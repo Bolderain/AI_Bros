@@ -4,8 +4,8 @@
 
 | Weg | Was | Wann |
 |---|---|---|
-| **ESPHome** | YAML-Konfiguration, fertige Sensortreiber, MQTT oder Home-Assistant-API, OTA, Deep Sleep eingebaut | Für M1, um in einem Abend Messwerte im Dashboard zu sehen |
-| **Eigene Firmware** (ESP-IDF oder Arduino-Core, PlatformIO) | Volle Kontrolle, Gießlogik im Gerät, eigene Zustandsmaschine, Puffern ohne WLAN | Ab M2, das ist der Teil, an dem die Embedded-Leute Spaß haben |
+| **ESPHome** | YAML-Konfiguration, fertige Sensortreiber, MQTT oder Home-Assistant-API, OTA, Deep Sleep eingebaut | Für Iteration 1, um in einem Abend Messwerte im Dashboard zu sehen |
+| **Eigene Firmware** (ESP-IDF oder Arduino-Core, PlatformIO) | Volle Kontrolle, Gießlogik im Gerät, eigene Zustandsmaschine, Puffern ohne WLAN | Ab Iteration 2, das ist der Teil, an dem die Embedded-Leute Spaß haben |
 
 Empfehlung: ESPHome als Referenz behalten (zum Vergleich der Messwerte), eigentliche
 Entwicklung in ESP-IDF mit C, oder Arduino-Core in C++ wenn es schneller gehen soll.

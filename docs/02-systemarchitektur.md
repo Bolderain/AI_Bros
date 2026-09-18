@@ -31,7 +31,7 @@ Zwei Hardware-Einheiten plus Handy:
 | Zentrale | Raspberry Pi (vorhandener Pi 3/4 oder Zero 2 W) | Läuft 24/7, Linux, alle Dienste als Docker oder nativ | Alter Laptop, NAS mit Docker, Mini-PC |
 | Protokoll | MQTT | Leichtgewichtig, Publish/Subscribe, Standard in Home Assistant und Node-RED | HTTP-REST (einfacher zu debuggen, schlechter für Akku) |
 | Wer entscheidet "gießen"? | Das Gerät selbst (Regeln in der Firmware), die Zentrale kann Parameter setzen | Pflanze überlebt auch, wenn WLAN oder Pi ausfällt | Zentrale entscheidet, Gerät führt nur aus |
-| Wassertank | Getrennter Kanister neben dem Topf, Pumpe im Tank | 0,5 l Gerätevolumen reicht nicht für Elektronik plus Wasservorrat über Wochen | Tank im Gerät (nur wenige Tage Vorrat) |
+| Wassertank | Stufe 1 (Prototyp A): getrennter Kanister neben dem Topf, Pumpe im Tank. Stufe 1b (Prototyp B): Tank im Gerät, ca. 1 l, siehe `09-mechanik-gehaeuse.md` | 0,5 l Gerätevolumen reicht nicht für Elektronik plus Wasservorrat über Wochen, das Gerät wird für den integrierten Tank größer | Tank dauerhaft extern |
 | Dünger | Kleiner Konzentratbehälter (100 bis 250 ml) am Gerät, Peristaltikpumpe dosiert in die Gießleitung | Ein Kanal reicht für Stufe 1, Konzentrat hält Monate | Mehrkanal später |
 
 ## Datenfluss

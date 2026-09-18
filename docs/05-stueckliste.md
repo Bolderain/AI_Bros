@@ -32,7 +32,7 @@ MOSFET-Module, Schwimmerschalter) parallel bei AliExpress als Reserve.
 | A17 | Düngerbehälter 150 ml (Flasche mit Deckel, Bohrung) | 1 | 2 | | |
 | A18 | Wasserkanister 5 l mit Bohrung im Deckel | 1 | 6 | | Baumarkt |
 | A19 | Lochrasterplatine, Stiftleisten, JST-Stecker, Kabel | 1 Set | 10 | 5 | |
-| A20 | 3D-Druck Gehäuse (Filament PETG) | ca. 200 g | 8 | | Eigener Drucker oder Druckdienst (ca. 20 Euro) |
+| A20 | 3D-Druck Gehäuse, PETG auf dem Bambu A1 Mini | ca. 200 g | 8 | | Für den integrierten Tank (Stufe 1b) nochmal ca. 300 g plus Epoxid |
 | A21 | Kleinteile: Epoxid, Heißkleber, Kabelbinder, Dichtungen | | 10 | | |
 | | **Summe Gerät** | | **ca. 132** | | |
 
@@ -72,6 +72,6 @@ Kamera (ca. 15 bis 30 Euro), weitere Geräte für Stufe 2 (ca. 90 Euro je Topf o
 
 ## Bestellreihenfolge
 
-1. Sofort (M0): A1 bis A5, A10, A12, A19. Damit läuft der Breadboard-Aufbau.
-2. Nach erstem Test (M1): A6 bis A9, A11, A13 bis A18.
-3. Wenn Gehäuseform steht (M4): A20, A21.
+1. Sofort (Iteration 0): A1 bis A5, A10, A12, A19. Damit läuft der Breadboard-Aufbau.
+2. Nach erstem Test (Iteration 1): A6 bis A9, A11, A13 bis A18.
+3. Wenn Gehäuseform steht (Iteration 4): A20, A21.

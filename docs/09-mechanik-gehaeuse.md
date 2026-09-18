@@ -29,11 +29,26 @@ ca. 220 mm Länge plus einem Erdspieß unten. Es steckt wie ein Pflanzstab am To
         +----------+
 ```
 
-Die Wasserpumpe sitzt nicht im Gerät, sondern im Kanister (Tauchpumpe). Vom Kanister geht
+**Prototyp A (Iteration 4 bis 6):** Die Wasserpumpe sitzt nicht im Gerät, sondern im Kanister (Tauchpumpe). Vom Kanister geht
 ein Schlauch zum Gerät, vom Gerät ein Schlauch zum Tropfring. Im Gerät wird der Dünger in
 diese Leitung eingespeist (T-Stück), so mischt sich das Konzentrat mit dem Gießwasser.
 
-## Fertigung
+## Fertigung auf dem Bambu A1 Mini
+
+Bauraum des A1 Mini: 180 x 180 x 180 mm. Das Rohr mit 220 mm Länge wird deshalb in zwei
+Teilen gedruckt (Oberteil 120 mm, Unterteil 100 mm) und mit Bajonett oder Gewinde verbunden.
+Der Spieß wird separat gedruckt und mit Epoxid eingesetzt.
+
+Druckhinweise:
+
+- Material PETG (feuchteresistent, nicht spröde). Für Tankteile PETG mit 4 Wänden und
+  100 % Infill in den Böden, damit sie dicht werden. PLA nimmt Wasser auf und verzieht sich.
+- Rohrteile stehend drucken, Wandstärke 2,4 mm (6 Linien bei 0,4-mm-Düse), keine Stützen nötig.
+- Gewinde: Bambu Studio druckt M-Gewinde ab ca. 60 mm Durchmesser sauber, alternativ
+  Bajonett mit drei Nasen, das ist toleranter.
+- Dichtungen: O-Ring-Nut mit 2 mm Schnur, oder gedruckte Nut und Silikon aus der Tube.
+
+## Fertigungsoptionen
 
 | Option | Vorteil | Nachteil |
 |---|---|---|
@@ -61,6 +76,34 @@ Gehäuse ersetzen.
 | Schwimmerschalter Kanister | 2 x 2-polig JST |
 | Schwimmerschalter Dünger | intern |
 | USB-C Laden/Programmieren | Buchse im Deckel, Verlängerung zum XIAO |
+
+## Prototyp B: Tank im Gerät (Iteration 7, Stufe 1b)
+
+Endziel laut Team: Der Wassertank ist im Gerät, kein Kanister mehr. Rechnung: Bei 80 ml alle
+2 Tage braucht die Pflanze ca. 1,2 l pro Monat. Für 3 Wochen Vorrat sind ca. 1 l Tank nötig.
+
+Ein Zylinder mit 70 mm Innendurchmesser fasst 38 ml pro cm Höhe. 1 l wären 26 cm nur Tank.
+Das passt nicht mehr in die 0,5-l-Flasche. Optionen:
+
+| Option | Maße (ca.) | Tank | Bemerkung |
+|---|---|---|---|
+| B1: Dickere Flasche | 100 mm Durchmesser, 300 mm hoch | ca. 1,5 l im unteren Teil | Sieht noch aus wie eine Flasche (Magnum), Elektronik oben, Akku mittig, Tank unten. Zwei Drucke auf dem A1 Mini |
+| B2: Sockel-Tank | Rohr 70 mm wie Prototyp A, steht auf einem flachen Tank 160 x 160 x 60 mm | ca. 1,2 l | Tank in einem Stück druckbar (unter 180 mm), Rohr bleibt gleich. Gerät steht neben dem Topf, nicht drin |
+| B3: Topfmanschette | Ring um den Topf herum | 1 bis 2 l | Tank ist unsichtbar, aber jeder Topf braucht seinen Ring |
+
+Empfehlung: **B2**, weil Prototyp A unverändert bleibt und der Tank ein eigenes, austauschbares
+Druckteil ist. Wenn B2 dicht ist, kann B1 als Designvariante folgen.
+
+Anforderungen an den gedruckten Tank:
+
+- Dicht: 4 Wände, Böden 100 % Infill, innen mit Epoxid oder XTC-3D beschichten, 24 h Wassertest.
+- Nachfüllöffnung oben mit Deckel, Durchmesser mindestens 30 mm (Gießkanne).
+- Tauchpumpe im tiefsten Punkt, Schwimmerschalter "leer" 1 cm über der Pumpe.
+- Lichtdicht (dunkles Filament), sonst Algen.
+- Reinigbar: Deckel groß genug für einen Flaschenbürste.
+
+Bis der integrierte Tank existiert, bleibt der externe Kanister. Prototyp B ändert an
+Elektronik und Firmware nichts, nur der Pumpenstecker wandert nach innen.
 
 ## Design-Freiheit
 

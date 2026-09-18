@@ -7,6 +7,7 @@ Stand: September 2026. Ergebnis des Kickoff-Interviews.
 | Punkt | Festlegung |
 |---|---|
 | Team | 3 Personen, 2 davon Embedded-Entwickler, Löten und eigene Aufbauten möglich |
+| Werkzeug | Bambu Lab A1 Mini (3D-Druck, Bauraum 180 x 180 x 180 mm) |
 | Budget | 300 Euro gesamt |
 | Zeit | Hobbyprojekt nebenbei, fertig bis spätestens März 2027 |
 | Sprache Doku | Deutsch |
@@ -25,6 +26,7 @@ Stand: September 2026. Ergebnis des Kickoff-Interviews.
 
 ## Kann (spätere Stufen)
 
+- Stufe 1b: Wassertank im Gerät integriert (ca. 1 l, 3 Wochen Vorrat), kein externer Kanister. Das Gerät wird dafür größer als die 0,5-l-Flasche.
 - Mehrere Töpfe an einer Zentrale (Stufe 2).
 - Hydroponik: Nährlösung statt Erde, pH- und EC-Regelung (Stufe 3).
 - Kamera für Wachstumsdoku.
@@ -40,7 +42,7 @@ Stand: September 2026. Ergebnis des Kickoff-Interviews.
 
 | Kriterium | Messbar durch |
 |---|---|
-| Pflanze überlebt 4 Wochen ohne manuelles Gießen | Dauertest ab Meilenstein M5 |
+| Pflanze überlebt 4 Wochen ohne manuelles Gießen | Dauertest ab Iteration 5 |
 | Bodenfeuchte bleibt im Zielband | Dashboard-Verlauf |
 | Nachfüll-Meldung kommt mindestens 3 Tage vor leerem Tank | Log der Benachrichtigungen |
 | Akkulaufzeit mindestens 4 Wochen (Schätzung, siehe `06-stromversorgung.md`) | Messung der Akkuspannung im Dashboard |

@@ -12,19 +12,20 @@
 | Pi Zero 2 W nicht lieferbar | Zentrale fehlt | Vorhandenen Pi oder alten Laptop nehmen |
 | Dünger kristallisiert im Schlauch | Dosierpumpe blockiert | Vorverdünnen, nach Dosierung kurz mit Wasser spülen (T-Stück vor der Dosierstelle) |
 | Algen im Tank | Pumpe verstopft | Kanister lichtdicht, Filter am Pumpeneinlass |
-| Team-Zeit | Termin März rutscht | Meilensteine klein halten, M5 nicht verschieben |
+| Team-Zeit | Termin März rutscht | Iterationen klein halten, It. 5 nicht verschieben |
+| Gedruckter Tank undicht | Wasser im Gerät | Erst extern testen (24 h), Elektronik immer über dem Tank, Prototyp B erst nach stabilem Prototyp A |
 
-## Offene Fragen (vor M1 klären)
+## Offene Fragen (vor Iteration 1 klären)
 
 | Frage | Optionen | Entscheidung bis |
 |---|---|---|
-| Welche Pflanze für den Prototyp? | Efeutute (Empfehlung), Basilikum, andere | M0 |
-| Vorhandener Raspberry Pi im Team? | Ja -> 40 Euro gespart | M0 |
-| 3D-Drucker vorhanden? | Ja / Nein -> Druckdienst oder HT-Rohr | M2 |
-| Feuchtesensor: DFRobot IP65 oder Billigsensor mit Epoxid? | Preis vs. Aufwand | M0 (Bestellung) |
-| Düngerbehälter im Rohr oder außen angeclipst? | Formfaktor vs. Akkugröße | M4 |
-| ESP-IDF oder Arduino-Core? | Vorlieben der Embedded-Leute | M1 |
-| Home Assistant zusätzlich zum eigenen Stack? | Komfort vs. Basteln | M3 |
+| Welche Pflanze für den Prototyp? | Efeutute (Empfehlung), Basilikum, andere | Iteration 0 |
+| Vorhandener Raspberry Pi im Team? | Ja -> 40 Euro gespart | Iteration 0 |
+| Integrierter Tank: Variante B1, B2 oder B3 (siehe `09-mechanik-gehaeuse.md`)? | Sockel-Tank empfohlen | Iteration 6 |
+| Feuchtesensor: DFRobot IP65 oder Billigsensor mit Epoxid? | Preis vs. Aufwand | Iteration 0 (Bestellung) |
+| Düngerbehälter im Rohr oder außen angeclipst? | Formfaktor vs. Akkugröße | Iteration 4 |
+| ESP-IDF oder Arduino-Core? | Vorlieben der Embedded-Leute | Iteration 1 |
+| Home Assistant zusätzlich zum eigenen Stack? | Komfort vs. Basteln | Iteration 3 |
 
 ## Bewusst nicht in Stufe 1
 

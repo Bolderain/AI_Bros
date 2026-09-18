@@ -30,7 +30,8 @@ docs/                     Wissensbasis (alles Deutsch)
   08-zentrale-und-handy.md
   09-mechanik-gehaeuse.md
   10-pflegeregeln.md
-  11-meilensteine.md
+  11-meilensteine.md      (Iterationen)
+  13-retros.md
   12-risiken-offene-fragen.md
 mockup/                   Visuelles Mockup des Geräts (SVG, PNG, HTML)
 firmware/                 ESP32-Firmware (noch leer)
@@ -55,7 +56,7 @@ Details in `docs/02-systemarchitektur.md`.
 - Alles Wissen landet hier im Repo, nicht im Chat.
 - Preise in der Stückliste sind Schätzungen mit Datum, vor dem Bestellen prüfen.
 - Änderungen an Doku per Pull Request oder direkt auf `main`, wie es dem Team passt.
-- Meilensteine in `docs/11-meilensteine.md`, Offenes in `docs/12-risiken-offene-fragen.md`.
+- Iterationen in `docs/11-meilensteine.md`, Retros in `docs/13-retros.md`, Offenes in `docs/12-risiken-offene-fragen.md`.
 
 ## Mockup
 
