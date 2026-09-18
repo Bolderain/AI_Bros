@@ -32,7 +32,7 @@ docs/                     Wissensbasis (alles Deutsch)
   10-pflegeregeln.md
   11-meilensteine.md
   12-risiken-offene-fragen.md
-mockup/                   Visuelles Mockup des Geräts (SVG, HTML)
+mockup/                   Visuelles Mockup des Geräts (SVG, PNG, HTML)
 firmware/                 ESP32-Firmware (noch leer)
 backend/                  Zentrale: MQTT, Datenbank, Dashboard, Benachrichtigung (noch leer)
 app/                      Handy-Oberfläche, falls eigene App gebaut wird (noch leer)
@@ -56,3 +56,7 @@ Details in `docs/02-systemarchitektur.md`.
 - Preise in der Stückliste sind Schätzungen mit Datum, vor dem Bestellen prüfen.
 - Änderungen an Doku per Pull Request oder direkt auf `main`, wie es dem Team passt.
 - Meilensteine in `docs/11-meilensteine.md`, Offenes in `docs/12-risiken-offene-fragen.md`.
+
+## Mockup
+
+![Mockup](mockup/geraet-mockup.png)
