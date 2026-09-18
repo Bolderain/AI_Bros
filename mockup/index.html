@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pflanzenautomat Mockup</title>
+<style>
+  :root { --bg: #f4f1ea; --fg: #222; --muted: #555; --card: #fff; --line: #d9d2c3; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #1b1f1c; --fg: #eee; --muted: #bbb; --card: #262c28; --line: #3a423c; }
+  }
+  :root[data-theme="dark"] { --bg: #1b1f1c; --fg: #eee; --muted: #bbb; --card: #262c28; --line: #3a423c; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font-family: Helvetica, Arial, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p { color: var(--muted); margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  img { width: 100%; height: auto; display: block; }
+  table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 0.9rem; }
+  td, th { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pflanzenautomat, Mockup Stufe 1</h1>
+  <p>Gerät im Format einer 0,5-l-Flasche, steckt als Spieß am Topfrand. Wasser kommt aus einem getrennten Kanister, Dünger aus einer kleinen Flasche am Gerät.</p>
+  <div class="card"><img src="geraet-mockup.svg" alt="Mockup des Pflanzenautomaten neben einem Topf und einem Wasserkanister"></div>
+  <table>
+    <tr><th>Abschnitt</th><th>Inhalt</th><th>Höhe (ca.)</th></tr>
+    <tr><td>Kopf</td><td>Luftsensor SHT40, Lichtsensor BH1750, Status-LED, USB-C</td><td>40 mm</td></tr>
+    <tr><td>Elektronik</td><td>XIAO ESP32-C6, Boost 5 V, MOSFETs, Schlauchanschlüsse seitlich</td><td>60 mm</td></tr>
+    <tr><td>Akku</td><td>18650 Li-Ion im Halter</td><td>70 mm</td></tr>
+    <tr><td>Dosiereinheit</td><td>Peristaltikpumpe, Düngerflasche außen angeclipst</td><td>50 mm</td></tr>
+    <tr><td>Spieß</td><td>Kapazitiver Feuchtesensor, DS18B20, mit Epoxid vergossen</td><td>80 mm in der Erde</td></tr>
+  </table>
+</main>
+</body>
+</html>
