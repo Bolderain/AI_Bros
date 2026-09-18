@@ -33,6 +33,20 @@ PlatformIO als Build-System, damit alle drei die gleiche Toolchain haben.
 4. **PUMPEN**: Boost an, Pumpe für berechnete Zeit, Boost aus, Ereignis publishen.
 5. **SLEEP**: Deep Sleep für Intervall (Akku: 30 min, USB: 60 s).
 
+## Modulstruktur (wichtig wegen Stufe 3 und 4)
+
+Sensoren, Aktoren und Regeln als getrennte Module mit gleicher Schnittstelle:
+
+```
+sensor_t:   init(), read() -> Wert, sleep()
+aktor_t:    init(), set(wert, max_dauer), off()
+regel_t:    eval(messwerte, konfig) -> aktor_befehle
+```
+
+Eine Geräte-Konfiguration (Topf, Hydroponik, Pilzbox) ist dann nur eine Liste, welche Module
+aktiv sind, und ein Satz Schwellwerte. Für die Pilzbox kommen z. B. `sensor_scd41`,
+`aktor_vernebler`, `aktor_luefter` und `regel_feuchte_co2` dazu, der Rest bleibt.
+
 ## Sicherheitsregeln in der Firmware
 
 - Maximale Pumplaufzeit hart begrenzt (Wasser 60 s, Dünger 10 s), unabhängig von Regeln.

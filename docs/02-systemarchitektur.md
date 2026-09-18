@@ -64,3 +64,10 @@ Jedes Gerät hat eine eigene `<geraete-id>`. Die Zentrale unterscheidet nach Top
 ## Erweiterung auf Hydroponik (Stufe 3)
 
 Bodenfeuchte entfällt, dafür pH- und EC-Sonde in der Nährlösung, Umwälzpumpe, zwei Dosierkanäle (Nährlösung A/B) plus pH-Korrektur. Das Gerät bleibt der gleiche ESP32, nur die Sensor- und Aktorbestückung ändert sich.
+
+## Erweiterung auf Pilzzucht (Stufe 4)
+
+Gleiche Zentrale, gleicher Broker, gleiches Firmware-Gerüst. Ein zweiter ESP32 am Netzteil
+in einer Zuchtbox mit CO2-Sensor, Vernebler und Lüfter. Details in `14-pilzzucht.md`.
+Konsequenz für jetzt: Sensoren und Aktoren in der Firmware als Module mit eigenem Regelblock
+anlegen, nicht fest verdrahten. Dann ist die Box nur eine andere Konfiguration.

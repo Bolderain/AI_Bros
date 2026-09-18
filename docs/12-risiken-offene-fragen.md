@@ -35,6 +35,11 @@
 - Eigene App.
 - Kamera.
 
+## Ideen für später (nicht geplant, nur notiert)
+
+- Stufe 4 Pilz-Growbox: eigene Seite `14-pilzzucht.md`. Beeinflusst jetzt schon die
+  Firmware-Struktur (Module statt fest verdrahtet).
+
 ## Nicht verifiziert (Kennzeichnung)
 
 Alle Preise sind Schätzungen mit Stand September 2026. Die Laufzeitrechnung in

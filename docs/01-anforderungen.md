@@ -29,6 +29,7 @@ Stand: September 2026. Ergebnis des Kickoff-Interviews.
 - Stufe 1b: Wassertank im Gerät integriert (ca. 1 l, 3 Wochen Vorrat), kein externer Kanister. Das Gerät wird dafür größer als die 0,5-l-Flasche.
 - Mehrere Töpfe an einer Zentrale (Stufe 2).
 - Hydroponik: Nährlösung statt Erde, pH- und EC-Regelung (Stufe 3).
+- Growbox für Speisepilze mit der gleichen Elektronik: Luftfeuchte, CO2, Lüftung, Vernebler (Stufe 4, siehe `14-pilzzucht.md`).
 - Kamera für Wachstumsdoku.
 - Eigene Handy-App statt Browser-Dashboard.
 

@@ -14,6 +14,7 @@ Zieltermin: fertig bis spätestens **März 2027**.
 | 1 | Eine Topfpflanze drinnen am Fensterbrett, Netzteil oder Akku, lokale Anbindung im Heimnetz | in Planung |
 | 2 | Mehrere Töpfe an einer Zentrale | später |
 | 3 | Hydroponik mit pH/EC-Regelung | später |
+| 4 | Growbox für Speisepilze mit gleicher Elektronik (Feuchte, CO2, Lüftung) | Idee |
 
 ## Repo-Struktur
 
@@ -32,6 +33,7 @@ docs/                     Wissensbasis (alles Deutsch)
   10-pflegeregeln.md
   11-meilensteine.md      (Iterationen)
   13-retros.md
+  14-pilzzucht.md         (Stufe 4, Idee)
   12-risiken-offene-fragen.md
 mockup/                   Visuelles Mockup des Geräts (SVG, PNG, HTML)
 firmware/                 ESP32-Firmware (noch leer)
