@@ -34,6 +34,7 @@ docs/                     Wissensbasis (alles Deutsch)
   11-meilensteine.md      (Iterationen)
   13-retros.md
   14-pilzzucht.md         (Stufe 4, Idee)
+  15-messintervalle.md
   12-risiken-offene-fragen.md
 mockup/                   Visuelles Mockup des Geräts (SVG, PNG, HTML)
 firmware/                 ESP32-Firmware (noch leer)
@@ -62,4 +63,8 @@ Details in `docs/02-systemarchitektur.md`.
 
 ## Mockup
 
-![Mockup](mockup/geraet-mockup.png)
+![Mockup Prototyp A](mockup/geraet-mockup.png)
+
+Kompakte, semi-professionelle Version:
+
+![Mockup kompakt](mockup/kompakt-mockup.png)

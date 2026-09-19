@@ -105,6 +105,48 @@ Anforderungen an den gedruckten Tank:
 Bis der integrierte Tank existiert, bleibt der externe Kanister. Prototyp B ändert an
 Elektronik und Firmware nichts, nur der Pumpenstecker wandert nach innen.
 
+## Wie klein geht es semi-professionell?
+
+Die 0,5-l-Flasche ist eine Vorgabe aus dem Kickoff, kein Minimum. Mit eigener Platine statt
+Lochraster und ohne externen Kanister lässt sich das Gerät deutlich verkleinern. Grenze ist
+nicht die Elektronik, sondern der Akku und der Wasservorrat.
+
+### Was wie viel Platz braucht
+
+| Baugruppe | Lochraster-Aufbau (Prototyp A) | Semi-professionell (eigene Platine) |
+|---|---|---|
+| Controller | XIAO ESP32-C6, 21 x 18 mm, gesteckt | ESP32-C6-Mini-Modul direkt auf die Platine gelötet, ca. 15 x 13 mm |
+| Sensoren Luft/Licht | 3 Breakout-Boards, je ca. 15 x 15 mm | SHT40 und BH1750 als nackte Bauteile auf die Platine, zusammen unter 1 cm2 |
+| Boost, MOSFETs | 3 Module | in die Platine integriert, wenige mm2 |
+| Verkabelung | Steckbrücken, JST, viel Luft | Leiterbahnen, fast kein Volumen |
+| Akku | 18650, 18 x 65 mm | LiPo-Pouch nach Formfaktor, z. B. 30 x 40 x 6 mm für 700 mAh |
+| Feuchtesensor | Fertigplatine am Kabel | eigener vergossener Spieß, so dünn wie ein Pflanzstab |
+
+Die reine Elektronik passt semi-professionell auf eine Platine von etwa 25 x 60 mm. Der Rest ist
+Akku, Sensorspieß und, falls integriert, Wasser.
+
+### Drei realistische Baugrößen
+
+| Variante | Maße (ca.) | Vergleich | Akku | Wasser | Bemerkung |
+|---|---|---|---|---|---|
+| Kompakt am Kabel | 20 x 20 x 130 mm | dicker Bleistift, Pflanzstab | LiPo 500 mAh im Griff | extern | Nur Sensor plus Funk, Pumpe und Dünger in einer getrennten kleinen Box am Kanister. Der Teil, der in der Erde steckt, ist winzig |
+| Kompakt autark | 40 x 40 x 150 mm | kleine Parfumflasche | LiPo 1000 mAh | extern | Alles außer Wasser im Gerät, Kanister daneben. Realistisch das kleinste "alles drin außer Wasser" |
+| Halbe Flasche | Durchmesser 45 mm, 160 mm hoch | halbe 0,33-l-Dose | 18650 | ca. 150 ml intern (wenige Tage) | Wenn ein kleiner interner Vorrat reichen soll |
+
+Mit eigener Platine, LiPo statt 18650 und SMD-Sensoren ist ein Gerät von der Größe eines
+dicken Filzstifts machbar, das misst, funkt und über ein bistabiles Ventil per Schwerkraft
+gießt. Sobald ein nennenswerter Wasservorrat (Wochen) im Gerät sein soll, gewinnt das Wasser
+den Kampf um das Volumen und das Gerät wird zwangsläufig größer, egal wie klein die Elektronik ist.
+
+### Kosten der Miniaturisierung
+
+- Eigene Platine (KiCad, Fertigung bei JLCPCB): ca. 2 Euro pro Platine bei 5 Stück plus
+  Bestückung, plus Lernaufwand. Passt zu "mit HW rumspielen".
+- SMD-Löten von Hand: SHT40 und ESP32-Modul sind mit Heißluft und ruhiger Hand machbar,
+  QFN ist fummelig. Alternativ Bestückung bei JLCPCB mitbestellen.
+- Gehäuse: kleiner heißt engere Toleranzen. Der A1 Mini druckt 0,4-mm-Wände, für ein
+  20-mm-Rohr wird es knapp, aber machbar.
+
 ## Design-Freiheit
 
 Das Mockup in `../mockup/` zeigt eine Variante. Wenn das Team lieber ein flaches Kästchen
