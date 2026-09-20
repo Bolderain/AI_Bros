@@ -11,7 +11,7 @@ Zieltermin: fertig bis spätestens **März 2027**.
 
 | Stufe | Ziel | Status |
 |---|---|---|
-| 1 | Eine Topfpflanze drinnen am Fensterbrett, Netzteil oder Akku, lokale Anbindung im Heimnetz | in Planung |
+| 1 | Eine Topfpflanze drinnen am Fensterbrett, Prototyp steckbar am Netzteil, Zentrale auf vorhandenem Raspi | in Planung |
 | 2 | Mehrere Töpfe an einer Zentrale | später |
 | 3 | Hydroponik mit pH/EC-Regelung | später |
 | 4 | Growbox für Speisepilze mit gleicher Elektronik (Feuchte, CO2, Lüftung) | Idee |

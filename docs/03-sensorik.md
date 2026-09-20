@@ -29,6 +29,28 @@ davon lassen sich mit Hobby-Hardware zuverlässig messen?
 | Akkuspannung | Spannungsteiler an ADC (XIAO C6 hat das intern) | Analog | 0 Euro | Für "Akku schwach"-Meldung |
 | Pumpen-Rückmeldung | Kein Durchflusssensor in Stufe 1 | | | Stattdessen: Feuchte muss nach dem Gießen steigen. Wenn nicht, Alarm "Pumpe oder Tank prüfen" |
 
+## Nährstoffmessung: gewollt, Weg noch offen
+
+Wir wollen die Nährstoffversorgung nicht nur nach Plan düngen, sondern einen **Trend** sehen
+(reichert sich Salz an, oder zehrt es aus). Womit, ist noch offen. Zur Auswahl stehen zwei
+Sensoren am ESP32, die physikalisch **dasselbe** messen (Leitfähigkeit); der NPK-Sensor legt
+nur eine Umrechnungstabelle für N, P, K dahinter.
+
+| | EC-Sensor (analog) | NPK-Sonde (RS485/Modbus) |
+|---|---|---|
+| Vorteil | misst nur die eine reale Größe, einfacher Anschluss (Analogpin) | liefert Feuchte/Temp/pH mit, gutes RS485-Lernobjekt |
+| Nachteil | trennt N/P/K nicht (kann keiner), Elektroden korrodieren in Erde | NPK-Zahlen geraten und nicht belastbar, Elektroden korrodieren, mehr Code |
+| Preis | ca. 50 | ca. 20 bis 60 |
+
+Gemeinsames Problem: Blanke Elektroden korrodieren und driften über genau die Monate, in denen
+der Trend entsteht. Gegenmittel: Sensor nur kurz beim Messen bestromen (ESP schaltet die
+Versorgung) und mit **Wechselspannung** messen, um Elektrolyse zu vermeiden. Wirklich stabil
+wird EC erst in Hydroponik-Nährlösung (Stufe 3). Für N, P, K einzeln bräuchte es Laboranalyse
+oder ionenselektive Elektroden (mehrere hundert Euro pro Ion).
+
+Entscheidung offen: EC oder NPK-Sonde, und ob im Topf überhaupt oder erst in Stufe 3. Details
+unten.
+
 ## Bewertung von pH, EC und NPK
 
 ### NPK-Sensoren (RS485, "7-in-1", "Boden NPK Sensor")
