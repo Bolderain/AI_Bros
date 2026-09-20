@@ -21,7 +21,8 @@ Startwerte für einen 15-cm-Topf mit ca. 1,5 l Substrat:
 | feuchte_min | 35 % | Viele Zimmerpflanzen wollen oberflächlich abtrocknen, bevor sie wieder Wasser bekommen |
 | feuchte_ziel | 60 % | Nicht bis zur Sättigung, Staunässe vermeiden |
 | giessmenge_ml | 80 ml | Ca. 5 % des Substratvolumens, lieber öfter klein als selten viel |
-| sperrzeit | 6 h | Wasser braucht Zeit, bis der Sensor es sieht |
+| sperrzeit | 20 h | Frühestens am nächsten Morgen wieder gießen, Wasser braucht Zeit bis der Sensor es sieht |
+| prüfzeit | 1 mal täglich, morgens | Pflanze wird wie von Hand einmal am Tag kontrolliert, gegossen wird morgens |
 
 Die Menge wird adaptiv: Wenn nach einem Gießvorgang die Feuchte unter dem Ziel bleibt, beim
 nächsten Mal 20 % mehr, bis maximal das Dreifache. Umgekehrt weniger, wenn die Feuchte

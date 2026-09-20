@@ -17,7 +17,7 @@ MOSFET-Module, Schwimmerschalter) parallel bei AliExpress als Reserve.
 | A2 | Bodenfeuchtesensor DFRobot SEN0308 (kapazitiv, IP65) | 1 | 15 | | Alternativ generischer v2.0 für 3 Euro, Kante versiegeln |
 | A3 | DS18B20 wasserdicht mit Kabel | 1 | 3 | 1,5 | |
 | A4 | SHT40 Breakout (I2C) | 1 | 5 | 3 | oder BME280 |
-| A5 | BH1750 Breakout (I2C) | 1 | 3 | 1,5 | |
+| A5 | BH1750 Breakout (I2C) | 0 | - | - | Gestrichen, siehe `15-messintervalle.md`. Nur einbauen, wenn ein Lichtlog ausdrücklich gewünscht ist |
 | A6 | Li-Ion 18650 3500 mAh mit Schutzschaltung | 1 | 8 | | In DE kaufen |
 | A7 | 18650-Halter mit Kabel | 1 | 2 | 1 | |
 | A8 | Boost-Modul 5 V mit Enable (TPS61023 oder MT3608) | 1 | 4 | 1,5 | |
@@ -34,7 +34,7 @@ MOSFET-Module, Schwimmerschalter) parallel bei AliExpress als Reserve.
 | A19 | Lochrasterplatine, Stiftleisten, JST-Stecker, Kabel | 1 Set | 10 | 5 | |
 | A20 | 3D-Druck Gehäuse, PETG auf dem Bambu A1 Mini | ca. 200 g | 8 | | Für den integrierten Tank (Stufe 1b) nochmal ca. 300 g plus Epoxid |
 | A21 | Kleinteile: Epoxid, Heißkleber, Kabelbinder, Dichtungen | | 10 | | |
-| | **Summe Gerät** | | **ca. 132** | | |
+| | **Summe Gerät** | | **ca. 129** | | |
 
 ## B. Zentrale
 
@@ -60,12 +60,12 @@ MOSFET-Module, Schwimmerschalter) parallel bei AliExpress als Reserve.
 
 | Block | Betrag |
 |---|---|
-| A Gerät | 132 |
+| A Gerät | 129 |
 | B Zentrale | 41 |
 | C Werkzeug | 25 |
-| **Zwischensumme** | **198** |
+| **Zwischensumme** | **195** |
 | Reserve für Fehlkäufe, Ersatzteile, Versand | 60 |
-| **Gesamt** | **ca. 258 von 300 Euro** |
+| **Gesamt** | **ca. 255 von 300 Euro** |
 
 Nicht im Budget von Stufe 1: pH- und EC-Sonden für Hydroponik (ca. 85 Euro zusammen),
 Kamera (ca. 15 bis 30 Euro), weitere Geräte für Stufe 2 (ca. 90 Euro je Topf ohne Zentrale).

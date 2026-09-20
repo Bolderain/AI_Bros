@@ -1,50 +1,101 @@
-# 15 Messintervalle: was wie oft?
+# 15 Messintervalle: aus Sicht der Pflanze
 
-Grundregel: So oft messen, wie sich der Wert tatsächlich ändert. Schneller messen liefert keine
-neue Information, kostet aber Akku. Die Trägheit der Erde ist hier der Maßstab, nicht die
-Fähigkeit des Sensors.
+Leitgedanke: nicht so oft messen, wie die Elektronik kann, sondern so oft, wie es die Pflanze
+braucht. Und das Ziel ist maximale Laufzeit ohne Nachladen und Nachfüllen. Beides zeigt in die
+gleiche Richtung: selten messen, selten senden.
 
-## Wie schnell ändern sich die Werte wirklich?
+## Wie ein Mensch gießt, so soll das Gerät messen
 
-| Größe | Typische Änderungsrate | Sinnvolles Messintervall | Warum |
-|---|---|---|---|
-| Bodenfeuchte | Stunden bis Tage. Ein Topf trocknet über 1 bis 5 Tage | 15 bis 30 min | Erde ist extrem träge. Häufiger messen zeigt nur Rauschen. 30 min reicht, um rechtzeitig zu gießen |
-| Bodentemperatur | Stunden | 30 min | Folgt langsam der Raumtemperatur |
-| Lufttemperatur | 10 bis 30 min (Heizung, Sonne aufs Fenster) | 5 bis 15 min | Springt schneller als der Boden, aber nicht sekündlich |
-| Luftfeuchte | 10 bis 30 min | 5 bis 15 min | Wie Lufttemperatur |
-| Licht | Minuten (Wolke) bis Stunden (Tagesgang) | 1 bis 5 min, wenn wach; sonst Tagessumme | Für den Tagesgang reicht grob. Kurze Wolken sind für die Pflanze egal |
-| Tank- und Düngerstand | Nur bei Verbrauch, also nach dem Gießen | bei jedem Gießvorgang plus 1 mal am Tag | Ändert sich sonst nicht |
-| Akkuspannung | Stunden | bei jeder Aktivphase (kostet nichts, ADC ist eh an) | Für die Restlaufzeit-Prognose |
+Ein Mensch schaut alle paar Tage nach der Pflanze, steckt den Finger in die Erde und gießt bei
+Bedarf, am besten morgens. Genau das ist der Maßstab. Die Erde ist ein träger Speicher, sie
+ändert sich über Tage, nicht über Minuten. 48 Messungen am Tag liefern 48 fast gleiche Werte.
 
-## Empfehlung nach Betriebsmodus
+## Standard: eine Aktivphase pro Tag, morgens
 
-| Modus | Feuchte, Bodentemp. | Luft T/rF | Licht | Senden |
-|---|---|---|---|---|
-| Netzteil (Prototyp A/B am Kabel) | 5 min | 1 min | 1 min | jede Messung sofort |
-| Akku, Modus "Beobachten" | 15 min | 15 min | 15 min | alle 15 min gebündelt |
-| Akku, Modus "Sparen" (Standard) | 30 min | 30 min | 30 min, nachts 4 h | alle 2 h gebündelt |
-| Akku, Modus "Urlaub" | 1 h | 1 h | nur Tagessumme | alle 6 h plus bei Ereignis |
-
-Messen und Senden trennen: Der ESP kann alle 30 min messen (kurz, ca. 200 ms, ohne WLAN,
-ca. 20 mA) und die Werte im RTC-RAM sammeln. Das teure WLAN geht nur alle 2 h an und schickt
-den ganzen Block auf einmal. So bleibt die Kurve fein, ohne dass jede Messung eine
-WLAN-Verbindung kostet. Details in `06-stromversorgung.md`.
-
-## Wie oft rausschicken?
-
-| Ansatz | Sendehäufigkeit | Für wen |
+| Schritt | Zeitpunkt | Was passiert |
 |---|---|---|
-| Sofort bei jeder Messung | wie Messintervall | Nur am Netzteil oder in der Debug-Phase (Iteration 1 bis 3), wenn man live zuschauen will |
-| Gebündelt | alle 2 h ein Block mit den letzten Messungen | Standard im Akkubetrieb |
-| Nur bei Änderung | wenn ein Wert um mehr als x % vom letzten gesendeten abweicht, sonst 1 Lebenszeichen pro Tag | Maximale Sparsamkeit, Kurve wird gröber bei stabilen Werten |
-| Sofort bei Ereignis | zusätzlich immer sofort: Gießen, Düngen, Tank leer, Sensorfehler, Akku schwach | In jedem Modus aktiv, das sind die wichtigen Nachrichten |
+| Aufwachen | einmal täglich, früher Morgen | Sensor an, Bodenfeuchte 8-fach mitteln, Akku messen |
+| Entscheiden | sofort | Feuchte unter Schwelle und Sperrzeit vorbei? Dann gießen |
+| Gießen | morgens | Bester Zeitpunkt: Pflanze verbraucht das Wasser über den Tag, Wurzeln stehen nachts nicht nass und kalt |
+| Melden | einmal täglich | Eine Tagesnachricht: Feuchte, ob gegossen wurde, Akku, Warnungen |
+| Schlafen | Rest des Tages | Gerät ist praktisch aus |
 
-Wichtig: Alarme und Ereignisse gehen immer sofort raus, unabhängig vom Sendeintervall. Nur die
-Routine-Messwerte werden gebündelt. Ein leerer Tank darf nicht 2 h auf das nächste Sendefenster
-warten.
+Morgens ist keine Kür, sondern gärtnerisch richtig. Deshalb wird die eine Aktivphase per
+Uhrzeit ausgelöst (RTC), nicht per festem Intervall.
 
-## Empfehlung für den Anfang (Iteration 1 bis 3, am Netzteil)
+## Warum eine zweite Messung am Tag Sinn haben kann (aber nicht muss)
 
-Alle 60 s messen und senden. Nicht weil es nötig ist, sondern weil man beim Entwickeln eine
-feine Live-Kurve sehen will, um Sensoren zu kalibrieren und die Gießregel zu testen. Sobald der
-Akkubetrieb kommt (Iteration 4), auf 30 min messen und 2 h senden umstellen.
+Der einzige gute Grund für einen zweiten Blick: prüfen, ob das Gießen gewirkt hat. Ist die
+Feuchte ein paar Stunden nach dem Gießen nicht gestiegen, ist der Schlauch leer, die Pumpe
+hängt oder der Tank ist leer. Das ist die einzige Fehlererkennung, die Zeit braucht. Wer das
+will, macht am selben Morgen einen zweiten kurzen Weck-Termin, kein Dauerbetrieb. Wer darauf
+verzichtet, merkt den Fehler spätestens am nächsten Morgen. Für eine Zimmerpflanze ist ein Tag
+Verzug unkritisch.
+
+## Senden: einmal am Tag
+
+| Was | Wann gesendet |
+|---|---|
+| Tagesmeldung (Feuchte, Gießen ja/nein, Akku, Temperatur falls gemessen) | einmal täglich, in der Morgen-Aktivphase |
+| Warnungen (Tank leer, Feuchte nach Gießen nicht gestiegen, Akku schwach, Sensorfehler) | in derselben Aktivphase, denn genau dann fallen sie auf |
+
+Der Trick: Ein leerer Tank fällt beim morgendlichen Gießversuch auf. Das Gerät muss dafür nicht
+dauernd erreichbar sein. Es merkt und meldet das Problem in dem Moment, in dem es handeln will.
+Deshalb reicht einmal senden pro Tag, ohne dass Warnungen liegen bleiben.
+
+## Wann doch öfter?
+
+Nur beim Entwickeln und Kalibrieren. In Iteration 1 bis 3, am Netzteil, misst und sendet man
+ruhig jede Minute, um live zuzuschauen, den Feuchtesensor zu kalibrieren und die Gießregel zu
+testen. Sobald der Akkubetrieb kommt (Iteration 4), wird auf eine Aktivphase pro Tag
+umgestellt. Das ist kein Rückschritt, sondern der eigentliche Betriebsmodus.
+
+## Welche Sensoren überhaupt?
+
+| Sensor | Für die Regelung nötig? | Entscheidung |
+|---|---|---|
+| Bodenfeuchte | Ja, die einzige zeitkritische Größe | Pflicht |
+| Bodentemperatur | Nein, ändert sich langsam, treibt keinen Aktor | Optional, im gleichen Weck-Termin fast gratis mitmessen |
+| Lufttemperatur, Luftfeuchte | Nein, der Effekt auf den Wasserbedarf steckt schon in der Bodenfeuchte | Optional, nur als Tageswert, sonst weglassen |
+| Licht | Nein, siehe unten | Streichen |
+| Tank- und Düngerstand | Ja, aber nur beim Gießen relevant | Beim Gießen prüfen |
+| Akkuspannung | Ja, für die Laufzeitprognose | Bei jeder Aktivphase, kostet nichts |
+
+### Warum der Lichtsensor gestrichen wird
+
+- Für die Gießentscheidung liefert Licht nichts Eigenes: Mehr Licht heißt schnelleres
+  Austrocknen, und das sieht der Feuchtesensor bereits.
+- Die Messung ist leicht gestört: ein Blatt, der Standort des Geräts, Gardine, Tageszeit.
+- Ein Dauer-Lichtlog über Jahre hat kaum Aussagekraft.
+- Der einzige echte Nutzen wäre eine einmalige Standortprüfung ("steht zu dunkel"), und die
+  macht man einfacher von Hand mit dem Handy.
+
+Konsequenz: ein Bauteil, ein I2C-Teilnehmer und dessen Ruhestrom weniger. Falls die Solarzelle
+im Deckel kommt (siehe `06-stromversorgung.md`), liefert deren Ladestrom nebenbei ein grobes
+Hell/Dunkel-Signal, ganz ohne eigenen Sensor.
+
+## Was das für die Laufzeit bedeutet (der eigentliche Punkt)
+
+Wenn man einmal am Tag misst und sendet, ist die Elektronik nicht mehr der Flaschenhals.
+Tagesbudget (Schätzung, sauberer Aufbau, Ruhestrom unter 100 µA):
+
+| Posten | pro Tag |
+|---|---|
+| Messen plus einmal senden | ca. 0,12 mAh |
+| Pumpen (gießen alle 2 Tage, 20 s) | ca. 1,0 mAh |
+| Deep Sleep unter 100 µA | ca. 2,4 mAh |
+| Selbstentladung Li-Ion (2 bis 3 % pro Monat) | ca. 2,5 bis 3,5 mAh |
+
+Messen und Senden ist der kleinste Posten. Die Laufzeit wird jetzt von zwei anderen Dingen
+begrenzt:
+
+1. **Selbstentladung und Alterung des Akkus.** Der Akku verliert im Kalender mehr, als das
+   Gerät durch Arbeit verbraucht. Das ist der Grund, den Ruhestrom mit einem TPL5110-Timer
+   (unter 1 µA) fast auf Selbstentladungs-Niveau zu drücken. Mehr Sparen an der Messung bringt
+   dann nichts mehr.
+2. **Der Wasservorrat.** Das Wasser ist nach Wochen leer, egal wie sparsam die Elektronik ist.
+
+Designregel daraus, genau auf "so lange wie möglich ohne Nachladen" gemünzt: Akku und Tank so
+dimensionieren, dass beide etwa gleich lang halten. Dann ist Nachfüllen und Nachladen derselbe
+Termin, alle paar Wochen. Mit Solarzelle im Deckel fällt das Laden ganz weg, dann bestimmt nur
+noch der Tank, wie oft man hinmuss.

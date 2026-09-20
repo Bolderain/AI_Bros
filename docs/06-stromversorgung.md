@@ -139,6 +139,21 @@ Aufwand lohnt.
 | Zwei Betriebsmodi im Dashboard umschaltbar: "Urlaub" (nur gießen, keine Kurven, 4 h Intervall, ESP-NOW) und "Beobachten" (feine Kurven, 15 min) | Der Nutzer entscheidet, wann Laufzeit und wann Daten wichtiger sind |
 | Akkuprognose in der Zentrale: aus Spannungsverlauf die Restlaufzeit in Tagen berechnen und melden, bevor es knapp wird | Verlängert nicht die Laufzeit, macht sie aber planbar. Nachfüllen und Laden fallen auf den gleichen Tag |
 
+### Der eigentliche Flaschenhals bei täglicher Messung
+
+Wenn nur einmal am Tag gemessen und gesendet wird (siehe `15-messintervalle.md`), ist die
+Elektronik nicht mehr der größte Verbraucher. Dann begrenzen zwei andere Dinge die Zeit bis zum
+Nachladen:
+
+- Selbstentladung des Li-Ion (ca. 2 bis 3 % pro Monat, grob 2,5 bis 3,5 mAh am Tag), oft mehr
+  als der Arbeitsverbrauch.
+- Der Wasservorrat, der ohnehin nach Wochen leer ist.
+
+Konsequenz: Ruhestrom per TPL5110 (unter 1 µA) fast auf Selbstentladungs-Niveau drücken, dann
+lohnt weiteres Sparen an der Messung nicht mehr. Akku und Tank so wählen, dass beide etwa gleich
+lang halten, damit Nachladen und Nachfüllen ein einziger Termin sind. Mit Solarzelle im Deckel
+entfällt das Laden ganz, dann bestimmt nur der Tank den Rhythmus.
+
 ### Empfehlung nach Reihenfolge
 
 1. Ruhestrom messen und unter 100 µA bringen (C). Ohne das bringt nichts anderes etwas.

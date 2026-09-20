@@ -23,7 +23,7 @@ davon lassen sich mit Hobby-Hardware zuverlässig messen?
 | Bodenfeuchte | DFRobot SEN0308 (kapazitiv, wasserdicht, IP65) oder generischer "Capacitive Soil Moisture Sensor v2.0" | Analog | 15 Euro bzw. 3 Euro | Kapazitiv statt resistiv: keine korrodierenden Elektroden. Beim Billigsensor die Schnittkante mit Epoxid versiegeln, sonst zieht Feuchte in die Platine. Erfahrungsberichte: unversiegelte Billigsensoren korrodieren nach einer Saison an den Bauteilen |
 | Substrattemperatur | DS18B20 wasserdicht | 1-Wire | 3 Euro | Robust, günstig, kann am Feuchtesensor mit in die Erde |
 | Luft Temperatur + Feuchte | SHT40 (Sensirion) oder BME280 | I2C | 5 Euro | SHT40 ist genauer bei Feuchte, BME280 liefert zusätzlich Luftdruck (hier unwichtig) |
-| Licht | BH1750 oder VEML7700 | I2C | 3 Euro | Lux reicht, um "hell/dunkel/Tageslänge" zu erkennen und den Gießbedarf zu gewichten |
+| Licht | gestrichen (siehe `15-messintervalle.md`) | | | Für die Gießentscheidung redundant, leicht durch Blätter verdeckt. Grobes Hell/Dunkel liefert später die Solarzelle im Deckel gratis |
 | Wasserstand Tank | 2 Schwimmerschalter (halb, leer) oder Ultraschall JSN-SR04T | Digital | 3 Euro pro Schalter | Schwimmerschalter sind das simpelste Zuverlässige. Alternative: Tank auf Wägezelle (HX711, ca. 6 Euro), liefert kontinuierlichen Füllstand und misst nebenbei die tatsächlich gepumpte Menge |
 | Düngerstand | Zählen der dosierten Menge plus ein Schwimmerschalter "fast leer" | Digital | 3 Euro | Peristaltikpumpe fördert reproduzierbar, Zählen reicht |
 | Akkuspannung | Spannungsteiler an ADC (XIAO C6 hat das intern) | Analog | 0 Euro | Für "Akku schwach"-Meldung |
@@ -58,8 +58,9 @@ DFRobot Gravity Analog pH V2 (ca. 35 Euro, Schätzung), regelmäßig kalibrieren
 
 ## Fazit Sensorik Stufe 1
 
-Gemessen wird: Bodenfeuchte, Substrattemperatur, Lufttemperatur, Luftfeuchte, Licht,
-Tankstand, Düngerstand, Akkuspannung. Alles unter 40 Euro. Nährstoffe werden nach Zeit und
+Gemessen wird: Bodenfeuchte (Pflicht). Substrattemperatur, Lufttemperatur und Luftfeuchte
+nur als optionaler Tageswert. Tankstand und Düngerstand beim Gießen, Akkuspannung bei jeder
+Aktivphase. Licht wird gestrichen (siehe `15-messintervalle.md`). Alles unter 40 Euro. Nährstoffe werden nach Zeit und
 Wachstumsphase dosiert und über das manuelle EC-Messen des Drainwassers nachgeführt.
 
 ## Kalibrierung Bodenfeuchte
