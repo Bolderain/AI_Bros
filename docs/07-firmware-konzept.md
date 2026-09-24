@@ -1,108 +1,52 @@
-# 07 Firmware-Konzept (ESP32-C6)
+# 07 Firmware-Konzept
 
-## Zwei Wege
+Maßgeblich: `00-spezifikation-stufe1.md`, Abschnitte 0 und 5 bis 7. Hier Aufbau und Begründung.
 
-| Weg | Was | Wann |
-|---|---|---|
-| **ESPHome** | YAML-Konfiguration, fertige Sensortreiber, MQTT oder Home-Assistant-API, OTA, Deep Sleep eingebaut | Für Iteration 1, um in einem Abend Messwerte im Dashboard zu sehen |
-| **Eigene Firmware** (ESP-IDF oder Arduino-Core, PlatformIO) | Volle Kontrolle, Gießlogik im Gerät, eigene Zustandsmaschine, Puffern ohne WLAN | Ab Iteration 2, das ist der Teil, an dem die Embedded-Leute Spaß haben |
+## Ansatz: ESPHome plus eigene Logik-Komponente
 
-Empfehlung: ESPHome als Referenz behalten (zum Vergleich der Messwerte), eigentliche
-Entwicklung in ESP-IDF mit C, oder Arduino-Core in C++ wenn es schneller gehen soll.
-PlatformIO als Build-System, damit alle drei die gleiche Toolchain haben.
+| Teil | Aufgabe |
+|---|---|
+| ESPHome (`esp32: variant: esp32c6`) | Treiber (ADC, HX711, Pumpenausgänge), WLAN, MQTT, SNTP, OTA, Deep Sleep, Persistenz über `globals` mit `restore_value` |
+| `firmware/components/plant_logic/` | Reine Entscheidungsfunktion ohne I/O. Bekommt Messwerte, Zähler, Zeitstatus und Config, liefert Aktionen (gießen, düngen, sperren) und Events |
+| `firmware/test/` | Unit-Tests von `plant_logic` auf dem Host (T16) |
 
-## Zustandsmaschine
+Warum so: ESPHome nimmt die Treiberarbeit ab, M1 läuft damit schnell. Die eigentliche Intelligenz
+und die Sicherheitslogik sind gekapselt und ohne Hardware testbar. Daran arbeiten die
+Embedded-Entwickler (Rolle B). Eine komplett eigene ESP-IDF-Firmware, wie früher geplant, entfällt
+für Stufe 1. Sie bleibt Option, falls ESPHome in Stufe 2 an Grenzen stößt.
 
-```
-   +---------+    Timer/USB     +---------+     +----------+     +----------+
-   | SLEEP   | --------------> | MESSEN  | --> | SENDEN   | --> | REGELN   |
-   +---------+                 +---------+     +----------+     +----------+
-        ^                                            |                |
-        |                                            | Befehl?        | Gießen/Düngen nötig?
-        |                                            v                v
-        |                                      +-----------+    +-----------+
-        +------------------------------------- | KONFIG    | <- | PUMPEN    |
-                                               +-----------+    +-----------+
-```
+## Zyklus (Kurzform von Spezifikation 5.1)
 
-1. **MESSEN**: Sensorversorgung einschalten, 100 ms warten, alle Werte lesen (Feuchte 8-fach
-   mitteln), Sensorversorgung aus.
-2. **SENDEN**: WLAN verbinden (statische IP spart ca. 1 s), MQTT-Status publishen, retained
-   Befehl und Konfig abholen, trennen. Timeout 10 s, sonst Werte im RTC-RAM puffern.
-3. **REGELN**: Gießregel und Düngeregel auswerten (siehe `10-pflegeregeln.md`).
-4. **PUMPEN**: Boost an, Pumpe für berechnete Zeit, Boost aus, Ereignis publishen.
-5. **SLEEP**: Deep Sleep für Intervall (Akku: 30 min, USB: 60 s).
+Sonde an, 10 Messungen mitteln, Sonde aus. Wiegen, nie während eines Pumpenlaufs. WLAN, Zeit, MQTT,
+Config validieren. Plausibilität prüfen. Ohne gültige Zeit Notbetrieb. Einmal täglich im
+Gießfenster entscheiden. Gießen als Wasser, Dünger, Wasser mit Wiegen vor und nach jedem Lauf.
+Publizieren, warten oder schlafen.
 
-## Modulstruktur (wichtig wegen Stufe 3 und 4)
+## Grundregeln
 
-Sensoren, Aktoren und Regeln als getrennte Module mit gleicher Schnittstelle:
+- Alle Schwellen und Mengen als Parameter (Spezifikation 5.2), (P)-Werte im Code als `TODO(P)`.
+- Absolute Grenzen fest im Code (5.3). Config außerhalb wird verworfen, Event `config_rejected`.
+- Persistenz von Zählern, Sperren, fälliger Düngung und letzter gültiger Config (5.4), Flash-
+  Schreibhäufigkeit begrenzen.
+- Notbetrieb ohne gültige Zeit (5.5).
+- Pumpen nur über eine zentrale Funktion mit Timeout, Watchdog, Eingänge beim Reset LOW (5.6).
+- Pinbelegung erst nach Abgleich mit dem Board-Pinout, Strapping-Pins meiden.
+- Secrets nur in `secrets.yaml`.
 
-```
-sensor_t:   init(), read() -> Wert, sleep()
-aktor_t:    init(), set(wert, max_dauer), off()
-regel_t:    eval(messwerte, konfig) -> aktor_befehle
-```
+## Erweiterbarkeit
 
-Eine Geräte-Konfiguration (Topf, Hydroponik, Pilzbox) ist dann nur eine Liste, welche Module
-aktiv sind, und ein Satz Schwellwerte. Für die Pilzbox kommen z. B. `sensor_scd41`,
-`aktor_vernebler`, `aktor_luefter` und `regel_feuchte_co2` dazu, der Rest bleibt.
+Das Muster "reine Entscheidungsfunktion plus ESPHome-Treiber" trägt auch die späteren Stufen: je
+Anwendung eine eigene Logikfunktion mit denselben Test- und Sicherheitsregeln, zum Beispiel eine
+Feuchte- und CO2-Regelung für die Pilzbox (Stufe 5). Mehrere Töpfe (Stufe 3) bedeuten eine
+`plant_logic`-Instanz pro Topf.
 
-## Sicherheitsregeln in der Firmware
+## Stufe 2
 
-- Maximale Pumplaufzeit hart begrenzt (Wasser 60 s, Dünger 10 s), unabhängig von Regeln.
-- Sperrzeit nach Gießen (z. B. 6 h), damit nicht bei träger Feuchteanzeige nachgepumpt wird.
-- Plausibilität: Feuchte-Rohwert außerhalb Kalibrierbereich -> Sensorfehler, nicht gießen, Alarm.
-- Tank-leer-Schalter aktiv -> nicht pumpen, Alarm.
-- Watchdog aktiv. Brown-out-Detektor aktiv (Akku leer -> kein Pumpen).
+Deep Sleep bis Uhrzeit (`deep_sleep.enter` mit `until` und SNTP), `ota_hold` für OTA, retained
+Befehle mit ID und Quittung, Peripherie im Schlaf abschalten (DRV8833 nSLEEP, HX711 Power-Down,
+Sonde stromlos), Pause zwischen den Portionen im Light Sleep. Messstrategie in `15`.
 
-## Datenformat Status (JSON)
+## Reihenfolge
 
-```json
-{
-  "id": "topf1",
-  "fw": "0.1.0",
-  "boden_feuchte_pct": 41.2,
-  "boden_feuchte_raw": 1830,
-  "boden_temp_c": 19.5,
-  "luft_temp_c": 21.3,
-  "luft_rf_pct": 38,
-  "licht_lux": 850,
-  "tank_halb": true,
-  "tank_leer": false,
-  "duenger_leer": false,
-  "duenger_rest_ml": 96.5,
-  "akku_v": 3.91,
-  "usb": false,
-  "letztes_giessen_s": 43200,
-  "gegossen_gesamt_ml": 1240
-}
-```
-
-## Konfig (retained im Broker)
-
-```json
-{
-  "intervall_s": 1800,
-  "feuchte_min_pct": 35,
-  "feuchte_ziel_pct": 60,
-  "giessmenge_ml": 80,
-  "sperrzeit_s": 21600,
-  "duenger_ml_pro_giessen": 2.0,
-  "duenger_aktiv": true
-}
-```
-
-## OTA
-
-ESP-IDF und ESPHome bringen OTA mit. Im Akkubetrieb OTA nur bei USB-Anschluss zulassen,
-sonst kann ein Update mitten im Schreiben den Akku leer ziehen.
-
-## Entwicklungsreihenfolge
-
-1. Blink + serielle Ausgabe, PlatformIO-Projekt im Ordner `firmware/`.
-2. Sensoren einzeln auslesen, Rohwerte loggen.
-3. WLAN + MQTT publish.
-4. Deep Sleep, Ruhestrom messen (Ziel unter 1 mA am Akku).
-5. Pumpen ansteuern, Kalibrierung ml pro Sekunde.
-6. Regeln, Sperrzeiten, Sicherungen.
-7. Konfig per MQTT, OTA.
+Nach den Meilensteinen M1 bis M5 (`11-meilensteine.md`), nicht vorgreifen. Die Unit-Tests für
+`plant_logic` dürfen schon während M1 und M2 entstehen, weil sie keine Hardware brauchen.

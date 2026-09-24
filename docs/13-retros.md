@@ -1,14 +1,14 @@
 # 13 Retros
 
-Pro Iteration drei Zeilen. Kurz halten, sonst schreibt sie keiner.
+Pro Meilenstein drei Zeilen. Kurz halten, sonst schreibt sie keiner.
 
-## Iteration 0 (Sep 2026)
+## M0 Kickoff (Sep 2026)
 
-- Lief: Kickoff, Repo steht, Anforderungen geklärt.
+- Lief: Kickoff, Repo steht, Anforderungen geklärt, Spezifikation v1.2 eingearbeitet.
 - Nervt: noch nichts.
 - Ändern: noch nichts.
 
-## Iteration 1 (Okt 2026)
+## M1 Messkette (Okt 2026)
 
 - Lief:
 - Nervt:

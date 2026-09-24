@@ -1,4 +1,4 @@
-# 14 Stufe 4: Pilz-Growbox (Speisepilze)
+# 14 Stufe 5: Pilz-Growbox (Speisepilze)
 
 Idee aus dem Team: Wenn der Pflanzenautomat läuft, die gleiche Elektronik für eine
 Zuchtbox für Speisepilze nutzen (Austernpilz, Shiitake, Kräuterseitling, Champignon).
@@ -16,9 +16,9 @@ Aufbau wie eine Growbox für Pflanzen, aber die Regelgrößen sind andere.
 | Hygiene | egal | Kontamination durch Schimmel ist das Hauptrisiko | Geschlossene Box, Filter am Lufteinlass, keine Erde in der Nähe |
 
 Fazit: Elektronik, Firmware-Gerüst, MQTT, Zentrale und Telegram bleiben gleich. Anders sind
-Sensorbestückung, Aktoren und die Regeln. Deshalb wird die Firmware ab Iteration 2 so
-gebaut, dass Sensoren und Aktoren als austauschbare Module mit eigenem Regelblock laufen
-(siehe `07-firmware-konzept.md`).
+Sensorbestückung, Aktoren und die Regeln. Die Firmware kapselt die Entscheidungslogik als reine
+Funktion ohne I/O (`plant_logic`, siehe `07-firmware-konzept.md`). Für die Box kommt eine eigene
+Logikfunktion mit denselben Test- und Sicherheitsregeln dazu.
 
 ## Zusätzliche Hardware (Schätzung 09/2026)
 
@@ -57,8 +57,8 @@ begleiten und nach 2 bis 3 Wochen zum Umschalten auf Fruchtung auffordern.
 
 | Zone | Sensoren | Aktoren |
 |---|---|---|
-| Topf (Stufe 1) | Bodenfeuchte, Bodentemp., Luft T/rF, Licht, Tankstand | Wasserpumpe, Dosierpumpe |
-| Box (Stufe 4) | SCD41 (CO2, T, rF), Substratfeuchte, Wasserstand Vernebler | Vernebler, Lüfter, LED, Heizmatte |
+| Topf (Stufe 1) | Bodenfeuchte, Wägezellen für Tank und Dünger, optional Luft T/rF | 2 Schlauchpumpen |
+| Box (Stufe 5) | SCD41 (CO2, T, rF), Substratfeuchte, Wasserstand Vernebler | Vernebler, Lüfter, LED, Heizmatte |
 
 Beide Zonen können am gleichen ESP32 hängen (genug GPIOs, I2C-Bus geteilt) oder es gibt einen
 zweiten ESP32 mit anderer Geräte-ID. Zweiteres ist sauberer, weil die Box am Netzteil hängt
@@ -68,9 +68,9 @@ zweiten ESP32 mit anderer Geräte-ID. Zweiteres ist sauberer, weil die Box am Ne
 
 - Akkubetrieb: Vernebler und Lüfter brauchen Dauerstrom, die Box läuft am Netzteil.
 - Deep Sleep: Feuchte und CO2 müssen minütlich geregelt werden.
-- Dosierpumpe und Tropfring.
+- Dosierpumpe und fester Auslass am Topf.
 
-## Offene Fragen für Stufe 4
+## Offene Fragen für Stufe 5
 
 | Frage | Optionen |
 |---|---|

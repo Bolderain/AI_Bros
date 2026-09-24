@@ -1,10 +1,16 @@
-# Build-Artefakte
+# Zugangsdaten
+secrets.yaml
+.env
+
+# ESPHome und Builds
+.esphome/
 build/
 .pio/
 *.bin
 *.elf
+
+# Sonstiges
 __pycache__/
 *.pyc
 node_modules/
-.env
 .DS_Store

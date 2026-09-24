@@ -1,70 +1,45 @@
-# 05 Stückliste
+# 05 Stückliste, Kauf und Budget
 
-Alle Preise sind **Schätzungen, Stand September 2026**, Brutto, ohne Versand. Vor dem Bestellen
-prüfen. Bezugsquellen: Berrybase, Reichelt, AZ-Delivery (DE, 1 bis 3 Tage), AliExpress
-(2 bis 4 Wochen, ca. halber Preis, Qualität streut).
+Maßgeblich für Stufe 1: `00-spezifikation-stufe1.md`, Abschnitt 4 (H01 bis H12). Hier stehen
+Kaufkriterien, Bestellreihenfolge und das Budget über alle Stufen.
 
-Grundsatz für den Anfang: **steckbar statt gelötet**. Großes ESP32-DevKit mit Pins, Breadboard,
-Module mit Stiftleisten oder Schraubklemmen. Kein Akku, Betrieb am USB-Netzteil. Zentrale ist
-der **vorhandene Raspi** (kein Kauf). Löten erst, wenn es wirklich nötig ist.
+Preise sind Schätzungen, Stand 09/2026, ohne Versand. Bezugsquellen: Berrybase, Reichelt,
+AZ-Delivery (DE, 1 bis 3 Tage), AliExpress (2 bis 4 Wochen, günstiger, Qualität streut).
 
-## A. Prototyp (Iteration 1 bis 3, Breadboard, kein Löten)
+## Kaufkriterien für "kein Löten" (R13)
 
-| Nr | Teil | Menge | Preis DE | Bemerkung |
-|---|---|---|---|---|
-| P1 | ESP32-C6-DevKitC-1 (oder ESP32-WROOM-DevKit) | 1 | 10 bis 12 | Großes Board mit Pins, breadboard-tauglich, USB dran. Gleiche Chip-Familie wie das spätere XIAO |
-| P2 | Breadboard 830 Punkte | 1 | 5 | Alles steckbar |
-| P3 | Jumperkabel-Set (m/m, m/w, w/w) | 1 | 6 | Verbindungen |
-| P4 | Kapazitiver Bodenfeuchtesensor (mit Kabel/Stecker) | 1 | 15 | Pflicht, steuert das Gießen. Alternativ generischer v2.0 für 3 Euro, Kante versiegeln |
-| P5 | DS18B20 wasserdicht (konfektioniert) | 1 | 3 | Optional, Substrattemperatur, nur bei kaltem Standort nützlich |
-| P6 | SHT40-Breakout (I2C, mit Stiftleiste) | 1 | 5 | Optional, Luft T/rF als Tageswert |
-| P7 | Pumpentreiber-Modul mit Schraubklemmen (MOSFET) | 2 | 4 | Statt MOSFET löten: Pumpe einklemmen, Steuerpin stecken |
-| P8 | Boost-Modul 5 V (mit Stiftleisten) | 1 | 4 | 5 V für die Pumpen |
-| P9 | Mini-Tauchpumpe 3 bis 6 V (Wasser) | 1 | 5 | Ersatz mitbestellen |
-| P10 | Peristaltikpumpe 5/6 V (Dünger) | 1 | 15 | Dosiert exakt, selbstansaugend |
-| P11 | Schwimmerschalter (Tank halb, Tank leer, Dünger leer) | 3 | 9 | Füllstände, reine Schalter |
-| P12 | Silikonschlauch 4/6 mm, Rückschlagventil, Tropfring | 1 | 11 | Wasserweg |
-| P13 | Wasserkanister 5 l, Düngerbehälter 150 ml | 1 | 8 | Vorrat |
-| P14 | USB-Netzteil 5 V | 1 | 6 | Kein Akku in dieser Phase |
-| | **Summe Prototyp** | | **ca. 110 bis 115** | Ohne DS18B20 und SHT40: ca. 102 |
-
-Zentrale: vorhandener Raspi, microSD ggf. 8 Euro. Werkzeug: INA219 oder USB-Strommesser
-(ca. 5 Euro) erst ab Iteration 4 nötig (Ruhestrom messen). Flüssigdünger ca. 5 Euro.
-
-## B. Zielversion (ab Iteration 4, gelötet, mit Akku)
-
-Wenn die steckbare Schaltung läuft, wandert dieselbe Verdrahtung auf Lochraster oder eigene
-Platine und ins Gehäuse. Dann kommen dazu:
-
-| Teil | Preis DE | Zweck |
-|---|---|---|
-| Seeed XIAO ESP32-C6 | 10 | Kleines Zielboard, Akku-Ladeschaltung integriert |
-| Li-Ion 18650 3500 mAh + Halter | 10 | Stromspeicher |
-| Load-Switch / P-MOSFET Sensorversorgung | 2 | Sensoren im Schlaf trennen, Ruhestrom senken |
-| Lochraster, Stiftleisten, JST, Kabel | 10 | Fester Aufbau |
-| 3D-Druck Gehäuse PETG (Bambu A1 Mini) | 8 | Hülle im Flaschenformat |
-| Kleinteile (Epoxid, Kabelbinder, Dichtung) | 10 | Vergießen, Abdichten |
-| **Zusatz Zielversion** | **ca. 50** | |
-
-Optionaler Ausbau (siehe `06-stromversorgung.md`): TPL5110-Timer (ca. 3, Ruhestrom unter 1 µA),
-Solarzelle 1 W + MPPT-Lader (ca. 12, macht Laden überflüssig).
-
-## Budgetcheck
-
-| Block | Betrag |
+| Teil | Worauf achten |
 |---|---|
-| A Prototyp | ca. 115 |
-| B Zusatz Zielversion | ca. 50 |
-| Werkzeug, Dünger, microSD | ca. 20 |
-| **Zwischensumme** | **ca. 185** |
-| Reserve (Fehlkäufe, Ersatz, Versand) | 60 |
-| **Gesamt** | **ca. 245 von 300 Euro** |
-
-Zentrale kostet 0 (Raspi vorhanden). Nicht im Budget: pH/EC-Sonden für Hydroponik (Stufe 3),
-Kamera, weitere Geräte für Stufe 2.
+| H01 FireBeetle 2 ESP32-C6 | Stiftleisten liegen lose bei (laut Händlerangaben 2 × 20-pol.). Entweder einmal anlöten oder für Stufe 1 ein fertig bestiftetes Board, Entscheidung E10 |
+| H02 Kapazitive Sonde | v1.2 mit TLC555 oder Markenmodul, kein NE555-Klon. Kommt mit Stecker und Kabel |
+| H05 DRV8833, H06 HX711 | Varianten mit vorgelöteten Stiftleisten wählen. Wägezelle per Schraubklemme oder fertig konfektioniert |
+| H12 SHT40 | Modul mit STEMMA-QT/Qwiic-Stecker plus Kabel auf Stiftleiste |
+| H09 | Wago- oder Schraubklemmen für Pumpenleitungen, dann braucht auch die Pumpe kein Löten |
 
 ## Bestellreihenfolge
 
-1. Sofort (Iteration 0): P1 bis P4, P7, P8, P9, P14. Damit läuft der Breadboard-Aufbau.
-2. Nach erstem Test (Iteration 1): P5, P6, P10 bis P13.
-3. Ab Iteration 4: Block B (Löten, Akku, Gehäuse).
+1. M1 Messkette: H01, H02, H09, H10, optional H08 und H12.
+2. M2 Aktorik: H03, H04, H05, H06, H06b, H11, optional H07.
+3. Zweites Set für paralleles Arbeiten: sobald M1 läuft.
+
+## Budget
+
+| Block | Betrag (Schätzung) |
+|---|---|
+| Node 1 inklusive der Optionen H07, H08, H12 | ca. 188 € |
+| Zweites Set | ca. 90 € |
+| 18650-Zelle + Halter für Akkutests | ca. 15 € |
+| Zentrale | 0 € (Raspi vorhanden) |
+| **Summe** | **ca. 293 € von 300 €** |
+
+Versand ist nicht enthalten, die Reserve ist damit knapp. Sparhebel in dieser Reihenfolge: H08
+(25 €), H12 (8 €), H07 (10 €), Umfang des zweiten Sets. Ob die 300 € nur Stufe 1 abdecken: E5.
+
+## Stufe 2 (nicht im Budget von Stufe 1, Schätzung)
+
+| Teil | ca. € | Zweck |
+|---|---|---|
+| TPL5110-Timer | 3 | Ruhestrom unter 1 µA, optional (`06`) |
+| Solarzelle 1 W | 10 bis 12 | Laden überflüssig machen, optional. Das Board unterstützt laut Herstellerangaben Solarladung, Details prüfen |
+| Lochraster oder eigene Platine, Kleinteile | 15 | fester Aufbau |
+| PETG-Filament, Dichtungen, Epoxid | 15 | Gehäuse vom A1 Mini, ggf. Tank |

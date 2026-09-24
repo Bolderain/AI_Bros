@@ -1,48 +1,57 @@
 # 12 Risiken und offene Fragen
 
+Offene Entscheidungen für Stufe 1 (E1 bis E12) stehen maßgeblich in `00-spezifikation-stufe1.md`,
+Abschnitt 10. Hier stehen Risiken, Fragen zu späteren Stufen und bereits Erledigtes.
+
 ## Risiken
 
 | Risiko | Wirkung | Gegenmaßnahme |
 |---|---|---|
-| Pumpe läuft durch (Softwarefehler, hängender Sensor) | Topf und Fensterbrett geflutet | Harte Laufzeitgrenze, Sperrzeit, Plausibilitätsprüfung, Untersetzer mit Überlaufsensor |
-| Feuchtesensor driftet oder korrodiert | Falsches Gießen über Wochen unbemerkt | Markensensor oder versiegelter Billigsensor, Rohwert im Dashboard, halbjährliche Kontrolle |
-| Ruhestrom zu hoch | Akkulaufzeit Tage statt Wochen | Sensoren schaltbar versorgen, LEDs auslöten, früh messen |
-| Wasser erreicht Elektronik | Kurzschluss, Li-Ion-Risiko | Elektronik oben, Wasserpfad unten, Dichtung, Vergussmasse am Spieß |
-| WLAN-Verbindung dauert lange | Aktivphase frisst Akku | Statische IP, schneller Kanal, MQTT-Timeout 10 s |
-| Pi Zero 2 W nicht lieferbar | Zentrale fehlt | Vorhandenen Pi oder alten Laptop nehmen |
-| Dünger kristallisiert im Schlauch | Dosierpumpe blockiert | Vorverdünnen, nach Dosierung kurz mit Wasser spülen (T-Stück vor der Dosierstelle) |
-| Algen im Tank | Pumpe verstopft | Kanister lichtdicht, Filter am Pumpeneinlass |
-| Team-Zeit | Termin März rutscht | Iterationen klein halten, It. 5 nicht verschieben |
-| Gedruckter Tank undicht | Wasser im Gerät | Erst extern testen (24 h), Elektronik immer über dem Tank, Prototyp B erst nach stabilem Prototyp A |
+| Pumpe läuft durch oder Tank entleert sich | Wasserschaden | Schlauchpumpen statt Tauchpumpen (kein Heber), zentrale Pumpenfunktion mit Timeout, Watchdog, Limits, absolute Grenzen, Förderkontrolle per Wägezelle, Auffangwanne |
+| Tippfehler in der Config | Überflutung | Validierung gegen absolute Grenzen (R20, T17) |
+| Sonde driftet oder korrodiert | falsches Gießen über Wochen | TLC555-Modul oder Markenmodul, Kante versiegeln, nur zur Messung bestromen, Plausibilitätsprüfung, halbjährlich kontrollieren |
+| Wasser geht neben den Topf | Pflanze vertrocknet unbemerkt | Anstiegsprüfung nach dem Gießen (T08) |
+| Wägung verfälscht | Fehlalarm bei der Förderkontrolle | Schläuche lose und zugentlastet, Beruhigungszeit `settle_s`, nie während eines Pumpenlaufs wiegen |
+| Keine Zeit nach Stromausfall ohne Netz | Gießfenster unbekannt | lokaler NTP, Notbetrieb (T18) |
+| Home Assistant löscht den Verlauf nach 10 Tagen | Datenbasis für die KI fehlt | `purge_keep_days` erhöhen, InfluxDB oder CSV nach `data/` |
+| SD-Karte im Raspi fällt aus | Daten weg | Backup, Schreiblast begrenzen |
+| Board braucht Löten | Widerspruch zu R13 | E10 |
+| Budget knapp (ca. 293 € ohne Versand) | kein Geld für Ersatzteile | Optionen streichen, E5 |
+| Düngerlösung verkeimt oder kristallisiert | Schlauch verstopft | blickdicht, vorverdünnt, zur Saison neu ansetzen |
+| Algen im Tank | Schlauch verstopft | blickdichte Behälter |
+| Team-Zeit | März 2027 rutscht | Meilensteine klein halten, M5 Anfang Februar starten |
+| Gedruckter Tank undicht (Stufe 2) | Wasser im Gerät | erst 24 h extern testen, Elektronik immer über dem Tank |
 
-## Offene Fragen (vor Iteration 1 klären)
+## Offene Fragen zu Stufe 2 und später
 
-| Frage | Optionen | Entscheidung bis |
+| Frage | Optionen | Wann |
 |---|---|---|
-| Welche Pflanze für den Prototyp? | Efeutute (Empfehlung), Basilikum, andere | Iteration 0 |
-| Vorhandener Raspberry Pi im Team? | Ja -> 40 Euro gespart | Iteration 0 |
-| Integrierter Tank: Variante B1, B2 oder B3 (siehe `09-mechanik-gehaeuse.md`)? | Sockel-Tank empfohlen | Iteration 6 |
-| Feuchtesensor: DFRobot IP65 oder Billigsensor mit Epoxid? | Preis vs. Aufwand | Iteration 0 (Bestellung) |
-| Düngerbehälter im Rohr oder außen angeclipst? | Formfaktor vs. Akkugröße | Iteration 4 |
-| ESP-IDF oder Arduino-Core? | Vorlieben der Embedded-Leute | Iteration 1 |
-| Home Assistant zusätzlich zum eigenen Stack? | Komfort vs. Basteln | Iteration 3 |
+| Integrierter Tank: Variante B1, B2 oder B3 (`09`) | Sockel-Tank empfohlen | Stufe 2, nach E8 |
+| Düngerbehälter im Gehäuse oder außen | Formfaktor gegen Akkugröße | Stufe 2 |
+| Pumpen direkt am Akku oder über Boost (`04`) | testen | Stufe 2 |
+| Solarzelle, TPL5110 (`06`) | optional | Stufe 2 |
 
-## Bewusst nicht in Stufe 1
+## Erledigt
 
-- pH- und EC-Sensorik im Substrat (unzuverlässig), NPK-Sensoren (nicht brauchbar).
-- Mehrkanal-Düngung.
-- Außenbetrieb, Solar.
-- Eigene App.
-- Kamera.
+| Frage | Ergebnis |
+|---|---|
+| Raspi vorhanden? | ja, die Zentrale kostet nichts |
+| ESP-IDF oder Arduino? | ESPHome plus `plant_logic` (Spezifikation 5) |
+| Home Assistant oder eigener Stack? | Home Assistant (Spezifikation 8) |
+| Welcher Feuchtesensor? | kapazitiv, TLC555 oder Markenmodul (H02) |
+| Füllstand per Schwimmer oder Wägezelle? | Wägezelle (H06, H06b) |
+| Wasserpumpe: Tauch- oder Schlauchpumpe? | Schlauchpumpe (H03) |
+| NPK-Sonde? | nicht verwenden (Spezifikation 4.2) |
+| Lichtsensor? | gestrichen (`15`) |
 
-## Ideen für später (nicht geplant, nur notiert)
+## Verifikationsstand
 
-- Stufe 4 Pilz-Growbox: eigene Seite `14-pilzzucht.md`. Beeinflusst jetzt schon die
-  Firmware-Struktur (Module statt fest verdrahtet).
-
-## Nicht verifiziert (Kennzeichnung)
-
-Alle Preise sind Schätzungen mit Stand September 2026. Die Laufzeitrechnung in
-`06-stromversorgung.md` basiert auf Datenblatt-Größenordnungen und ist zu messen.
-Die Pflanzenprofile in `10-pflegeregeln.md` sind Startwerte aus Gärtnererfahrung, nicht
-aus Messungen mit diesem Gerät.
+| Angabe | Stand |
+|---|---|
+| Preise | Schätzung 09/2026 |
+| Energie-Schätzungen (`06`, Spezifikation 13) | Schätzung, in M5 messen |
+| Pflanzenprofile (`10`) | Startwerte, nicht verifiziert |
+| FireBeetle 2: Schlafstrom 16 µA | Herstellerangabe, mehrfach gefunden |
+| FireBeetle 2: Schlafstrom 36 µA für V1.2 | nicht verifiziert |
+| FireBeetle 2: Stiftleisten lose im Lieferumfang | laut Händlerangaben |
+| Mi Flora ab Firmware 3.2.1 in HA, ohne Batteriestand bei neueren Geräten | laut HA-Doku |

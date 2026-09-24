@@ -1,96 +1,68 @@
 # 03 Sensorik
 
-Leitfrage: Welche Werte braucht man, damit eine Topfpflanze über Jahre gedeiht, und welche
-davon lassen sich mit Hobby-Hardware zuverlässig messen?
+Maßgeblich für Stufe 1: `00-spezifikation-stufe1.md`, Abschnitte 2 und 4. Hier die Begründung:
+Welche Werte braucht eine Topfpflanze über Jahre, und welche lassen sich mit Hobby-Hardware
+zuverlässig messen?
 
 ## Was eine Topfpflanze braucht
 
 | Faktor | Wirkung | Messbar mit Hobby-Hardware? |
 |---|---|---|
-| Wasser im Substrat | Zu trocken: Welke. Zu nass: Wurzelfäule, häufigste Todesursache bei Zimmerpflanzen | Ja, kapazitiver Bodenfeuchtesensor |
-| Licht | Zu wenig Licht: Vergeilen, kein Wachstum. Bestimmt auch den Wasserbedarf | Ja, Lux-Sensor (Näherung, kein PAR) |
-| Lufttemperatur | Unter ca. 10 °C leiden viele Zimmerpflanzen, Wasserbedarf steigt mit Temperatur | Ja |
-| Luftfeuchte | Trockene Heizungsluft im Winter, Blattspitzen werden braun | Ja |
-| Substrattemperatur | Kalte Wurzeln am Fensterbrett im Winter | Ja, DS18B20 |
-| Nährstoffe (N, P, K, Spurenelemente) | Mangel über Monate: gelbe Blätter, Kümmerwuchs. Überschuss: Salzschäden | Nur indirekt über EC (Leitfähigkeit), NPK-Sensoren unzuverlässig, siehe unten |
-| pH des Substrats | Bestimmt Nährstoffverfügbarkeit, driftet über Jahre durch Gießwasser und Dünger | In Erde schwierig, in Nährlösung gut |
-| Wurzelraum | Topf wird über Jahre zu klein, Substrat verdichtet | Nicht messbar, Umtopfen alle 1 bis 3 Jahre bleibt Handarbeit |
+| Wasser im Substrat | Zu trocken: Welke. Zu nass: Wurzelfäule, häufigste Todesursache bei Zimmerpflanzen | Ja, kapazitive Sonde |
+| Licht | Zu wenig Licht: Vergeilen, kein Wachstum | Ja, aber für die Gießentscheidung redundant und leicht verdeckt, deshalb gestrichen (`15`) |
+| Lufttemperatur, Luftfeuchte | Treiben die Austrocknung, trockene Heizungsluft im Winter | Ja, SHT40 (optional, R22) |
+| Nährstoffe (N, P, K, Spurenelemente) | Mangel über Monate: gelbe Blätter. Überschuss: Salzschäden | Nur indirekt über EC, siehe unten |
+| pH des Substrats | Bestimmt die Nährstoffverfügbarkeit | In Erde schwierig, in Nährlösung gut (Stufe 4) |
+| Wurzelraum | Topf wird über Jahre zu klein | Nicht messbar, Umtopfen bleibt Handarbeit |
 
-## Auswahl für Stufe 1
+## Auswahl Stufe 1
 
-| Größe | Sensor | Schnittstelle | Preis (Schätzung 09/2026) | Begründung |
-|---|---|---|---|---|
-| Bodenfeuchte | DFRobot SEN0308 (kapazitiv, wasserdicht, IP65) oder generischer "Capacitive Soil Moisture Sensor v2.0" | Analog | 15 Euro bzw. 3 Euro | Kapazitiv statt resistiv: keine korrodierenden Elektroden. Beim Billigsensor die Schnittkante mit Epoxid versiegeln, sonst zieht Feuchte in die Platine. Erfahrungsberichte: unversiegelte Billigsensoren korrodieren nach einer Saison an den Bauteilen |
-| Substrattemperatur | DS18B20 wasserdicht | 1-Wire | 3 Euro | Robust, günstig, kann am Feuchtesensor mit in die Erde |
-| Luft Temperatur + Feuchte | SHT40 (Sensirion) oder BME280 | I2C | 5 Euro | SHT40 ist genauer bei Feuchte, BME280 liefert zusätzlich Luftdruck (hier unwichtig) |
-| Licht | gestrichen (siehe `15-messintervalle.md`) | | | Für die Gießentscheidung redundant, leicht durch Blätter verdeckt. Grobes Hell/Dunkel liefert später die Solarzelle im Deckel gratis |
-| Wasserstand Tank | 2 Schwimmerschalter (halb, leer) oder Ultraschall JSN-SR04T | Digital | 3 Euro pro Schalter | Schwimmerschalter sind das simpelste Zuverlässige. Alternative: Tank auf Wägezelle (HX711, ca. 6 Euro), liefert kontinuierlichen Füllstand und misst nebenbei die tatsächlich gepumpte Menge |
-| Düngerstand | Zählen der dosierten Menge plus ein Schwimmerschalter "fast leer" | Digital | 3 Euro | Peristaltikpumpe fördert reproduzierbar, Zählen reicht |
-| Akkuspannung | Spannungsteiler an ADC (XIAO C6 hat das intern) | Analog | 0 Euro | Für "Akku schwach"-Meldung |
-| Pumpen-Rückmeldung | Kein Durchflusssensor in Stufe 1 | | | Stattdessen: Feuchte muss nach dem Gießen steigen. Wenn nicht, Alarm "Pumpe oder Tank prüfen" |
+| Größe | Sensor | Prio | Begründung |
+|---|---|---|---|
+| Bodenfeuchte | Kapazitive Sonde, Markenmodul (z. B. DFRobot SEN0308) oder v1.2 mit TLC555, 2 Stück (H02) | Muss (R02) | Keine korrodierenden Elektroden. NE555-Klone laufen an 3,3 V unzuverlässig, viele billige "v2.0"-Module haben einen. Platinenkante versiegeln. Nur während der Messung per GPIO bestromen |
+| Wasservorrat | Wägezelle 1 kg + HX711 unter dem Tank (H06) | Muss (R07) | Misst Restmenge und die tatsächlich geförderte Menge. Ersetzt die früher geplanten Schwimmerschalter |
+| Düngervorrat | Kleine Wägezelle + HX711 (H06b) oder Dosenzähler | Soll | Förderkontrolle der Düngerpumpe |
+| Topfgewicht | Wägezelle + HX711 unter dem Topf (H07) | Kann (R18) | Vergleich mit der Sonde, Datenbasis für die KI |
+| Luftklima | SHT40 mit STEMMA-QT/Qwiic-Stecker (H12) | Kann (R22) | Kontext für die KI, kein Löten |
+| EC | Mi Flora per BLE (H08) oder EC-Modul am ESP | Kann (R17) | Versalzungsindikator, siehe unten |
+| Substrattemperatur | DS18B20 | gestrichen | Nur Diagnose bei kaltem Standort, treibt keinen Aktor. Mi Flora liefert Temperatur mit |
+| Licht | – | gestrichen | siehe `15` |
 
-## Nährstoffmessung: gewollt, Weg noch offen
+Nicht verwenden (Spezifikation 4.2): resistive Feuchtesensoren, JSN-SR04T (Blindzone ca. 20 bis
+25 cm, im kleinen Tank unbrauchbar), NPK-Sonden.
 
-Wir wollen die Nährstoffversorgung nicht nur nach Plan düngen, sondern einen **Trend** sehen
-(reichert sich Salz an, oder zehrt es aus). Womit, ist noch offen. Zur Auswahl stehen zwei
-Sensoren am ESP32, die physikalisch **dasselbe** messen (Leitfähigkeit); der NPK-Sensor legt
-nur eine Umrechnungstabelle für N, P, K dahinter.
+## Nährstoffmessung: Trend ja, NPK nein
 
-| | EC-Sensor (analog) | NPK-Sonde (RS485/Modbus) |
+Ziel ist ein Trend: reichert sich Salz an, oder zehrt es aus? Reines Düngen nach Plan sieht diese
+langsame Drift nicht.
+
+- **Pflicht (R06):** Trend über das Dosierprotokoll (ml pro Monat, letzte Dosierung). Das sind
+  echte Daten, keine erfundenen Nährstoffwerte.
+- **Optional (R17):** EC als Versalzungsindikator. Zwei Wege:
+
+| | Mi Flora (BLE) | EC-Modul am ESP |
 |---|---|---|
-| Vorteil | misst nur die eine reale Größe, einfacher Anschluss (Analogpin) | liefert Feuchte/Temp/pH mit, gutes RS485-Lernobjekt |
-| Nachteil | trennt N/P/K nicht (kann keiner), Elektroden korrodieren in Erde | NPK-Zahlen geraten und nicht belastbar, Elektroden korrodieren, mehr Code |
-| Preis | ca. 50 | ca. 20 bis 60 |
+| Vorteil | fertig, kein Löten, liefert Feuchte und Temperatur mit, HA-Integration vorhanden | Sensor direkt am Node, volle Kontrolle über die Messung |
+| Nachteil | Firmware ab 3.2.1 nötig, neuere Geräte melden keinen Batteriestand, Raspi muss in BLE-Reichweite sein | Elektroden korrodieren in Erde, nur zur Messung bestromen und mit Wechselspannung messen |
+| Preis (Schätzung) | ca. 25 € | ca. 50 € |
 
-Gemeinsames Problem: Blanke Elektroden korrodieren und driften über genau die Monate, in denen
-der Trend entsteht. Gegenmittel: Sensor nur kurz beim Messen bestromen (ESP schaltet die
-Versorgung) und mit **Wechselspannung** messen, um Elektrolyse zu vermeiden. Wirklich stabil
-wird EC erst in Hydroponik-Nährlösung (Stufe 3). Für N, P, K einzeln bräuchte es Laboranalyse
-oder ionenselektive Elektroden (mehrere hundert Euro pro Ion).
+Für beide gilt: EC in Erde hängt stark von der Feuchte ab. Werte nur bei gleicher Feuchte
+vergleichen, zum Beispiel immer morgens vor dem Gießen.
 
-Entscheidung offen: EC oder NPK-Sonde, und ob im Topf überhaupt oder erst in Stufe 3. Details
-unten.
+NPK-Sonden messen physikalisch ebenfalls nur die Leitfähigkeit und rechnen N, P und K über eine
+Tabelle aus. Die Hersteller kennzeichnen diese Werte selbst nur als Referenz. N, P und K einzeln
+bräuchten Laboranalyse oder ionenselektive Elektroden (mehrere hundert Euro pro Ion). Als
+RS485/Modbus-Lernobjekt wären sie brauchbar, für die Regelung nicht.
 
-## Bewertung von pH, EC und NPK
-
-### NPK-Sensoren (RS485, "7-in-1", "Boden NPK Sensor")
-
-Nicht verwenden. Diese Sensoren messen im Kern Leitfähigkeit und Feuchte und rechnen daraus
-N, P und K per Tabelle aus. Selbst die Hersteller-Wikis (z. B. DFRobot SEN0605) schreiben, die
-NPK-Werte seien nur als Referenz brauchbar und nicht mit Laborwerten vergleichbar. Für
-Regelentscheidungen ungeeignet. Ein echter NPK-Wert braucht Laboranalyse oder Ionenselektive
-Elektroden (mehrere hundert Euro pro Ion).
-
-### EC (elektrische Leitfähigkeit)
-
-In feuchter Erde ist EC ein grober Indikator für den Salzgehalt, also "ist überhaupt Dünger da"
-bzw. "ist zu viel Dünger da". Die Messung hängt stark von der Feuchte ab. Brauchbar als Trend,
-nicht als Absolutwert. Für Stufe 1 weglassen, für Hydroponik (Stufe 3) Pflicht, dort mit
-DFRobot Gravity Analog EC (ca. 50 Euro, Schätzung).
-
-Praktische Alternative für Erde: Drainwasser auffangen und mit einem billigen EC-Stift
-(ca. 15 Euro) von Hand messen, ein- bis zweimal im Monat. Ergebnis von Hand ins Dashboard
-eintragen. Das reicht, um die Düngermenge über Monate nachzuführen.
-
-### pH
-
-In Erde messen die Billig-pH-Sonden (die mit Glaselektrode) nur zuverlässig in einer
-Aufschlämmung, nicht im Topf. Für Stufe 1 weglassen. Für Hydroponik (Stufe 3) Pflicht:
-DFRobot Gravity Analog pH V2 (ca. 35 Euro, Schätzung), regelmäßig kalibrieren.
-
-## Fazit Sensorik Stufe 1
-
-Gemessen wird: Bodenfeuchte (Pflicht). Substrattemperatur, Lufttemperatur und Luftfeuchte
-nur als optionaler Tageswert. Tankstand und Düngerstand beim Gießen, Akkuspannung bei jeder
-Aktivphase. Licht wird gestrichen (siehe `15-messintervalle.md`). Alles unter 40 Euro. Nährstoffe werden nach Zeit und
-Wachstumsphase dosiert und über das manuelle EC-Messen des Drainwassers nachgeführt.
+pH im Topf: Billige Glaselektroden messen nur in einer Aufschlämmung zuverlässig. Erst in der
+Hydroponik (Stufe 4) sinnvoll, dort mit regelmäßiger Kalibrierung.
 
 ## Kalibrierung Bodenfeuchte
 
-Der kapazitive Sensor liefert einen Rohwert (ADC), der pro Sensor und Substrat anders ist.
-Vorgehen: Rohwert in Luft und Rohwert in Wasser aufnehmen, linear auf 0 bis 100 % abbilden,
-dann in der echten Erde "trocken" und "frisch gegossen" markieren. Diese beiden Werte sind die
-Grundlage für die Schwellwerte in `10-pflegeregeln.md`.
+Die Sonde liefert einen Rohwert, der pro Sonde und Substrat anders ist. Vorgehen in M1: in der
+echten Erde `moisture_dry_raw` (trocken) und `moisture_wet_raw` (frisch gegossen) aufnehmen,
+Trocknungskurve über 7 Tage loggen, Protokoll in `../calibration/`. Die Werte gehen als Parameter
+in die Config, nie hart in den Code.
 
-Hinweis ESP32-ADC: Der ADC des ESP32 ist nichtlinear an den Rändern. Sensor an 3,3 V
-betreiben, Rohwert mehrfach lesen und mitteln, oder einen externen ADS1115 (ca. 4 Euro) nutzen.
+Hinweis ESP32-ADC: nichtlinear an den Rändern. 10 Messungen mitteln und die Streuung prüfen
+(Spezifikation 5.1). Ein externer ADC (z. B. ADS1115) bleibt Option, falls das nicht reicht.

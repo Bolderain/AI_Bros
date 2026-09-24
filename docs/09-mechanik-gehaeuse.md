@@ -1,5 +1,11 @@
 # 09 Mechanik und Gehäuse
 
+Gehäuse, Formfaktor und integrierter Tank sind Themen von **Stufe 2**. Der Aufbau von Stufe 1 ist
+ein Tischaufbau in einer Auffangwanne, Vorgaben in `00-spezifikation-stufe1.md`, Abschnitt 4.1:
+fester Auslass 3 bis 5 cm neben der Sonde, Schläuche lose und zugentlastet, Elektronik oberhalb
+des Wasserniveaus, blickdichte Behälter. Ob die Flaschengröße fest ist, entscheidet E8. Die
+Spezifikation sagt: Formfaktor aus dem Autonomieziel ableiten, nicht umgekehrt.
+
 ## Formfaktor
 
 Vorgabe: etwa eine 0,5-l-Bierflasche. Referenzmaße einer Euro-Bierflasche: ca. 27 cm hoch,
@@ -10,28 +16,28 @@ ca. 220 mm Länge plus einem Erdspieß unten. Es steckt wie ein Pflanzstab am To
 
 ```
         +----------+   Deckel: USB-C-Buchse, Status-LED, Taster
-        | Kopf     |   Luftsensor SHT40 und Lichtsensor BH1750 hinter Lüftungsschlitzen
-        | 40 mm    |   (Licht braucht ein klares Fenster nach oben)
+        | Kopf     |   Luftsensor SHT40 (optional) hinter Lüftungsschlitzen
+        | 40 mm    |   ggf. Solarzelle im Deckel
         +----------+
-        | Elektro- |   XIAO ESP32-C6, Boost, MOSFETs auf Lochraster
-        | nik      |   Schlauchanschlüsse seitlich: Wasser rein, Wasser raus (Tropfring)
+        | Elektro- |   ESP32-C6-Board, DRV8833, HX711 auf Lochraster
+        | nik      |   Schlauchanschlüsse seitlich: Ansaugung vom Tank, Auslass zum Topf
         | 60 mm    |
         +----------+
         | Akku     |   18650 längs im Halter
         | 70 mm    |
         +----------+
-        | Dosier-  |   Peristaltikpumpe, Düngerflasche 100 bis 150 ml seitlich angeclipst
-        | einheit  |   oder im Rohr (dann Akku kürzer, LiPo-Pouch statt 18650)
+        | Pumpen   |   2 Schlauchpumpen (Wasser, Dünger), Düngerflasche 100 ml seitlich
+        |          |   angeclipst oder im Rohr (dann Akku kürzer, LiPo-Pouch statt 18650)
         | 50 mm    |
         +----------+
-        | Spieß    |   Kapazitiver Feuchtesensor und DS18B20 in Nut, ca. 80 mm in der Erde
+        | Spieß    |   Kapazitive Sonde in Nut, ca. 80 mm in der Erde
         | 80 mm    |   Kabel innen nach oben
         +----------+
 ```
 
-**Prototyp A (Iteration 4 bis 6):** Die Wasserpumpe sitzt nicht im Gerät, sondern im Kanister (Tauchpumpe). Vom Kanister geht
-ein Schlauch zum Gerät, vom Gerät ein Schlauch zum Tropfring. Im Gerät wird der Dünger in
-diese Leitung eingespeist (T-Stück), so mischt sich das Konzentrat mit dem Gießwasser.
+**Gehäuse-Prototyp A (Stufe 2):** Beide Schlauchpumpen sitzen im Gerät. Ein Ansaugschlauch führt
+in den externen Tank, der auf einer Wägezelle steht. Vom Gerät gehen Wasser und Dünger zum festen
+Auslass neben der Sonde. Keine Tauchpumpe im Tank, wegen Heberrisiko (Spezifikation 4.2).
 
 ## Fertigung auf dem Bambu A1 Mini
 
@@ -72,12 +78,12 @@ Gehäuse ersetzen.
 | Anschluss | Typ |
 |---|---|
 | Sensorspieß | intern, fest |
-| Tauchpumpe im Kanister | 2-polig JST, 1,5 m Kabel |
-| Schwimmerschalter Kanister | 2 x 2-polig JST |
-| Schwimmerschalter Dünger | intern |
-| USB-C Laden/Programmieren | Buchse im Deckel, Verlängerung zum XIAO |
+| Wägezelle unter dem Tank | 4-polig, steckbar, 1,5 m Kabel |
+| Wägezelle Dünger | intern |
+| Ansaugschlauch Tank, Auslassschlauch Topf | Schlauchtüllen seitlich |
+| USB-C Laden/Programmieren | Buchse im Deckel, Verlängerung zum Board |
 
-## Prototyp B: Tank im Gerät (Iteration 7, Stufe 1b)
+## Gehäuse-Prototyp B: Tank im Gerät (Stufe 2)
 
 Endziel laut Team: Der Wassertank ist im Gerät, kein Kanister mehr. Rechnung: Bei 80 ml alle
 2 Tage braucht die Pflanze ca. 1,2 l pro Monat. Für 3 Wochen Vorrat sind ca. 1 l Tank nötig.
@@ -98,12 +104,12 @@ Anforderungen an den gedruckten Tank:
 
 - Dicht: 4 Wände, Böden 100 % Infill, innen mit Epoxid oder XTC-3D beschichten, 24 h Wassertest.
 - Nachfüllöffnung oben mit Deckel, Durchmesser mindestens 30 mm (Gießkanne).
-- Tauchpumpe im tiefsten Punkt, Schwimmerschalter "leer" 1 cm über der Pumpe.
+- Ansaugschlauch am tiefsten Punkt, Tank auf Wägezelle für Füllstand und Förderkontrolle.
 - Lichtdicht (dunkles Filament), sonst Algen.
 - Reinigbar: Deckel groß genug für einen Flaschenbürste.
 
-Bis der integrierte Tank existiert, bleibt der externe Kanister. Prototyp B ändert an
-Elektronik und Firmware nichts, nur der Pumpenstecker wandert nach innen.
+Bis der integrierte Tank existiert, bleibt der externe Tank. Prototyp B ändert an Elektronik und
+Firmware nichts, nur die Wägezelle wandert in den Sockel.
 
 ## Wie klein geht es semi-professionell?
 
@@ -115,8 +121,8 @@ nicht die Elektronik, sondern der Akku und der Wasservorrat.
 
 | Baugruppe | Lochraster-Aufbau (Prototyp A) | Semi-professionell (eigene Platine) |
 |---|---|---|
-| Controller | XIAO ESP32-C6, 21 x 18 mm, gesteckt | ESP32-C6-Mini-Modul direkt auf die Platine gelötet, ca. 15 x 13 mm |
-| Sensoren Luft/Licht | 3 Breakout-Boards, je ca. 15 x 15 mm | SHT40 und BH1750 als nackte Bauteile auf die Platine, zusammen unter 1 cm2 |
+| Controller | FireBeetle 2 oder XIAO ESP32-C6 (kleinste Fertigboard-Variante, 21 x 18 mm), gesteckt | ESP32-C6-Mini-Modul direkt auf die Platine gelötet, ca. 15 x 13 mm |
+| Luftsensor | SHT40-Breakout, ca. 15 x 15 mm | SHT40 als nacktes Bauteil auf der Platine, wenige mm2 |
 | Boost, MOSFETs | 3 Module | in die Platine integriert, wenige mm2 |
 | Verkabelung | Steckbrücken, JST, viel Luft | Leiterbahnen, fast kein Volumen |
 | Akku | 18650, 18 x 65 mm | LiPo-Pouch nach Formfaktor, z. B. 30 x 40 x 6 mm für 700 mAh |
@@ -134,8 +140,8 @@ Akku, Sensorspieß und, falls integriert, Wasser.
 | Halbe Flasche | Durchmesser 45 mm, 160 mm hoch | halbe 0,33-l-Dose | 18650 | ca. 150 ml intern (wenige Tage) | Wenn ein kleiner interner Vorrat reichen soll |
 
 Mit eigener Platine, LiPo statt 18650 und SMD-Sensoren ist ein Gerät von der Größe eines
-dicken Filzstifts machbar, das misst, funkt und über ein bistabiles Ventil per Schwerkraft
-gießt. Sobald ein nennenswerter Wasservorrat (Wochen) im Gerät sein soll, gewinnt das Wasser
+dicken Filzstifts machbar, das misst und funkt, während Pumpen und Tank in einer getrennten Box sitzen. Die früher erwogene Variante mit Schwerkraft und bistabilem Ventil hat ein Flutrisiko (`06`) und ist nicht vorgesehen.
+Sobald ein nennenswerter Wasservorrat (Wochen) im Gerät sein soll, gewinnt das Wasser
 den Kampf um das Volumen und das Gerät wird zwangsläufig größer, egal wie klein die Elektronik ist.
 
 ### Kosten der Miniaturisierung

@@ -1,49 +1,45 @@
 # 04 Aktorik
 
-## Wasserpumpe
+Maßgeblich für Stufe 1: `00-spezifikation-stufe1.md`, Abschnitte 4, 5.6 und 7.
 
-| Option | Beschreibung | Vorteil | Nachteil |
-|---|---|---|---|
-| **Mini-Tauchpumpe 3 bis 6 V DC** (empfohlen Stufe 1) | Sitzt im Wassertank, fördert ca. 1 bis 2 l/min bei 5 V, Stromaufnahme ca. 150 bis 300 mA (Schätzung) | Billig (3 bis 5 Euro), direkt aus 5-V-Boost, kein Ansaugen nötig | Nicht selbstansaugend außerhalb des Wassers, Menge nur über Laufzeit steuerbar |
-| Peristaltikpumpe 12 V, 60 bis 150 ml/min | Selbstansaugend, dosiert exakt | Genaue Menge, kein Rücklauf | 12 V nötig (zweiter Boost), langsam, teurer (10 bis 20 Euro) |
-| Membranpumpe 12 V | Hoher Druck, selbstansaugend | Viele Töpfe möglich (Stufe 2) | Laut, 12 V, Stromhunger |
+## Pumpen: zwei Schlauchpumpen
 
-Mengensteuerung bei der Tauchpumpe: einmal messen, wie viel ml die Pumpe in 10 s fördert,
-in der Firmware als Konstante hinterlegen. Rückschlagventil in die Leitung, sonst läuft
-Wasser aus dem Schlauch zurück und der nächste Gießvorgang fördert erst Luft.
+| Punkt | Festlegung | Begründung |
+|---|---|---|
+| Typ | Schlauchpumpe (peristaltisch) 5 V, je eine für Wasser und Dünger (H03) | fördert reproduzierbar, Menge = Laufzeit × kalibrierte Förderrate |
+| Kein Rückschlagventil | die Pumpe klemmt den Schlauch im Stillstand ab | kein Rücklauf, kein Leerlaufen |
+| Keine Tauchpumpe | Heberrisiko: Liegt der Tank höher als der Auslass, kann er sich über den Schlauch selbst entleeren. Zudem ungenau | Wasserschaden vermeiden. Die früher geplante Tauchpumpe entfällt |
+| Kalibrierung | Förderrate in ml/s je Pumpe mit der Küchenwaage (M2), Protokoll in `../calibration/` | Parameter `pump_water_ml_per_s`, `pump_fert_ml_per_s` |
+| Wartung | Pumpenschlauch altert, etwa jährlich tauschen (Schätzung) und neu kalibrieren | |
 
-Wasserverteilung im Topf: Tropfring aus Schlauch mit 4 bis 6 Löchern, oder zwei Tropfer.
-Punktgießen an einer Stelle führt zu ungleichmäßiger Feuchte und falschen Messwerten.
+## Treiber: DRV8833
 
-## Dosierpumpe für Dünger
+- Ein vorgelötetes DRV8833-Modul (H05) treibt beide Pumpen, VM aus 5 V.
+- nSLEEP: prüfen, ob auf dem Modul fest verdrahtet. Für Stufe 2 per GPIO schaltbar vorsehen, sonst
+  bleibt Ruhestrom.
+- Eingänge beim Reset definiert LOW (interne Pulldowns, im Datenblatt prüfen, Spezifikation 5.6).
+- Nicht verwenden: IRF520-Module, kein Logic-Level.
+- Stufe 2: Der DRV8833 arbeitet laut Datenblatt ab 2,7 V, VM direkt aus der Li-Ion-Zelle ist also
+  möglich. 5-V-Pumpen fördern dann langsamer, neu kalibrieren und die Saugleistung testen.
+  Reicht sie nicht, Boost-Wandler mit Enable.
 
-Peristaltikpumpe ist hier die richtige Wahl: fördert exakt, Dünger kommt nicht mit dem Motor
-in Kontakt, selbstansaugend, kein Rücklauf.
+## Auslass
 
-| Modell | Spannung | Förderrate | Preis (Schätzung) |
-|---|---|---|---|
-| Adafruit Peristaltik 5 bis 6 V | 5 V | ca. 50 ml/min | ca. 15 Euro |
-| Generisch "Kamoer NKP" 12 V | 12 V | 11 bis 100 ml/min je nach Typ | 10 bis 15 Euro |
-| Generisch 6 V Dosierpumpe (AliExpress) | 6 V | 20 bis 60 ml/min | 5 bis 8 Euro |
+- Wasser und Dünger an derselben Stelle, fest fixiert, 3 bis 5 cm (P) neben der Sonde. Zu weit weg
+  gibt Fehlalarme bei der Anstiegsprüfung, direkt auf der Sonde verfälscht es die Messung.
+- Der früher geplante Tropfring entfällt. Er verteilt besser, schwächt aber die Anstiegsprüfung
+  (R08). Bei größeren Töpfen später ein zweiter Auslass, dann `moisture_rise_min_pct` neu bestimmen.
+- Gießen in Portionen mit Pause, Dünger zwischen den Wasserportionen: So wird er eingespült und
+  verdünnt.
 
-Empfehlung: 5-/6-V-Typ, damit die gleiche 5-V-Schiene wie die Wasserpumpe reicht.
-Dosiermengen liegen im Bereich 1 bis 5 ml pro Gießvorgang (siehe `10-pflegeregeln.md`),
-also Laufzeiten von wenigen Sekunden. Kalibrieren: 60 s laufen lassen, Menge wiegen.
+## Sicherheit
 
-Silikonschlauch der Pumpe altert. Nach ca. einem Jahr ersetzen, in der Doku als
-Wartungspunkt vermerken.
+- Pumpen nur über eine zentrale Funktion mit festem Timeout (`max_pump_runtime_s`,
+  `ABS_MAX_PUMP_RUNTIME_S`), Watchdog aktiv.
+- Tages- und Wochenlimits, Förderkontrolle per Wägezelle, Anstiegsprüfung der Feuchte.
+- Elektronik oberhalb des Wasserniveaus, alles in einer Auffangwanne.
 
-## Ansteuerung
+## Stufe 3 (mehrere Töpfe)
 
-- Beide Pumpen über Logic-Level-N-MOSFET (z. B. IRLZ44N oder fertiges Modul mit AO3400)
-  gegen Masse schalten, Freilaufdiode über den Motor.
-- Boost-Wandler 3,7 V auf 5 V (MT3608-Modul oder besser TPS61023-Modul) speist beide
-  Pumpen. Enable-Pin des Wandlers an den ESP, damit er im Schlaf komplett aus ist.
-- Software-Sicherung: maximale Laufzeit pro Pumpvorgang hart begrenzen (z. B. 60 s),
-  unabhängig vom Feuchtewert. Ein hängender Sensor darf nie den Topf fluten.
-- Hardware-Sicherung (optional): Überlaufsensor im Untersetzer, der die Pumpe hart trennt.
-
-## Ventile
-
-In Stufe 1 keine. Ab Stufe 2 (mehrere Töpfe an einer Pumpe): 12-V-Magnetventile oder
-je Topf eine eigene Tauchpumpe. Letzteres ist bei 2 bis 3 Töpfen billiger und einfacher.
+Je Topf eine eigene Schlauchpumpe ist bei 2 bis 3 Töpfen einfacher als Magnetventile. Ein DRV8833
+hat zwei Kanäle, für jedes weitere Pumpenpaar ein weiteres Modul.

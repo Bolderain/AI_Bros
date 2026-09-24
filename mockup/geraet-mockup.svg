@@ -21,8 +21,8 @@
   </defs>
 
   <rect width="940" height="620" fill="#f4f1ea"/>
-  <text x="30" y="40" font-size="22" font-weight="bold" fill="#222">Pflanzenautomat, Mockup Stufe 1</text>
-  <text x="30" y="62" font-size="13" fill="#555">Gerät im Format einer 0,5-l-Flasche (ca. 27 cm x 7 cm), Wasserkanister getrennt. Maße nicht maßstabsgetreu.</text>
+  <text x="30" y="40" font-size="22" font-weight="bold" fill="#222">Pflanzenautomat, Mockup Stufe 2 (Flaschenformat)</text>
+  <text x="30" y="62" font-size="13" fill="#555">Gerät im Format einer 0,5-l-Flasche (ca. 27 cm x 7 cm), Tank getrennt auf Wägezelle. Nicht maßstabsgetreu. Stufe 1 ist ein Tischaufbau.</text>
 
   <!-- Fensterbrett -->
   <rect x="30" y="540" width="880" height="24" fill="#d9d2c3" stroke="#b8ae9b"/>
@@ -34,13 +34,11 @@
     <rect x="76" y="420" width="138" height="114" rx="6" fill="url(#water)" opacity="0.85"/>
     <rect x="120" y="310" width="50" height="24" rx="4" fill="#8aa0b0"/>
     <!-- Tauchpumpe -->
-    <rect x="100" y="495" width="40" height="30" rx="4" fill="#333"/>
-    <text x="104" y="515" font-size="9" fill="#fff">Pumpe</text>
+    <line x1="145" y1="334" x2="145" y2="528" stroke="#3f8fbf" stroke-width="4"/>
     <!-- Schwimmer -->
-    <circle cx="190" cy="425" r="7" fill="#ffd166" stroke="#a37c00"/>
-    <circle cx="190" cy="505" r="7" fill="#ffd166" stroke="#a37c00"/>
-    <text x="80" y="355" font-size="12" fill="#333">Kanister 5 l</text>
-    <text x="80" y="371" font-size="10" fill="#555">Schwimmer halb / leer</text>
+
+    <text x="152" y="355" font-size="12" fill="#333">Wassertank</text>
+    <text x="152" y="371" font-size="10" fill="#555">blickdicht</text>
   </g>
 
   <!-- Topf -->
@@ -60,8 +58,8 @@
     <ellipse cx="440" cy="320" rx="34" ry="18" fill="#358f42" transform="rotate(-20 440 320)"/>
     <ellipse cx="515" cy="330" rx="34" ry="18" fill="#358f42" transform="rotate(20 515 330)"/>
     <!-- Tropfring -->
-    <ellipse cx="470" cy="404" rx="95" ry="10" fill="none" stroke="#222" stroke-width="3" stroke-dasharray="8 6"/>
-    <text x="392" y="380" font-size="10" fill="#222">Tropfring</text>
+    <circle cx="560" cy="405" r="5" fill="#3f8fbf"/>
+    <text x="378" y="426" font-size="10" fill="#f4f1ea">Auslass, 3 bis 5 cm neben der Sonde</text>
   </g>
 
   <!-- Gerät -->
@@ -69,7 +67,7 @@
     <!-- Spieß in Erde -->
     <path d="M598 404 L598 500 L612 520 L626 500 L626 404 Z" fill="#2b2b2b"/>
     <rect x="602" y="420" width="20" height="60" rx="3" fill="#7fb3d5"/>
-    <text x="636" y="500" font-size="10" fill="#333">Feuchtesensor + DS18B20</text>
+    <text x="636" y="500" font-size="10" fill="#333">Kapazitive Sonde</text>
     <!-- Rohr -->
     <rect x="577" y="150" width="70" height="256" rx="14" fill="url(#tube)" stroke="#233" stroke-width="2"/>
     <!-- Abschnitte -->
@@ -95,10 +93,10 @@
     <text x="652" y="347" font-size="8" fill="#5a4e00">NPK</text>
     <!-- Beschriftung Abschnitte -->
     <g font-size="11" fill="#222">
-      <text x="690" y="175">Kopf: Luft T/rF, Licht, LED, USB-C</text>
-      <text x="690" y="222">Elektronik: ESP32-C6, Boost, MOSFETs</text>
-      <text x="690" y="290">Akku 18650, ca. 4 Wochen (Schätzung)</text>
-      <text x="690" y="345">Dosierpumpe + Düngerflasche</text>
+      <text x="690" y="175">Kopf: Luft T/rF (optional), LED, USB-C</text>
+      <text x="690" y="222">Elektronik: ESP32-C6, DRV8833, HX711</text>
+      <text x="690" y="290">Akku 18650 (Laufzeit messen)</text>
+      <text x="690" y="345">2 Schlauchpumpen + Düngerflasche</text>
       <text x="690" y="392">Spieß, 8 cm in der Erde</text>
     </g>
     <g stroke="#888" stroke-width="1" stroke-dasharray="3 3">
@@ -112,10 +110,11 @@
 
   <!-- Schläuche -->
   <path d="M145 318 C 145 200, 400 200, 566 217" stroke="#3f8fbf" stroke-width="4" fill="none"/>
-  <text x="300" y="192" font-size="10" fill="#3f8fbf">Schlauch vom Kanister (Wasser rein)</text>
-  <path d="M658 217 C 700 217, 700 300, 620 402 C 600 410, 560 410, 470 414" stroke="#3f8fbf" stroke-width="4" fill="none" stroke-dasharray="6 4"/>
+  <text x="300" y="192" font-size="10" fill="#3f8fbf">Ansaugschlauch vom Tank</text>
+  <path d="M658 217 C 700 217, 700 300, 630 380 C 605 398, 580 402, 565 404" stroke="#3f8fbf" stroke-width="4" fill="none" stroke-dasharray="6 4"/>
   <!-- Pumpenkabel -->
-  <path d="M120 495 C 60 480, 60 260, 300 240 C 450 230, 560 210, 566 214" stroke="#222" stroke-width="1.5" fill="none"/>
+  <rect x="62" y="530" width="166" height="10" rx="2" fill="#9aa5ad" stroke="#6b7780"/>
+  <text x="96" y="557" font-size="11" fill="#333">Wägezelle + HX711</text>
 
   <!-- Funk -->
   <g fill="none" stroke="#e07a1f" stroke-width="2">

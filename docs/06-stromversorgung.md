@@ -1,20 +1,23 @@
 # 06 Stromversorgung
 
+Thema von **Stufe 2**. Stufe 1 läuft am 5-V-Netzteil, die Hardware ist aber akkutauglich (R16).
+Maßgeblicher Ausblick: `00-spezifikation-stufe1.md`, Abschnitt 13.
+
 ## Ziel
 
-Akkubetrieb mit mindestens 4 Wochen Laufzeit (Schätzung, zu verifizieren), Laden über USB-C.
-Am Netzteil dauerhaft betreibbar.
+Akkubetrieb so lange wie möglich ohne Nachladen, Laden über USB-C. Am Netzteil dauerhaft
+betreibbar.
 
 ## Konzept
 
 ```
-USB-C 5 V ---> Ladeschaltung (auf XIAO ESP32-C6 integriert, BQ25101 oder ähnlich) ---> Li-Ion 18650, 3,7 V
-                                                                                         |
-                                                    +------------------------------------+
-                                                    |                                    |
-                                            XIAO 3,3 V LDO                     Boost 5 V (TPS61023)
-                                            ESP32-C6 + Sensoren                mit Enable vom ESP
-                                                                               Wasserpumpe, Dosierpumpe
+USB-C 5 V ---> Laderegler (auf dem FireBeetle 2 ESP32-C6) ---> Li-Ion 18650, 3,7 V
+                                                                     |
+                                +------------------------------------+
+                                |                                    |
+                        Board 3,3 V                          DRV8833 VM direkt am Akku (zu testen)
+                        ESP32-C6, Sonde, HX711               oder Boost 5 V mit Enable
+                        (Peripherie schaltbar)               2 Schlauchpumpen
 ```
 
 ## Akku
@@ -22,37 +25,37 @@ USB-C 5 V ---> Ladeschaltung (auf XIAO ESP32-C6 integriert, BQ25101 oder ähnlic
 | Option | Kapazität | Maße | Preis (Schätzung) | Bemerkung |
 |---|---|---|---|---|
 | 18650 Li-Ion (z. B. Samsung 35E) | 3500 mAh | 18 x 65 mm | 6 bis 8 Euro | Passt längs in ein 70-mm-Rohr, Halter nötig, nur Zellen mit Schutzschaltung oder eigenes Schutz-IC |
-| LiPo-Pouch 2000 bis 3000 mAh | 2000 bis 3000 mAh | flach | 8 bis 12 Euro | Formflexibel, JST-Stecker passt direkt an XIAO |
+| LiPo-Pouch 2000 bis 3000 mAh | 2000 bis 3000 mAh | flach | 8 bis 12 Euro | Formflexibel, Stecker passend zum Akkuanschluss des Boards wählen (prüfen) |
 | 2 x 18650 parallel | 7000 mAh | | 15 Euro | Falls Laufzeit nicht reicht |
 
 Empfehlung: eine 18650-Zelle mit Schutzschaltung im Halter. Austauschbar, ausreichend Kapazität.
 
-## Laufzeitabschätzung (Schätzung, alle Werte zu messen)
+## Laufzeitabschätzung Stufe 2 (Schätzung, in M5 und Stufe 2 messen)
 
-Annahmen: Aufwachen alle 30 min, 3 s aktiv mit WLAN (ca. 120 mA), Deep Sleep 30 µA
-(XIAO ESP32-C6 laut Datenblatt-Größenordnung, Sensoren im Schlaf abgeschaltet), Gießen alle 2 Tage
-20 s bei 300 mA, Düngen vernachlässigbar.
+Annahme: einmal täglich aufwachen (`15`), Werte aus Spezifikation 13 plus Selbstentladung.
 
-| Posten | Rechnung | pro Tag |
-|---|---|---|
-| Aktivphasen | 48 x 3 s x 120 mA | 4,8 mAh |
-| Deep Sleep | 24 h x 0,03 mA | 0,7 mAh |
-| Pumpen | 20 s x 300 mA / 2 Tage, Boost-Wirkungsgrad 85 % | 1,0 mAh |
-| Summe | | ca. 6,5 mAh/Tag |
+| Posten | pro Tag |
+|---|---|
+| Board-Schlaf (16 µA laut Hersteller, 36 µA für V1.2 nicht verifiziert) | ca. 0,4 bis 0,9 mAh |
+| Wachphase einmal täglich | ca. 0,3 mAh |
+| Pumpen (Spezifikation 13) | ca. 4,0 mAh |
+| Selbstentladung Li-Ion (2 bis 3 % pro Monat bei 3500 mAh) | ca. 2,5 bis 3,5 mAh |
+| Ruhestrom der Peripherie (DRV8833, HX711, Sonde) | offen, messen |
+| **Summe ohne Peripherie** | **ca. 7 bis 9 mAh** |
 
-Bei 3500 mAh und 80 % nutzbar: ca. 430 Tage rechnerisch. Realistisch wird die Selbstentladung
-und ein schlechterer Schlafstrom (Sensormodule mit LEDs und Pullups, Boost-Leckstrom)
-dominieren. Ziel von 4 Wochen ist mit Reserve erreichbar, wenn der Schlafstrom unter 1 mA bleibt.
-Ein Schlafstrom von 5 mA (typisch für ein unaufgeräumtes Breadboard) ergibt nur noch ca. 3 Wochen.
+Bei 3500 mAh und 80 % nutzbar wären das rechnerisch rund 10 bis 13 Monate. Realistisch wird es
+weniger, weil Peripherie, Pausen zwischen den Portionen und Alterung fehlen. Der Wasservorrat ist
+ohnehin viel früher leer. Ein Schlafstrom von einigen mA, typisch für ein unaufgeräumtes
+Breadboard, würde die Laufzeit dagegen auf Wochen drücken.
 
-Konsequenz: Alle Sensormodule über einen High-Side-Schalter (P-MOSFET oder Load Switch
-TPS22918) versorgen, der im Schlaf trennt. Power-LEDs auf den Modulen auslöten.
+Konsequenz: Peripherie im Schlaf abschalten (Sonde per GPIO, HX711 Power-Down, DRV8833 nSLEEP),
+Power-LEDs auf Modulen entfernen, Ruhestrom früh messen.
 
 ## Netzteilbetrieb
 
-USB-C-Netzteil 5 V dauerhaft an, Akku puffert. Firmware erkennt "USB da" (VBUS-Pin) und
-schaltet auf Dauer-WLAN. Ladeschaltung des XIAO liefert nur ca. 100 mA Ladestrom (zu prüfen),
-für Dauerbetrieb reicht das.
+USB-C-Netzteil 5 V dauerhaft an, Akku puffert. Die Firmware kann erkennen, ob USB anliegt, und
+dann auf Dauer-WLAN schalten (Pin laut Board-Pinout prüfen). Ladestrom des Board-Ladereglers
+laut Datenblatt prüfen.
 
 ## Sicherheit
 
@@ -100,26 +103,27 @@ Aufwand lohnt.
 | Sensoren über Load-Switch schalten, im Schlaf komplett stromlos | Modul-Leckströme (oft 0,5 bis 3 mA zusammen) verschwinden | Hardware, klein |
 | Power-LEDs von allen Modulen auslöten | 1 bis 3 mA pro LED | 5 Minuten |
 | Boost-Wandler mit Enable und echtem Shutdown (unter 1 µA), kein MT3608 (Ruhestrom ca. 100 µA und keine Abschaltung) | Boost frisst im Schlaf nichts mehr | Bauteilwahl |
-| Pullup-Widerstände auf I2C und Schwimmerschaltern hochohmig (10 k statt 4,7 k) oder mit abschaltbar versorgen | Mikroampere-Bereich | Hardware, klein |
+| Peripherie gezielt schlafen legen: Sonde per GPIO stromlos, HX711 im Power-Down, DRV8833 über nSLEEP | Ruhestrom der Module fällt weg | Hardware und Firmware, klein |
+| Pullup-Widerstände auf I2C hochohmig (10 k statt 4,7 k) oder abschaltbar versorgen | Mikroampere-Bereich | Hardware, klein |
 | Akkuspannungs-Teiler über MOSFET schalten oder sehr hochohmig (1 M) | Sonst fließen dauerhaft ca. 30 µA | Hardware, klein |
-| Ruhestrom messen mit INA219 oder Multimeter im µA-Bereich, Ziel unter 100 µA gesamt | Ohne Messung findet man die Lecks nicht | Werkzeug, Pflicht ab Iteration 4 |
+| Ruhestrom messen mit INA219 oder Multimeter im µA-Bereich, Ziel unter 100 µA gesamt | Ohne Messung findet man die Lecks nicht | Werkzeug, Basis aus M5, Pflicht in Stufe 2 |
 
 ### D. Pumpen effizienter
 
 | Ansatz | Wirkung | Aufwand |
 |---|---|---|
-| Wasser ohne Pumpe: Tank über dem Topf, Schwerkraft, ESP öffnet nur ein Ventil (bistabiles Magnetventil, Impuls 50 ms, sonst stromlos) | Pumpstrom fällt weg, Ventil braucht nur einen Impuls | Mechanik: Tank oben, Ventil ca. 15 Euro |
-| Tauchpumpe nur so lange wie nötig, Fördermenge kalibriert, kein Nachlauf | Weniger Laufzeit | Firmware |
-| Effizienter Boost (TPS61023, über 90 %) statt MT3608 | 5 bis 10 % weniger Verlust | Bauteilwahl |
+| Wasser ohne Pumpe: Tank über dem Topf, Schwerkraft, ESP öffnet nur ein Ventil (bistabiles Magnetventil, Impuls 50 ms, sonst stromlos) | Pumpstrom fällt weg, Ventil braucht nur einen Impuls | Flutrisiko: Bleibt das Ventil offen hängen, läuft der Tank leer. Widerspricht dem Sicherheitsprinzip, nicht vorgesehen |
+| Pumpe nur so lange wie nötig, Förderrate kalibriert, kein Nachlauf | Weniger Laufzeit | Firmware |
+| Effizienter Boost (TPS61023, über 90 %) statt MT3608 | 5 bis 10 % weniger Verlust | Bauteilwahl, entfällt wenn DRV8833 direkt am Akku reicht |
 
 ### E. Mehr Energie reinholen (kreativ)
 
 | Ansatz | Wirkung | Bemerkung |
 |---|---|---|
-| Kleine Solarzelle am Fensterbrett (5 V, 1 W, ca. 100 x 60 mm) mit CN3791 oder BQ25570 als MPPT-Lader | Am Südfenster reichen wenige mW Tagesmittel, um 6,5 mAh Tagesverbrauch zu decken. Gerät wird "unendlich" | 8 bis 15 Euro, Zelle in den Deckel des Rohrs oder als Blatt am Pflanzstab |
-| Solarzelle direkt hinter dem Lichtsensor-Fenster, gleiche Fläche, Zelle liefert gleichzeitig den Lichtmesswert (Kurzschlussstrom ist proportional zu Licht) | Spart den BH1750 und dessen Strom | Kalibrierung nötig, kein Lux-Absolutwert |
-| Laden beim Nachfüllen: USB-C am Gerät, wer Wasser nachfüllt, steckt kurz das Kabel an, Telegram erinnert daran | Kein Akkuwechsel, kein Solar | Nur Gewohnheit |
-| Kontakte im Sockel-Tank (Prototyp B): Tank steht auf einer Ladeschale mit Federkontakten oder Qi-Spule | Gerät ist immer geladen, solange es steht | Qi-Empfänger ca. 5 Euro, Wirkungsgrad schlecht, aber egal am Netz |
+| Kleine Solarzelle am Fensterbrett (5 V, 1 W, ca. 100 x 60 mm) | Am Südfenster reichen wenige mW Tagesmittel, um den Tagesverbrauch von einigen mAh zu decken (Schätzung). Gerät wird "unendlich" | 8 bis 15 Euro. Das FireBeetle 2 unterstützt laut Hersteller Solarladung, Details prüfen. Sonst externer Lader wie CN3791 |
+| Solarzelle als grobes Hell/Dunkel-Signal (Ladestrom steigt mit Licht) | Ersetzt den gestrichenen Lichtsensor, falls doch ein Lichtwert gewünscht ist | Kalibrierung nötig, kein Lux-Absolutwert |
+| Laden beim Nachfüllen: USB-C am Gerät, wer Wasser nachfüllt, steckt kurz das Kabel an, Push erinnert daran | Kein Akkuwechsel, kein Solar | Nur Gewohnheit |
+| Kontakte im Sockel-Tank (Stufe 2, Variante B2): Tank steht auf einer Ladeschale mit Federkontakten oder Qi-Spule | Gerät ist immer geladen, solange es steht | Qi-Empfänger ca. 5 Euro, Wirkungsgrad schlecht, aber egal am Netz |
 | Thermoelektrisch am Heizkörper (Peltier als Generator) | Realistisch nur wenige mW, Spielerei | Kreativ, nicht empfohlen |
 
 ### F. Größerer Speicher

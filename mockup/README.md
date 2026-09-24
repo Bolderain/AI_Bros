@@ -1,9 +1,11 @@
 # Mockup
 
-- `geraet-mockup.svg`: Illustration des Geräts am Topf mit Kanister, Zentrale und Handy.
-- `geraet-mockup.png`: Gerendert, für die Vorschau auf GitHub.
-- `index.html`: Gleiche Grafik mit Abschnittstabelle, im Browser öffnen.
+Skizzen für das autarke Gerät in Stufe 2. Stufe 1 ist ein Tischaufbau, dafür gibt es kein Mockup.
 
-- `kompakt-mockup.svg` / `.png`: Kompakte, semi-professionelle Version (Stab, eigene Platine, Solar im Deckel), siehe `../docs/09-mechanik-gehaeuse.md`.
+- `geraet-mockup.svg` / `.png`: Gerät im Flaschenformat am Topf. Zwei Schlauchpumpen im Gerät,
+  Wassertank getrennt auf einer Wägezelle, fester Auslass neben der Sonde, Zentrale und Handy.
+- `index.html`: gleiche Grafik mit Abschnittstabelle, im Browser öffnen.
+- `kompakt-mockup.svg` / `.png`: kompakte, semi-professionelle Variante (Stab, eigene Platine,
+  Solar im Deckel, Pumpenbox am Tank), siehe `../docs/09-mechanik-gehaeuse.md`.
 
-Es ist eine 2D-Illustration, kein CAD. Maße stehen in `../docs/09-mechanik-gehaeuse.md`.
+Es sind 2D-Illustrationen, kein CAD. Maße stehen in `../docs/09-mechanik-gehaeuse.md`.

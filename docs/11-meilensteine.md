@@ -1,59 +1,57 @@
-# 11 Iterationen und Meilensteine
+# 11 Meilensteine, Rollen und Ablauf
 
-Zieltermin: Stufe 1 fertig bis März 2027. Hobby nebenbei, ca. ein Arbeitsabend pro Woche pro
-Person angenommen. Kein Issue-Tracking, Fortschritt hier in den Tabellen pflegen.
+Maßgeblich: `00-spezifikation-stufe1.md`, Abschnitt 11. Die Zeiträume sind ein Vorschlag (P),
+Entscheidung E6. Kickoff-Vorgabe: Stufe 1 fertig bis spätestens März 2027. Kein Issue-Tracking,
+Fortschritt hier in der Status-Spalte pflegen.
 
-## Prinzip
+## Meilensteine Stufe 1
 
-Jede Iteration endet mit einem **lauffähigen Gerät, das eine echte Pflanze versorgt**, und
-zwar schon ab Iteration 1. Was in einer Iteration nicht fertig wird, rutscht in die nächste,
-nicht umgekehrt. Am Ende jeder Iteration ein kurzes Retro (drei Zeilen in `13-retros.md`):
-Was lief, was nervt, was ändern wir.
-
-Ein Sprint dauert etwa 3 bis 4 Wochen (ein Monat). Jeder Sprint hat ein Demo-Kriterium,
-das man am Fensterbrett zeigen kann.
-
-## Iterationen
-
-| It. | Zeitraum | Name | Demo-Kriterium (so sieht "fertig" aus) | Hardware-Stand | Tank |
+| M | Zeitraum (P) | Inhalt | Rolle | Abnahme | Status |
 |---|---|---|---|---|---|
-| 0 | Sep 2026 | Kickoff | Repo, Bestellung Runde 1 raus, Pflanze steht am Fensterbrett | nichts | Gießkanne |
-| 1 | Okt 2026 | Der Sensor | Breadboard am USB-Netzteil misst Feuchte und sendet MQTT, Grafana zeigt die Kurve. Gießen macht noch der Mensch, aber das Dashboard sagt wann | Breadboard, offen | Gießkanne |
-| 2 | Nov 2026 | Die Pumpe | Gerät gießt selbst nach Regel, Pflanze überlebt 2 Wochen ohne Handgießen. Tauchpumpe in einem Marmeladenglas oder Kanister, Tropfring, Laufzeitgrenze, Sperrzeit | Breadboard in einem Schuhkarton, Netzteil | extern, 1 bis 5 l |
-| 3 | Dez 2026 | Die Zentrale | Telegram meldet "Tank leer", "gegossen", "Gerät stumm". Befehle per Telegram. Konfig per MQTT | wie It. 2 | extern |
-| 4 | Jan 2027 | Der Akku | Deep Sleep unter 1 mA, 18650 eingebaut, Lochrasterplatine statt Breadboard, erste gedruckte Hülle (Bambu A1 Mini, zwei Teile), Gerät steht frei am Topf | Prototyp A: Rohr mit Elektronik, Tank noch extern | extern |
-| 5 | Feb 2027 | Der Dünger | Dosierpumpe kalibriert, Fertigation aktiv, Nachfüllmeldung für Dünger, Dauertest 4 Wochen ohne Eingriff läuft an | Prototyp A | extern |
-| 6 | Mär 2027 | Abschluss Stufe 1 | Dauertest bestanden, Doku nachgezogen, Retro, Entscheidung über Stufe 1b und 2/3 | Prototyp A | extern |
-| 7 | Apr bis Jun 2027 | Der Tank (Stufe 1b) | Wassertank im Gerät, gedruckt und dicht, mindestens 3 Wochen Vorrat. Gerät braucht keinen Kanister mehr | Prototyp B: Gerät mit integriertem Tank | intern, ca. 1 bis 2 l |
-| 8 | ab Jul 2027 | Stufe 2 oder 3 | Mehrere Töpfe oder Hydroponik | | |
+| M0 Kickoff | Sep 2026 | Repo, Spezifikation, Referenzpflanze (E1), Board-Frage (E10), Bestellung M1-Teile | alle | Bestellung raus | in Arbeit |
+| M1 Messkette | Okt 2026 | Sonde im echten Topf kalibrieren, 15-min-Logging in HA, NTP auf dem Raspi | A + C | Trocknungskurve über 7 Tage | offen |
+| M2 Aktorik | Nov 2026 | Pumpen mit Küchenwaage kalibrieren, Vorverdünnung festlegen, Wägezellen | A | T01-Genauigkeit, Düngerdosis reproduzierbar | offen |
+| M3 Logik | Nov 2026 bis Jan 2027 | `plant_logic`, Zyklus, Düngeplan, Sicherheitslogik, absolute Grenzen, Notbetrieb, Persistenz | B | T02, T03, T06 bis T09, T11, T13, T16 bis T21 | offen |
+| M4 Zentrale | Dez 2026 bis Jan 2027 | Dashboard, Push, Lebenszeichen, Datenhaltung | C | T04, T05, T10, T12, T14 | offen |
+| M5 Dauertest | Feb bis Mär 2027 | Dauertest am Netzteil mit Strommessung | alle | T15, Datenbasis für Stufe 2 | offen |
 
-Iteration 7 liegt nach dem Zieltermin März 2027. Grund: Ein dichter, gedruckter Tank mit
-Pumpe, Füllstandsmessung und Nachfüllöffnung ist ein eigenes Mechanik-Projekt. Erst muss die
-Elektronik im Dauertest stabil sein, sonst debuggt man zwei Dinge gleichzeitig. Wer schneller
-ist, zieht It. 7 vor.
+M3 und M4 laufen parallel, weil sie verschiedene Rollen betreffen. Rolle B kann die Unit-Tests
+von `plant_logic` schon während M1 und M2 schreiben. Startet M5 Anfang Februar, passen 8 Wochen
+bis Ende März, und das Erfolgskriterium von 6 bis 8 Wochen lässt sich im Dauertest nachweisen
+(die Spezifikation nennt für M5 4 Wochen, Klärung E11).
 
-## Was in jeder Iteration passiert (Ablauf)
+## Rollen
 
-1. **Planen** (30 min, zu dritt): Demo-Kriterium bestätigen, Aufgaben auf die drei Pakete
-   Firmware, Zentrale, Mechanik verteilen.
-2. **Bauen**: jeder an seinem Paket, Zwischenstände ins Repo.
-3. **Integrieren** (ein Abend gegen Ende): alles zusammenstecken, an der echten Pflanze testen.
-4. **Demo + Retro** (30 min): Kriterium erfüllt? Drei Zeilen in `13-retros.md`. Tabelle oben
-   aktualisieren, Offenes in `12-risiken-offene-fragen.md` nachziehen.
-
-## Aufteilbare Arbeitspakete (ohne Zuordnung)
-
-| Paket | Inhalt |
+| Rolle | Verantwortung |
 |---|---|
-| Firmware | Sensoren, MQTT, Deep Sleep, Pumpen, Regeln, OTA |
-| Zentrale | Pi aufsetzen, Docker Compose, Grafana-Dashboard, Node-RED-Flows, Telegram-Bot |
-| Mechanik | Gehäuse auf dem A1 Mini, Sensorspieß vergießen, Schlauchführung, Tank, Lochrasterplatine, Akkuhalter |
+| A Hardware | Verdrahtung, Flüssigkeitsführung, Mechanik, Kalibrierung von Sonde, Pumpen und Wägezellen |
+| B Firmware | ESPHome, `plant_logic`, Sicherheitslogik, Persistenz, Unit-Tests |
+| C Zentrale/Daten | Mosquitto, NTP, Home Assistant, Dashboard, Push, Datenexport, spätere KI-Auswertung |
 
-Drei Pakete, drei Personen, die Zuordnung macht das Team selbst.
+Welche Person welche Rolle übernimmt, entscheidet das Team.
+
+## Ablauf je Meilenstein
+
+1. **Planen** (30 min zu dritt): Abnahme bestätigen, Aufgaben nach Rollen verteilen.
+2. **Bauen:** jede Rolle an ihrem Teil, Zwischenstände ins Repo.
+3. **Integrieren** (ein Abend gegen Ende): zusammenstecken, an der Referenzpflanze testen.
+4. **Abnahme und Retro** (30 min): Tests aus der Abnahme-Spalte durchgehen, drei Zeilen in
+   `13-retros.md`, Status oben aktualisieren, neue offene Punkte in Spezifikation Abschnitt 10.
+
+Was nicht fertig wird, rutscht in den nächsten Meilenstein. Meilensteine der Reihe nach, nicht
+vorgreifen.
+
+## Danach (Vorschlag)
+
+| Stufe | Zeitraum (P) | Inhalt |
+|---|---|---|
+| 2 | ab Apr 2027 | Akku, Deep Sleep mit einmal täglich messen, Peripherie abschaltbar, Gehäuse vom A1 Mini, Formfaktor aus dem Autonomieziel (E8), ggf. integrierter Tank |
+| 3 bis 5 | später | mehrere Töpfe, Hydroponik, Pilz-Growbox |
 
 ## Was den Termin gefährdet
 
-- Lieferzeiten aus China (2 bis 4 Wochen): Runde 1 sofort bestellen.
-- Ruhestrom-Debugging kann sich ziehen: früh messen (It. 1 schon grob), nicht erst in It. 4.
-- Dauertest braucht Kalenderzeit: It. 5 nicht nach hinten schieben.
-- Integrierter Tank zu früh anfangen: erst Elektronik stabil, dann Tank (It. 7).
+- Lieferzeiten: M1-Teile sofort bestellen, AliExpress braucht 2 bis 4 Wochen.
+- M3 ist der größte Block: Unit-Tests früh beginnen.
+- Der Dauertest braucht Kalenderzeit: M5 nicht nach hinten schieben.
+- Themen aus Stufe 2 (Akku, Gehäuse, Tank) nicht vorziehen, sonst debuggt man zwei Dinge
+  gleichzeitig.
