@@ -1,6 +1,11 @@
 # Idee: Magnetisches Schachbrett gegen eine Schach-KI
 
-Stand: 03.10.2026, Vorschlag von Kevin B. Noch nicht entschieden, Alternative zum Pflanzenautomaten.
+Stand: 04.10.2026, Vorschlag von Kevin B. Noch nicht entschieden, eine von mehreren Ideen.
+
+> **Weiter ausgearbeitet:** Aufbau, Magnetspalt, Stückliste und die offenen Punkte stehen in
+> [`aufbau.md`](aufbau.md). Ein 59-Sekunden-Erklärvideo liegt unter [`video/`](video/).
+> Zwischenzeitlich entschieden: **geschalteter Elektromagnet** statt abgesenktem
+> Permanentmagnet, und **H-Bot** (ein Riemen) statt CoreXY.
 
 ## Idee
 
@@ -12,7 +17,7 @@ unter dem Brett aus, der die Figuren bewegt. Viel Hardware zum Tüfteln.
 | Baustein | Umsetzung (Vorschlag) |
 |---|---|
 | KI | Stockfish (freie Schach-Engine, Suchalgorithmus) auf dem vorhandenen Raspi, angebunden über die Python-Bibliothek python-chess |
-| Bewegung | XY-Mechanik unter dem Brett (z. B. CoreXY) mit zwei Schrittmotoren, Elektromagnet oder Servo mit Permanentmagnet |
+| Bewegung | H-Bot-Portal unter dem Brett (ein Riemen, eine Ebene) mit zwei Schrittmotoren, **geschalteter Elektromagnet** auf dem Schlitten |
 | Figuren | 3D-Druck auf dem A1 Mini, Magnet im Fuß, Filz unten |
 | Zugerkennung Mensch | Reed-Kontakte oder Hall-Sensoren unter allen 64 Feldern, Auswertung über Multiplexer |
 | Steuerung | ESP32 oder Raspi direkt, Schrittmotortreiber |
@@ -29,7 +34,7 @@ unter dem Brett aus, der die Figuren bewegt. Viel Hardware zum Tüfteln.
 | Posten | ca. € |
 |---|---|
 | Schrittmotoren, Treiber, Riemen, Schienen | 60 bis 100 |
-| Elektromagnet oder Servo mit Permanentmagnet | 10 bis 20 |
+| Elektromagnet mit MOSFET-Treiber | 10 bis 20 |
 | 64 Sensoren plus Multiplexer | 20 bis 40 |
 | Magnete, Brettmaterial | 20 bis 40 |
 | **Summe** | **ca. 110 bis 200** |
