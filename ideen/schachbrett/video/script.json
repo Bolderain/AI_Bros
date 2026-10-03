@@ -1,0 +1,168 @@
+{
+  "title": {
+    "de": "Wie das Schachbrett sich selbst spielt",
+    "en": "How the Chessboard Plays Itself"
+  },
+  "voices": {
+    "de": "de-DE-SeraphinaMultilingualNeural",
+    "en": "en-US-AvaMultilingualNeural"
+  },
+  "rate": {
+    "de": "+0%",
+    "en": "-3%"
+  },
+  "pitch": "+0Hz",
+  "target_total": 55,
+  "beats": [
+    {
+      "id": "hook",
+      "lines": [
+        {
+          "de": "Ein Schachbrett, das seine Figuren selbst bewegt.",
+          "en": "A chessboard that moves its own pieces.",
+          "pause": 0.45
+        }
+      ]
+    },
+    {
+      "id": "brain",
+      "lines": [
+        {
+          "de": "Oben spielst du.",
+          "en": "You play on top.",
+          "pause": 0.16
+        },
+        {
+          "de": "Unten denkt ein Computer.",
+          "en": "Underneath, a computer thinks.",
+          "pause": 0.16
+        },
+        {
+          "de": "Millionen Züge, bevor er einen wählt.",
+          "en": "Millions of moves, before it picks one.",
+          "pause": 0.4
+        }
+      ]
+    },
+    {
+      "id": "hand",
+      "lines": [
+        {
+          "de": "Seine Hand ist ein Elektromagnet.",
+          "en": "Its hand is an electromagnet.",
+          "pause": 0.16
+        },
+        {
+          "de": "Er hängt unter dem Brett, an einem Riemen und zwei Motoren.",
+          "en": "It hangs under the board, on one belt and two motors.",
+          "pause": 0.45
+        }
+      ]
+    },
+    {
+      "id": "problem",
+      "lines": [
+        {
+          "de": "Aber Figuren können nicht übereinander hinweg.",
+          "en": "But pieces can't pass over each other.",
+          "pause": 0.5
+        }
+      ]
+    },
+    {
+      "id": "lines",
+      "lines": [
+        {
+          "de": "Also fährt der Magnet nie über die Felder.",
+          "en": "So the magnet never crosses the squares.",
+          "pause": 0.16
+        },
+        {
+          "de": "Sondern genau auf den Linien dazwischen.",
+          "en": "It runs exactly on the lines between them.",
+          "pause": 0.2
+        },
+        {
+          "de": "Ein halbes Feld Abstand, links und rechts.",
+          "en": "Half a square of clearance, left and right.",
+          "pause": 0.4
+        }
+      ]
+    },
+    {
+      "id": "slim",
+      "lines": [
+        {
+          "de": "Deshalb ist jede Figur schlanker als ein halbes Feld.",
+          "en": "Which is why every piece is slimmer than half a square.",
+          "pause": 0.2
+        },
+        {
+          "de": "Wer zu dick ist, bleibt stecken.",
+          "en": "Too fat, and it gets stuck.",
+          "pause": 0.45
+        }
+      ]
+    },
+    {
+      "id": "capture",
+      "lines": [
+        {
+          "de": "Beim Schlagen bringt er die Figur erst an den Rand.",
+          "en": "On a capture, it walks the piece off the board first.",
+          "pause": 0.16
+        },
+        {
+          "de": "Zwei Fahrten für einen Zug.",
+          "en": "Two trips for one move.",
+          "pause": 0.4
+        }
+      ]
+    },
+    {
+      "id": "release",
+      "lines": [
+        {
+          "de": "Am Ziel muss er loslassen.",
+          "en": "At the destination it has to let go.",
+          "pause": 0.16
+        },
+        {
+          "de": "Ein Schalter genügt: Strom aus.",
+          "en": "All it takes is a switch: current off.",
+          "pause": 0.2
+        },
+        {
+          "de": "Das Feld ist weg, die Figur steht.",
+          "en": "The field vanishes, the piece stays.",
+          "pause": 0.45
+        }
+      ]
+    },
+    {
+      "id": "sense",
+      "lines": [
+        {
+          "de": "Deinen Zug fühlt das Brett selbst.",
+          "en": "Your move, the board feels for itself.",
+          "pause": 0.2
+        },
+        {
+          "de": "Vierundsechzig Sensoren, einer pro Feld.",
+          "en": "Sixty-four sensors, one per square.",
+          "pause": 0.5
+        }
+      ]
+    },
+    {
+      "id": "outro",
+      "lines": [
+        {
+          "de": "Du bist dran.",
+          "en": "Your turn.",
+          "pause": 0
+        }
+      ]
+    }
+  ]
+}

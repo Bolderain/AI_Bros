@@ -1,0 +1,223 @@
+{
+ "lang": "de",
+ "voice": "de-DE-SeraphinaMultilingualNeural",
+ "title": "Wie das Schachbrett sich selbst spielt",
+ "sr": 48000,
+ "speech": 51.94,
+ "pauses": 5.76,
+ "lines": [
+  {
+   "i": 0,
+   "beat": "hook",
+   "text": "Ein Schachbrett, das seine Figuren selbst bewegt.",
+   "dur": 3.322,
+   "pause": 0.45
+  },
+  {
+   "i": 1,
+   "beat": "brain",
+   "text": "Oben spielst du.",
+   "dur": 1.242,
+   "pause": 0.16
+  },
+  {
+   "i": 2,
+   "beat": "brain",
+   "text": "Unten denkt ein Computer.",
+   "dur": 1.847,
+   "pause": 0.16
+  },
+  {
+   "i": 3,
+   "beat": "brain",
+   "text": "Millionen Züge, bevor er einen wählt.",
+   "dur": 2.932,
+   "pause": 0.4
+  },
+  {
+   "i": 4,
+   "beat": "hand",
+   "text": "Seine Hand ist ein Elektromagnet.",
+   "dur": 2.512,
+   "pause": 0.16
+  },
+  {
+   "i": 5,
+   "beat": "hand",
+   "text": "Er hängt unter dem Brett, an einem Riemen und zwei Motoren.",
+   "dur": 3.822,
+   "pause": 0.45
+  },
+  {
+   "i": 6,
+   "beat": "problem",
+   "text": "Aber Figuren können nicht übereinander hinweg.",
+   "dur": 3.027,
+   "pause": 0.5
+  },
+  {
+   "i": 7,
+   "beat": "lines",
+   "text": "Also fährt der Magnet nie über die Felder.",
+   "dur": 2.647,
+   "pause": 0.16
+  },
+  {
+   "i": 8,
+   "beat": "lines",
+   "text": "Sondern genau auf den Linien dazwischen.",
+   "dur": 2.657,
+   "pause": 0.2
+  },
+  {
+   "i": 9,
+   "beat": "lines",
+   "text": "Ein halbes Feld Abstand, links und rechts.",
+   "dur": 3.237,
+   "pause": 0.4
+  },
+  {
+   "i": 10,
+   "beat": "slim",
+   "text": "Deshalb ist jede Figur schlanker als ein halbes Feld.",
+   "dur": 3.507,
+   "pause": 0.2
+  },
+  {
+   "i": 11,
+   "beat": "slim",
+   "text": "Wer zu dick ist, bleibt stecken.",
+   "dur": 2.382,
+   "pause": 0.45
+  },
+  {
+   "i": 12,
+   "beat": "capture",
+   "text": "Beim Schlagen bringt er die Figur erst an den Rand.",
+   "dur": 2.987,
+   "pause": 0.16
+  },
+  {
+   "i": 13,
+   "beat": "capture",
+   "text": "Zwei Fahrten für einen Zug.",
+   "dur": 2.017,
+   "pause": 0.4
+  },
+  {
+   "i": 14,
+   "beat": "release",
+   "text": "Am Ziel muss er loslassen.",
+   "dur": 1.857,
+   "pause": 0.16
+  },
+  {
+   "i": 15,
+   "beat": "release",
+   "text": "Ein Schalter genügt: Strom aus.",
+   "dur": 2.702,
+   "pause": 0.2
+  },
+  {
+   "i": 16,
+   "beat": "release",
+   "text": "Das Feld ist weg, die Figur steht.",
+   "dur": 2.687,
+   "pause": 0.45
+  },
+  {
+   "i": 17,
+   "beat": "sense",
+   "text": "Deinen Zug fühlt das Brett selbst.",
+   "dur": 2.307,
+   "pause": 0.2
+  },
+  {
+   "i": 18,
+   "beat": "sense",
+   "text": "Vierundsechzig Sensoren, einer pro Feld.",
+   "dur": 3.147,
+   "pause": 0.5
+  },
+  {
+   "i": 19,
+   "beat": "outro",
+   "text": "Du bist dran.",
+   "dur": 1.102,
+   "pause": 0
+  }
+ ],
+ "beats": [
+  {
+   "id": "hook",
+   "lines": [
+    0
+   ]
+  },
+  {
+   "id": "brain",
+   "lines": [
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "id": "hand",
+   "lines": [
+    4,
+    5
+   ]
+  },
+  {
+   "id": "problem",
+   "lines": [
+    6
+   ]
+  },
+  {
+   "id": "lines",
+   "lines": [
+    7,
+    8,
+    9
+   ]
+  },
+  {
+   "id": "slim",
+   "lines": [
+    10,
+    11
+   ]
+  },
+  {
+   "id": "capture",
+   "lines": [
+    12,
+    13
+   ]
+  },
+  {
+   "id": "release",
+   "lines": [
+    14,
+    15,
+    16
+   ]
+  },
+  {
+   "id": "sense",
+   "lines": [
+    17,
+    18
+   ]
+  },
+  {
+   "id": "outro",
+   "lines": [
+    19
+   ]
+  }
+ ],
+ "target_total": 55
+}

@@ -1,0 +1,7 @@
+# Große Zwischenstände - jederzeit neu erzeugbar
+node_modules/
+cache/*.wav
+audio/*/pcm/
+shots/
+sheet/
+package-lock.json

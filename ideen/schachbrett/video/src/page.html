@@ -1,0 +1,172 @@
+<title>__TITLE__</title>
+<style>
+/* Caveat & Patrick Hand, SIL Open Font License 1.1, subset: latin */
+@font-face{font-family:'Caveat';font-style:normal;font-weight:700;font-display:block;
+  src:url(data:font/woff2;base64,__FONT_CAVEAT__) format('woff2');}
+@font-face{font-family:'Patrick Hand';font-style:normal;font-weight:400;font-display:block;
+  src:url(data:font/woff2;base64,__FONT_PATRICK__) format('woff2');}
+
+:root{
+  --desk:#e6ddcb; --desk2:#d9cfb9; --fg:#2f2b28; --dim:#6d6456;
+  --rule:rgba(60,48,32,.18); --chip:#f6efdf; --chipEdge:rgba(58,46,30,.35);
+  --accent:#c0432f;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --desk:#1a1816; --desk2:#141211; --fg:#eee5d2; --dim:#a0988a;
+    --rule:rgba(240,228,205,.16); --chip:#2a2724; --chipEdge:rgba(240,228,205,.26);
+    --accent:#e4705a; }
+}
+:root[data-theme="light"]{
+  --desk:#e6ddcb; --desk2:#d9cfb9; --fg:#2f2b28; --dim:#6d6456;
+  --rule:rgba(60,48,32,.18); --chip:#f6efdf; --chipEdge:rgba(58,46,30,.35); --accent:#c0432f;
+}
+:root[data-theme="dark"]{
+  --desk:#1a1816; --desk2:#141211; --fg:#eee5d2; --dim:#a0988a;
+  --rule:rgba(240,228,205,.16); --chip:#2a2724; --chipEdge:rgba(240,228,205,.26); --accent:#e4705a;
+}
+
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 50% -10%, var(--desk) 0%, var(--desk2) 70%, var(--desk2) 100%);
+  color:var(--fg); font-family:'Patrick Hand',"Segoe Print","Bradley Hand",cursive;
+  -webkit-font-smoothing:antialiased; min-height:100vh;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:28px 18px 56px;}
+header{text-align:center; margin:0 0 18px;}
+h1{
+  font-family:'Caveat',cursive; font-weight:700; font-size:clamp(30px,5.2vw,58px);
+  margin:0 0 2px; line-height:1.04; letter-spacing:.4px; text-wrap:balance;
+}
+.sub{margin:0; color:var(--dim); font-size:clamp(14px,2.1vw,19px);}
+.sub b{color:var(--accent); font-weight:400;}
+
+.stagebox{
+  position:relative; border-radius:5px; overflow:hidden;
+  box-shadow:0 18px 44px -18px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.05);
+  background:#f4ead7; aspect-ratio:16/9;
+}
+canvas#stage{display:block; width:100%; height:auto;}
+
+#poster{
+  position:absolute; inset:0; width:100%; border:0; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+  background:radial-gradient(68% 72% at 50% 44%, rgba(250,243,228,.20), rgba(60,46,28,.34));
+  font-family:'Caveat',cursive; font-weight:700; color:#fdf7e8; font-size:clamp(20px,3vw,32px);
+  text-shadow:0 2px 12px rgba(40,28,12,.75);
+}
+#poster .disc{
+  width:clamp(74px,9vw,104px); aspect-ratio:1; border-radius:50%;
+  background:#f6efdf; border:3px solid #2f2b28;
+  box-shadow:0 10px 30px -6px rgba(0,0,0,.55), 0 0 0 10px rgba(62,48,30,.18);
+  display:grid; place-items:center; transition:transform .16s ease;
+}
+#poster .disc::after{
+  content:""; width:0; height:0; margin-left:7px;
+  border-left:clamp(22px,2.8vw,30px) solid #c0432f;
+  border-top:clamp(14px,1.8vw,19px) solid transparent;
+  border-bottom:clamp(14px,1.8vw,19px) solid transparent;
+}
+#poster:hover .disc{transform:scale(1.07) rotate(-3deg);}
+
+.bar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin-top:14px; padding:0 2px;
+}
+button.ui{
+  font-family:'Patrick Hand',cursive; font-size:17px; color:var(--fg);
+  background:var(--chip); border:1.5px solid var(--chipEdge); border-radius:999px;
+  padding:7px 16px; cursor:pointer; line-height:1.1;
+  transition:transform .12s ease, border-color .12s ease;
+}
+button.ui:hover{transform:translateY(-1px) rotate(-.6deg); border-color:var(--accent);}
+button.ui[aria-pressed="true"]{background:var(--accent); color:#fff6ea; border-color:var(--accent);}
+button.ui.wide{min-width:112px; text-align:center;}
+#scrub{
+  flex:1 1 180px; min-width:120px; height:22px; position:relative; cursor:pointer;
+  display:flex; align-items:center; touch-action:none;
+}
+#scrub::before{content:""; position:absolute; left:0; right:0; height:3px; background:var(--rule); border-radius:2px;}
+#scrubFill{position:absolute; left:0; height:3px; background:var(--accent); border-radius:2px; width:0;}
+#scrub::after{content:""; position:absolute; left:0; right:0; height:22px;}
+#time{font-size:15px; color:var(--dim); font-variant-numeric:tabular-nums; min-width:92px; text-align:right;}
+.langs{display:flex; gap:6px; margin-left:auto;}
+
+#audioNote{
+  margin:12px 0 0; padding:9px 14px; border-left:3px solid var(--accent);
+  background:var(--chip); font-size:15px; color:var(--dim); border-radius:0 6px 6px 0;
+}
+.notes{
+  margin-top:26px; padding-top:18px; border-top:1px solid var(--rule);
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:16px 26px;
+  font-size:15px; color:var(--dim); line-height:1.45;
+}
+.notes h2{font-family:'Caveat',cursive; font-weight:700; font-size:23px; margin:0 0 4px; color:var(--fg); text-wrap:balance;}
+.notes p{margin:0;}
+.notes code{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; color:var(--fg);}
+.kbd{
+  display:inline-block; border:1px solid var(--chipEdge); border-bottom-width:2px;
+  border-radius:4px; padding:0 5px; font-size:13px; background:var(--chip);
+}
+button.ui:focus-visible, #poster:focus-visible{
+  outline:3px solid var(--accent); outline-offset:3px; border-radius:999px;
+}
+#scrub:focus-visible{outline:2px solid var(--accent); outline-offset:5px; border-radius:4px;}
+
+@media (prefers-reduced-motion:reduce){
+  button.ui, #poster .disc{transition:none;}
+  button.ui:hover{transform:none;}
+  #poster:hover .disc{transform:none;}
+}
+@media (max-width:620px){
+  #time{min-width:0;}
+  .langs{margin-left:0;}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1 id="pageTitle">__TITLE__</h1>
+    <p class="sub" id="pageSub">__SUB__</p>
+  </header>
+
+  <div class="stagebox">
+    <canvas id="stage" width="1600" height="900" aria-label="Animation"></canvas>
+    <button id="poster" aria-label="Play">
+      <span class="disc"></span>
+      <span id="posterLabel">__POSTER__</span>
+    </button>
+  </div>
+
+  <div class="bar">
+    <button class="ui wide" id="btnPlay">▶&nbsp; Play</button>
+    <button class="ui" id="btnRestart" title="Neu starten (R)" aria-label="Restart">↺</button>
+    <div id="scrub" role="slider" aria-label="Zeit" tabindex="0"><div id="scrubFill"></div></div>
+    <span id="time">0:00 / 0:00</span>
+    <button class="ui" id="btnCC" data-on="1" aria-pressed="true" title="Untertitel (C)">CC</button>
+    <button class="ui" id="btnMute" data-on="0" aria-pressed="false" title="Ton">🔊</button>
+    <span class="langs">
+      <button class="ui" id="btnDE" data-on="1" aria-pressed="true">DE</button>
+      <button class="ui" id="btnEN" data-on="0" aria-pressed="false">EN</button>
+    </span>
+  </div>
+
+  <p id="audioNote" hidden>__AUDIONOTE__</p>
+
+  <div class="notes">
+    <div>
+      <h2 id="n1h">__N1H__</h2>
+      <p id="n1p">__N1P__</p>
+    </div>
+    <div>
+      <h2 id="n2h">__N2H__</h2>
+      <p id="n2p">__N2P__</p>
+    </div>
+    <div>
+      <h2 id="n3h">__N3H__</h2>
+      <p id="n3p">__N3P__</p>
+    </div>
+  </div>
+</div>
+
+<script>__DATA__</script>
+<script>__APP__</script>

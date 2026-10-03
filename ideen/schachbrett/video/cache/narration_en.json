@@ -1,0 +1,223 @@
+{
+ "lang": "en",
+ "voice": "en-US-AvaMultilingualNeural",
+ "title": "How the Chessboard Plays Itself",
+ "sr": 48000,
+ "speech": 45.5,
+ "pauses": 5.76,
+ "lines": [
+  {
+   "i": 0,
+   "beat": "hook",
+   "text": "A chessboard that moves its own pieces.",
+   "dur": 2.477,
+   "pause": 0.45
+  },
+  {
+   "i": 1,
+   "beat": "brain",
+   "text": "You play on top.",
+   "dur": 1.102,
+   "pause": 0.16
+  },
+  {
+   "i": 2,
+   "beat": "brain",
+   "text": "Underneath, a computer thinks.",
+   "dur": 1.737,
+   "pause": 0.16
+  },
+  {
+   "i": 3,
+   "beat": "brain",
+   "text": "Millions of moves, before it picks one.",
+   "dur": 2.417,
+   "pause": 0.4
+  },
+  {
+   "i": 4,
+   "beat": "hand",
+   "text": "Its hand is an electromagnet.",
+   "dur": 2.112,
+   "pause": 0.16
+  },
+  {
+   "i": 5,
+   "beat": "hand",
+   "text": "It hangs under the board, on one belt and two motors.",
+   "dur": 3.262,
+   "pause": 0.45
+  },
+  {
+   "i": 6,
+   "beat": "problem",
+   "text": "But pieces can't pass over each other.",
+   "dur": 2.107,
+   "pause": 0.5
+  },
+  {
+   "i": 7,
+   "beat": "lines",
+   "text": "So the magnet never crosses the squares.",
+   "dur": 2.512,
+   "pause": 0.16
+  },
+  {
+   "i": 8,
+   "beat": "lines",
+   "text": "It runs exactly on the lines between them.",
+   "dur": 2.537,
+   "pause": 0.2
+  },
+  {
+   "i": 9,
+   "beat": "lines",
+   "text": "Half a square of clearance, left and right.",
+   "dur": 2.467,
+   "pause": 0.4
+  },
+  {
+   "i": 10,
+   "beat": "slim",
+   "text": "Which is why every piece is slimmer than half a square.",
+   "dur": 3.192,
+   "pause": 0.2
+  },
+  {
+   "i": 11,
+   "beat": "slim",
+   "text": "Too fat, and it gets stuck.",
+   "dur": 1.817,
+   "pause": 0.45
+  },
+  {
+   "i": 12,
+   "beat": "capture",
+   "text": "On a capture, it walks the piece off the board first.",
+   "dur": 3.152,
+   "pause": 0.16
+  },
+  {
+   "i": 13,
+   "beat": "capture",
+   "text": "Two trips for one move.",
+   "dur": 1.682,
+   "pause": 0.4
+  },
+  {
+   "i": 14,
+   "beat": "release",
+   "text": "At the destination it has to let go.",
+   "dur": 2.102,
+   "pause": 0.16
+  },
+  {
+   "i": 15,
+   "beat": "release",
+   "text": "All it takes is a switch: current off.",
+   "dur": 2.582,
+   "pause": 0.2
+  },
+  {
+   "i": 16,
+   "beat": "release",
+   "text": "The field vanishes, the piece stays.",
+   "dur": 2.312,
+   "pause": 0.45
+  },
+  {
+   "i": 17,
+   "beat": "sense",
+   "text": "Your move, the board feels for itself.",
+   "dur": 2.722,
+   "pause": 0.2
+  },
+  {
+   "i": 18,
+   "beat": "sense",
+   "text": "Sixty-four sensors, one per square.",
+   "dur": 2.422,
+   "pause": 0.5
+  },
+  {
+   "i": 19,
+   "beat": "outro",
+   "text": "Your turn.",
+   "dur": 0.787,
+   "pause": 0
+  }
+ ],
+ "beats": [
+  {
+   "id": "hook",
+   "lines": [
+    0
+   ]
+  },
+  {
+   "id": "brain",
+   "lines": [
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "id": "hand",
+   "lines": [
+    4,
+    5
+   ]
+  },
+  {
+   "id": "problem",
+   "lines": [
+    6
+   ]
+  },
+  {
+   "id": "lines",
+   "lines": [
+    7,
+    8,
+    9
+   ]
+  },
+  {
+   "id": "slim",
+   "lines": [
+    10,
+    11
+   ]
+  },
+  {
+   "id": "capture",
+   "lines": [
+    12,
+    13
+   ]
+  },
+  {
+   "id": "release",
+   "lines": [
+    14,
+    15,
+    16
+   ]
+  },
+  {
+   "id": "sense",
+   "lines": [
+    17,
+    18
+   ]
+  },
+  {
+   "id": "outro",
+   "lines": [
+    19
+   ]
+  }
+ ],
+ "target_total": 55
+}

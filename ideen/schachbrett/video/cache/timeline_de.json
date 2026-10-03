@@ -1,0 +1,422 @@
+{
+ "lang": "de",
+ "voice": "de-DE-SeraphinaMultilingualNeural",
+ "title": "Wie das Schachbrett sich selbst spielt",
+ "bpm": 112,
+ "speechEnd": 57.7,
+ "total": 59.5,
+ "lines": [
+  {
+   "i": 0,
+   "beat": "hook",
+   "text": "Ein Schachbrett, das seine Figuren selbst bewegt.",
+   "start": 0,
+   "dur": 3.322,
+   "end": 3.322
+  },
+  {
+   "i": 1,
+   "beat": "brain",
+   "text": "Oben spielst du.",
+   "start": 3.772,
+   "dur": 1.242,
+   "end": 5.014
+  },
+  {
+   "i": 2,
+   "beat": "brain",
+   "text": "Unten denkt ein Computer.",
+   "start": 5.174,
+   "dur": 1.847,
+   "end": 7.021
+  },
+  {
+   "i": 3,
+   "beat": "brain",
+   "text": "Millionen Züge, bevor er einen wählt.",
+   "start": 7.181,
+   "dur": 2.932,
+   "end": 10.113
+  },
+  {
+   "i": 4,
+   "beat": "hand",
+   "text": "Seine Hand ist ein Elektromagnet.",
+   "start": 10.513,
+   "dur": 2.512,
+   "end": 13.025
+  },
+  {
+   "i": 5,
+   "beat": "hand",
+   "text": "Er hängt unter dem Brett, an einem Riemen und zwei Motoren.",
+   "start": 13.185,
+   "dur": 3.822,
+   "end": 17.007
+  },
+  {
+   "i": 6,
+   "beat": "problem",
+   "text": "Aber Figuren können nicht übereinander hinweg.",
+   "start": 17.457,
+   "dur": 3.027,
+   "end": 20.484
+  },
+  {
+   "i": 7,
+   "beat": "lines",
+   "text": "Also fährt der Magnet nie über die Felder.",
+   "start": 20.984,
+   "dur": 2.647,
+   "end": 23.631
+  },
+  {
+   "i": 8,
+   "beat": "lines",
+   "text": "Sondern genau auf den Linien dazwischen.",
+   "start": 23.791,
+   "dur": 2.657,
+   "end": 26.448
+  },
+  {
+   "i": 9,
+   "beat": "lines",
+   "text": "Ein halbes Feld Abstand, links und rechts.",
+   "start": 26.648,
+   "dur": 3.237,
+   "end": 29.885
+  },
+  {
+   "i": 10,
+   "beat": "slim",
+   "text": "Deshalb ist jede Figur schlanker als ein halbes Feld.",
+   "start": 30.285,
+   "dur": 3.507,
+   "end": 33.792
+  },
+  {
+   "i": 11,
+   "beat": "slim",
+   "text": "Wer zu dick ist, bleibt stecken.",
+   "start": 33.992,
+   "dur": 2.382,
+   "end": 36.374
+  },
+  {
+   "i": 12,
+   "beat": "capture",
+   "text": "Beim Schlagen bringt er die Figur erst an den Rand.",
+   "start": 36.824,
+   "dur": 2.987,
+   "end": 39.811
+  },
+  {
+   "i": 13,
+   "beat": "capture",
+   "text": "Zwei Fahrten für einen Zug.",
+   "start": 39.971,
+   "dur": 2.017,
+   "end": 41.988
+  },
+  {
+   "i": 14,
+   "beat": "release",
+   "text": "Am Ziel muss er loslassen.",
+   "start": 42.388,
+   "dur": 1.857,
+   "end": 44.245
+  },
+  {
+   "i": 15,
+   "beat": "release",
+   "text": "Ein Schalter genügt: Strom aus.",
+   "start": 44.405,
+   "dur": 2.702,
+   "end": 47.107
+  },
+  {
+   "i": 16,
+   "beat": "release",
+   "text": "Das Feld ist weg, die Figur steht.",
+   "start": 47.307,
+   "dur": 2.687,
+   "end": 49.994
+  },
+  {
+   "i": 17,
+   "beat": "sense",
+   "text": "Deinen Zug fühlt das Brett selbst.",
+   "start": 50.444,
+   "dur": 2.307,
+   "end": 52.751
+  },
+  {
+   "i": 18,
+   "beat": "sense",
+   "text": "Vierundsechzig Sensoren, einer pro Feld.",
+   "start": 52.951,
+   "dur": 3.147,
+   "end": 56.098
+  },
+  {
+   "i": 19,
+   "beat": "outro",
+   "text": "Du bist dran.",
+   "start": 56.598,
+   "dur": 1.102,
+   "end": 57.7
+  }
+ ],
+ "beats": [
+  {
+   "id": "hook",
+   "i": 0,
+   "start": 0,
+   "end": 3.772,
+   "dur": 3.772,
+   "lines": [
+    0
+   ],
+   "speechEnd": 3.322
+  },
+  {
+   "id": "brain",
+   "i": 1,
+   "start": 3.772,
+   "end": 10.513,
+   "dur": 6.741,
+   "lines": [
+    1,
+    2,
+    3
+   ],
+   "speechEnd": 10.113
+  },
+  {
+   "id": "hand",
+   "i": 2,
+   "start": 10.513,
+   "end": 17.457,
+   "dur": 6.944,
+   "lines": [
+    4,
+    5
+   ],
+   "speechEnd": 17.007
+  },
+  {
+   "id": "problem",
+   "i": 3,
+   "start": 17.457,
+   "end": 20.984,
+   "dur": 3.527,
+   "lines": [
+    6
+   ],
+   "speechEnd": 20.484
+  },
+  {
+   "id": "lines",
+   "i": 4,
+   "start": 20.984,
+   "end": 30.285,
+   "dur": 9.301,
+   "lines": [
+    7,
+    8,
+    9
+   ],
+   "speechEnd": 29.885
+  },
+  {
+   "id": "slim",
+   "i": 5,
+   "start": 30.285,
+   "end": 36.824,
+   "dur": 6.539,
+   "lines": [
+    10,
+    11
+   ],
+   "speechEnd": 36.374
+  },
+  {
+   "id": "capture",
+   "i": 6,
+   "start": 36.824,
+   "end": 42.388,
+   "dur": 5.564,
+   "lines": [
+    12,
+    13
+   ],
+   "speechEnd": 41.988
+  },
+  {
+   "id": "release",
+   "i": 7,
+   "start": 42.388,
+   "end": 50.444,
+   "dur": 8.056,
+   "lines": [
+    14,
+    15,
+    16
+   ],
+   "speechEnd": 49.994
+  },
+  {
+   "id": "sense",
+   "i": 8,
+   "start": 50.444,
+   "end": 56.598,
+   "dur": 6.154,
+   "lines": [
+    17,
+    18
+   ],
+   "speechEnd": 56.098
+  },
+  {
+   "id": "outro",
+   "i": 9,
+   "start": 56.598,
+   "end": 59.5,
+   "dur": 2.902,
+   "lines": [
+    19
+   ],
+   "speechEnd": 57.7
+  }
+ ],
+ "cues": [
+  {
+   "t": 0,
+   "kind": "tear"
+  },
+  {
+   "t": 0.16,
+   "kind": "paper"
+  },
+  {
+   "t": 0.3,
+   "kind": "paper"
+  },
+  {
+   "t": 0.44,
+   "kind": "paper"
+  },
+  {
+   "t": 0.6,
+   "kind": "paper"
+  },
+  {
+   "t": 0.76,
+   "kind": "paper"
+  },
+  {
+   "t": 1.685,
+   "kind": "snap"
+  },
+  {
+   "t": 1.735,
+   "kind": "slide"
+  },
+  {
+   "t": 2.255,
+   "kind": "land"
+  },
+  {
+   "t": 3.055,
+   "kind": "stamp"
+  },
+  {
+   "t": 10.513,
+   "kind": "tear"
+  },
+  {
+   "t": 10.793,
+   "kind": "switch"
+  },
+  {
+   "t": 10.853,
+   "kind": "snap"
+  },
+  {
+   "t": 13.485,
+   "kind": "motor"
+  },
+  {
+   "t": 18.092,
+   "kind": "slide"
+  },
+  {
+   "t": 19.079,
+   "kind": "bonk"
+  },
+  {
+   "t": 19.644,
+   "kind": "cross"
+  },
+  {
+   "t": 23.951,
+   "kind": "snap"
+  },
+  {
+   "t": 24.051,
+   "kind": "motor"
+  },
+  {
+   "t": 24.091,
+   "kind": "slide"
+  },
+  {
+   "t": 35.088,
+   "kind": "bonk"
+  },
+  {
+   "t": 37.004,
+   "kind": "motor"
+  },
+  {
+   "t": 37.044,
+   "kind": "slide"
+  },
+  {
+   "t": 38.444,
+   "kind": "park"
+  },
+  {
+   "t": 40.531,
+   "kind": "slide"
+  },
+  {
+   "t": 42.488,
+   "kind": "coil"
+  },
+  {
+   "t": 44.855,
+   "kind": "switch"
+  },
+  {
+   "t": 44.885,
+   "kind": "fieldoff"
+  },
+  {
+   "t": 51.513,
+   "kind": "off"
+  },
+  {
+   "t": 51.713,
+   "kind": "on"
+  },
+  {
+   "t": 56.598,
+   "kind": "tear"
+  },
+  {
+   "t": 57.382,
+   "kind": "stamp"
+  }
+ ]
+}
