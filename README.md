@@ -4,6 +4,8 @@ Ein Gerät, das eine Zimmerpflanze über Jahre selbstständig gesund hält. Es m
 Bodenfeuchte, gießt morgens bei Bedarf, düngt nach Plan, überwacht Wasser- und Düngervorrat und
 meldet aufs Handy. Hobbyprojekt zu dritt, Budget 300 Euro, Stufe 1 fertig bis spätestens März 2027.
 
+> **Projektwahl noch offen.** Der Pflanzenautomat ist eine von mehreren Ideen. Weitere Ideen in [`ideen/`](ideen/), z. B. [magnetisches Schachbrett](ideen/schachbrett.md).
+
 **Maßgeblich für Stufe 1: [`docs/00-spezifikation-stufe1.md`](docs/00-spezifikation-stufe1.md)**
 (Anforderungen, Hardware, Firmware, MQTT, Sicherheitslogik, Tests, offene Entscheidungen).
 Arbeitsregeln für Claude Code: [`CLAUDE.md`](CLAUDE.md).
@@ -58,6 +60,7 @@ hardware/                 Verdrahtung, Fotos
 calibration/              Protokolle Sonde, Pumpen, Wägezellen
 data/                     Exporte für die spätere Auswertung
 mockup/                   Skizzen für Stufe 2
+ideen/                    Alternative Projektideen
 ```
 
 ## Wie wir arbeiten
