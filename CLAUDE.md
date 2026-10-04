@@ -42,6 +42,7 @@ der geschaltet wird** (kein abgesenkter Permanentmagnet), und **H-Bot** (ein Rie
 - Die bestimmende Regel: gefahren wird auf den Linien zwischen den Feldern, dort ist
   der Abstand zu jeder stehenden Figur genau ein halbes Feld — also Figurenbreite ≤ halbe Feldgröße.
   Diese Regel bestimmt Feldgröße, Figurendesign und Grundfläche. Nicht daran vorbeiplanen.
+- Drehbares 3D-Modell der Mechanik: `ideen/schachbrett/3d/`, Maße in `src/scene.js` unter `MM`
 - `aufbau.md` und die Skizze werden **erzeugt**, nicht von Hand gepflegt:
   Quelle ist `ideen/schachbrett/video/src/bom-data.js` und `bom-doc.js`,
   Build mit `node build_bom.js && node render_bom.js`.

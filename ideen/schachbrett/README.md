@@ -3,7 +3,8 @@
 Stand: 04.10.2026, Vorschlag von Kevin B. Noch nicht entschieden, eine von mehreren Ideen.
 
 > **Weiter ausgearbeitet:** Aufbau, Magnetspalt, Stückliste und die offenen Punkte stehen in
-> [`aufbau.md`](aufbau.md). Ein 59-Sekunden-Erklärvideo liegt unter [`video/`](video/).
+> [`aufbau.md`](aufbau.md). Ein 59-Sekunden-Erklärvideo liegt unter [`video/`](video/),
+> ein drehbares 3D-Modell der Mechanik unter [`3d/`](3d/).
 > Zwischenzeitlich entschieden: **geschalteter Elektromagnet** statt abgesenktem
 > Permanentmagnet, und **H-Bot** (ein Riemen) statt CoreXY.
 

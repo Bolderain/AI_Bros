@@ -6,6 +6,10 @@ Entschieden ist noch nichts.
 
 ![Aufbau-Skizze](aufbau.png)
 
+Wer die Mechanik lieber dreht statt liest: unter [`3d/`](3d/) liegt ein
+
+drehbares 3D-Modell mit Explosionsansicht und den Fahrbewegungen.
+
 ## Kennzahlen
 
 | Größe | Wert | Bemerkung |

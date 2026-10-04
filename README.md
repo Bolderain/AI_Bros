@@ -35,6 +35,7 @@ ein halbes Feld.
 - Idee: [`ideen/schachbrett/README.md`](ideen/schachbrett/README.md)
 - Aufbau, Magnetspalt und Stückliste: [`ideen/schachbrett/aufbau.md`](ideen/schachbrett/aufbau.md)
 - Erklärvideo, 59 s: [`ideen/schachbrett/video/`](ideen/schachbrett/video/)
+- Mechanik in 3D zum Drehen: [`ideen/schachbrett/3d/`](ideen/schachbrett/3d/)
 
 ![Aufbau-Skizze](ideen/schachbrett/aufbau.png)
 

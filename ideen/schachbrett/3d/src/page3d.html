@@ -1,0 +1,153 @@
+<title>Schachbrett in 3D — Mechanik zum Drehen</title>
+<style>
+/* Caveat & Patrick Hand, SIL Open Font License 1.1 */
+@font-face{font-family:'Caveat';font-style:normal;font-weight:700;font-display:block;
+  src:url(data:font/woff2;base64,__FONT_CAVEAT__) format('woff2');}
+@font-face{font-family:'Patrick Hand';font-style:normal;font-weight:400;font-display:block;
+  src:url(data:font/woff2;base64,__FONT_PATRICK__) format('woff2');}
+
+:root{
+  --desk:#e6ddcb; --desk2:#d9cfb9; --fg:#2f2b28; --dim:#6d6456;
+  --rule:rgba(60,48,32,.18); --chip:#f6efdf; --chipEdge:rgba(58,46,30,.32);
+  --accent:#c0432f; --stage:#e9dfca; --fogN:1400; --fogF:2600;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --desk:#1a1816; --desk2:#141211; --fg:#eee5d2; --dim:#a0988a;
+    --rule:rgba(240,228,205,.16); --chip:#2a2724; --chipEdge:rgba(240,228,205,.24);
+    --accent:#e4705a; --stage:#20201e; }
+}
+:root[data-theme="light"]{ --desk:#e6ddcb; --desk2:#d9cfb9; --fg:#2f2b28; --dim:#6d6456;
+  --rule:rgba(60,48,32,.18); --chip:#f6efdf; --chipEdge:rgba(58,46,30,.32);
+  --accent:#c0432f; --stage:#e9dfca; }
+:root[data-theme="dark"]{ --desk:#1a1816; --desk2:#141211; --fg:#eee5d2; --dim:#a0988a;
+  --rule:rgba(240,228,205,.16); --chip:#2a2724; --chipEdge:rgba(240,228,205,.24);
+  --accent:#e4705a; --stage:#20201e; }
+
+*{box-sizing:border-box}
+body{margin:0; color:var(--fg);
+  background:radial-gradient(1200px 700px at 50% -10%, var(--desk), var(--desk2) 70%);
+  font-family:'Patrick Hand',"Segoe Print",system-ui,cursive; -webkit-font-smoothing:antialiased;}
+.wrap{max-width:1320px; margin:0 auto; padding:26px 16px 56px;}
+header{margin:0 0 16px}
+h1{font-family:'Caveat',cursive; font-weight:700; font-size:clamp(30px,5vw,56px);
+  margin:0 0 3px; line-height:1.04; text-wrap:balance}
+.sub{margin:0; color:var(--dim); font-size:clamp(14px,2vw,18px); max-width:66ch}
+.sub b{color:var(--accent); font-weight:400}
+
+.app{display:grid; grid-template-columns:1fr 262px; gap:14px; align-items:start}
+.stage{position:relative; aspect-ratio:16/10; border-radius:6px; overflow:hidden;
+  background:var(--stage); box-shadow:0 18px 44px -18px rgba(0,0,0,.55);
+  touch-action:none}
+.stage canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+#ov{cursor:grab}
+
+.panel{display:flex; flex-direction:column; gap:14px;
+  background:var(--chip); border:1px solid var(--rule); border-radius:10px; padding:14px}
+.panel h2{font-family:'Caveat',cursive; font-weight:700; font-size:21px; margin:0 0 7px}
+.grp{display:flex; flex-direction:column; gap:7px}
+button.ui{font-family:'Patrick Hand',cursive; font-size:16px; color:var(--fg); text-align:left;
+  background:transparent; border:1.5px solid var(--chipEdge); border-radius:8px;
+  padding:7px 12px; cursor:pointer; transition:border-color .12s, background .12s}
+button.ui:hover{border-color:var(--accent)}
+button.ui[aria-pressed="true"]{background:var(--accent); color:#fff6ea; border-color:var(--accent)}
+button.tog[aria-pressed="true"]{background:color-mix(in srgb, var(--accent) 16%, transparent);
+  color:var(--fg); border-color:var(--accent)}
+button.tog[aria-pressed="false"]{opacity:.55}
+button.ui:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+.row{display:grid; grid-template-columns:1fr 1fr; gap:7px}
+.row button.ui{text-align:center; padding:7px 6px}
+label.sl{font-size:15px; color:var(--dim); display:flex; flex-direction:column; gap:5px}
+input[type=range]{width:100%; accent-color:var(--accent)}
+#hint{margin:12px 0 0; padding:10px 14px; border-left:3px solid var(--accent);
+  background:var(--chip); border-radius:0 8px 8px 0; font-size:15.5px; color:var(--dim);
+  min-height:44px; line-height:1.45}
+
+.notes{margin-top:26px; padding-top:18px; border-top:1px solid var(--rule);
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px 26px;
+  font-size:15.5px; color:var(--dim); line-height:1.5}
+.notes h3{font-family:'Caveat',cursive; font-weight:700; font-size:22px; margin:0 0 4px; color:var(--fg)}
+.notes p{margin:0}
+.notes b{color:var(--accent); font-weight:400}
+footer{margin-top:22px; color:var(--dim); font-size:14.5px}
+
+@media (max-width:860px){
+  .app{grid-template-columns:1fr}
+  .stage{aspect-ratio:4/3}
+}
+@media (prefers-reduced-motion:reduce){ button.ui{transition:none} }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Schachbrett in 3D</h1>
+    <p class="sub">Nur die Mechanik: wo was sitzt und wie es sich bewegt.
+      <b>Ziehen zum Drehen</b>, Rad zum Zoomen, Umschalt-Ziehen zum Verschieben.</p>
+  </header>
+
+  <div class="app">
+    <div class="stage">
+      <canvas id="gl"></canvas>
+      <canvas id="ov" aria-label="3D-Ansicht der Brettmechanik"></canvas>
+    </div>
+
+    <aside class="panel">
+      <div class="grp">
+        <h2>Bewegung</h2>
+        <button class="ui" data-mode="move" aria-pressed="true">Zug fahren</button>
+        <button class="ui" data-mode="axisY" aria-pressed="false">Y: Motoren gleich</button>
+        <button class="ui" data-mode="axisX" aria-pressed="false">X: Motoren gegeneinander</button>
+        <button class="ui" data-mode="idle" aria-pressed="false">Stopp</button>
+      </div>
+
+      <div class="grp">
+        <h2>Ansicht</h2>
+        <label class="sl">Explosionsansicht
+          <input type="range" id="explode" min="0" max="100" value="0">
+        </label>
+        <div class="row">
+          <button class="ui tog" id="tGlass" aria-pressed="true">Glas</button>
+          <button class="ui tog" id="tPcb" aria-pressed="true">Sensoren</button>
+          <button class="ui tog" id="tFrame" aria-pressed="true">Rahmen</button>
+          <button class="ui tog" id="tPieces" aria-pressed="true">Figuren</button>
+        </div>
+        <div class="row">
+          <button class="ui tog" id="tLabels" aria-pressed="true">Beschriftung</button>
+          <button class="ui" id="reset">Ansicht zurück</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <p id="hint">Ziehen zum Drehen, Rad zum Zoomen.</p>
+
+  <div class="notes">
+    <div>
+      <h3>Der Stapel</h3>
+      <p>Von oben: Figur mit Stahlscheibe im Fuß, <b>4 mm Glas</b> mit dem Motiv auf der
+        Unterseite, die 1 mm dünne Sensorlage, 1,5 mm Luft — und darunter die Polfläche
+        des Elektromagneten. Zusammen rund <b>8 mm Magnetspalt</b>. Zieh den Regler
+        „Explosionsansicht" auf, dann fällt der Stapel auseinander.</p>
+    </div>
+    <div>
+      <h3>Der H-Bot</h3>
+      <p>Beide Motoren sind <b>fest am Rahmen</b> und bewegen sich nie. Ein einziger Riemen
+        läuft von einem Motor über die Umlenkrolle am Balken zum Schlitten, auf der anderen
+        Seite wieder zurück. Drehen beide gleich herum, fährt das ganze Portal. Drehen sie
+        gegeneinander, fährt nur der Schlitten am Balken entlang.</p>
+    </div>
+    <div>
+      <h3>Warum auf den Linien</h3>
+      <p>Der Magnet fährt nie über eine Feldmitte, auf der eine Figur steht, sondern immer
+        auf den Linien dazwischen. Dort ist der Abstand zu jeder stehenden Figur genau
+        <b>ein halbes Feld</b>. Deshalb muss jede Figur schlanker sein als ein halbes Feld —
+        hier sind es 24 mm bei 50 mm Feldern.</p>
+    </div>
+  </div>
+
+  <footer>Maße aus <code>ideen/schachbrett/aufbau.md</code>. Entschieden ist noch nichts.
+    3D mit three.js (MIT).</footer>
+</div>
+
+<script>__THREE__</script>
+<script>__SCENE__</script>
+<script>__VIEWER__</script>

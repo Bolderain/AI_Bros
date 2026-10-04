@@ -113,6 +113,8 @@ md.push('Stand: 04.10.2026. Gehört zur Projektidee in [`README.md`](README.md).
 md.push('Preise und nicht gemessene Werte sind **Schätzungen**, Werte mit **(P)** sind Vorschläge.');
 md.push('Entschieden ist noch nichts.', '');
 md.push('![Aufbau-Skizze](aufbau.png)', '');
+md.push('Wer die Mechanik lieber dreht statt liest: unter [`3d/`](3d/) liegt ein', '');
+md.push('drehbares 3D-Modell mit Explosionsansicht und den Fahrbewegungen.', '');
 md.push('## Kennzahlen', '');
 md.push('| Größe | Wert | Bemerkung |', '|---|---|---|');
 for (const [a, b, c] of KEY) md.push(`| ${a} | ${b} | ${c} |`);
