@@ -2,6 +2,10 @@
 
 Stand: 22.10.2026, **Vorschlag von Claude** (nicht aus dem Team). Noch nicht entschieden, eine von mehreren Ideen.
 
+**Neu (22.10.2026):** Unser Zähler hängt im Keller eines Mehrparteienhauses. Was das bedeutet und welche
+Wege es gibt, steht unter [Zähler im Keller](#zähler-im-keller). Zum Ausprobieren gibt es eine
+[interaktive Simulation](sim/index.html) der WG (Abdeckung, Kosten, Flur-Anzeige, Funk aus dem Keller).
+
 ## Idee
 
 Eine Anzeige im Flur zeigt, wie viel Strom die WG heute verbraucht hat, was das ungefähr kostet,
@@ -27,6 +31,9 @@ Zählerschrank, Verteilung oder Unterputzdosen. Alles ist ohne Spuren wieder abb
 
 ![Blockdiagramm](aufbau.svg)
 
+Das Blockdiagramm zeigt den Vollausbau (Variante A). Für den Start mit Variante B entfällt der Zweig
+Zähler und Lesekopf, siehe [Zähler im Keller](#zähler-im-keller).
+
 So könnte die Anzeige im Flur aussehen (Mockup, Zahlen erfunden):
 
 ![Dashboard-Mockup](dashboard-mockup.svg)
@@ -51,13 +58,51 @@ Hier liegt die größte Unbekannte der Idee. Vor jedem Kauf muss jemand in den Z
   der Drehscheibe zählt (Variante D), deutlich ungenauer.
 - **iMSys mit Gateway:** Daten kommen eventuell auch über das Gateway (HAN-Schnittstelle).
   Das ist von Betreiber zu Betreiber unterschiedlich und wird hier nicht weiter vorausgesetzt.
-- **Zugang zum Zählerschrank.** Steht der Zähler im Keller oder im Treppenhaus, braucht der
-  ESP32 dort WLAN und Strom (USB-Netzteil an einer Steckdose in der Nähe). Liegt er außerhalb
-  der Wohnung, kurz mit dem Vermieter bzw. der Hausverwaltung abstimmen, ob ein kleines
-  Gerät am eigenen Zähler hängen darf. **(Offen)**
+- **Zugang zum Zählerschrank.** Bei uns hängt der Zähler im Keller, siehe nächster Abschnitt.
 
 Konkrete Zählermodelle, OBIS-Kennzahlen und Lesekopf-Pinbelegungen werden erst eingetragen,
 wenn wir unseren Zähler und den gekauften Lesekopf kennen. Hier wird nichts davon vorweggenommen.
+
+## Zähler im Keller
+
+**Nutzer-Info vom 22.10.2026:** Der Zähler hängt im Keller eines Mehrparteienhauses. Das macht Variante A
+schwierig: Der Lesekopf bräuchte dort Strom und eine Funkverbindung bis in die Wohnung, und der Zählerraum
+ist ein gemeinsamer Raum, für den die Hausverwaltung zuständig ist.
+
+**Grundregel: Zähler anderer Parteien werden nie berührt**, auch nicht "nur kurz zum Testen". Unseren eigenen
+Zähler erkennt man an der Zählernummer, die auch auf der Stromrechnung steht. Ob am eigenen Zähler im
+Keller überhaupt etwas hängen darf, klärt die Hausverwaltung (siehe unten).
+
+| Weg | Wie | Gesamtverbrauch | Was es braucht | Risiko, offen | Kosten (Schätzung) |
+|---|---|---|---|---|---|
+| **1. Nur Zwischenstecker** (Variante B) | Kein Gerät im Keller. Messstecker an den Großverbrauchern in der Wohnung, alles in Home Assistant | nein, nur die gemessenen Geräte; Grundlast, Herd, Licht bleiben unsichtbar | nichts außer Steckdosen in der Wohnung | Wie groß der unsichtbare Rest ist, weiß man nicht (die Simulation zeigt, wie das aussehen kann) | ca. 65 bis 180 € mit Flur-Anzeige |
+| **2. Lesekopf mit Akku und Langstrecken-Funk** | Lesekopf am Zähler, dazu ein Board mit Akku, das per LoRa (868 MHz), ESP-NOW (eventuell im Long-Range-Modus) oder anderem Funk durch die Decken zu einem Empfänger in der Wohnung sendet | ja | Erlaubnis der Hausverwaltung, Akku oder eigene Stromquelle im Keller, Empfänger in der Wohnung | **Reichweite ehrlich unbekannt.** Stahlbetondecken, Metallschrank und Abstand lassen sich nicht vorhersagen, nur **messen**: zwei Boards, eines im Keller, eines in der Wohnung, ein paar Tage Empfang mitschreiben. Akku-Laufzeit offen (P), hängt am Sendeintervall und am Lesekopf. Im 868-MHz-Band gelten Regeln zur Sendezeit, vor dem Bau prüfen | ca. 40 bis 90 € zusätzlich zu Weg 1 (P) |
+| **3. WLAN-Repeater** | Repeater oder Mesh-Knoten so platzieren, dass das WG-WLAN den Keller erreicht, Lesekopf mit WLAN wie in Variante A | ja | Steckdose für den Repeater, die wir nutzen dürfen (in der Wohnung, im Keller meist Allgemeinstrom), Strom auch für den Lesekopf | Kommt nur weiter, wenn die Wohnung nah am Keller liegt (EG, Hochparterre). Steckdosen im Keller hängen oft am Allgemeinzähler des Hauses: dort Strom abzuzapfen geht nur mit Erlaubnis | ca. 20 bis 50 € zusätzlich (P) |
+| **4. Schaltschrank in der Wohnung prüfen** | Nachsehen, was im Verteiler in der Wohnung sitzt | nur falls dort doch ein eigener Zähler hängt | einen Blick hinein, ohne Abdeckungen zu öffnen | Meist sitzen dort nur Sicherungen. Hutschienen-Zähler oder Stromzangen im Verteiler wären ein Eingriff in die Installation: nur Elektrofachkraft, nur mit Zustimmung des Vermieters, nicht mieter-tauglich im Sinne dieser Idee | 0 € fürs Nachsehen |
+| **5. Daten vom Messstellen- bzw. Netzbetreiber** | Falls ein intelligentes Messsystem (Smart Meter mit Gateway) verbaut ist oder kommt: Verbrauchswerte im Kundenportal bzw. über eine Schnittstelle des Betreibers abrufen | ja, oft aber verzögert (z.B. erst am Folgetag), Auflösung je Betreiber | Zugang über den Stromvertrag, eventuell Antrag beim Messstellenbetreiber | Ob unser Zähler ein Smart Meter ist, ob es ein Portal oder eine Schnittstelle gibt und mit welchem Verzug: **offen (P)**. Bei einer modernen Messeinrichtung ohne Gateway gibt es keine Fernwerte | meist 0 €, Smart-Meter-Einbau auf Wunsch eventuell kostenpflichtig (offen) |
+| **6. Hausverwaltung fragen** | Kurz anfragen, bevor im Keller irgendetwas passiert | (Voraussetzung für 2 und 3) | eine Mail | Fragen: Darf ein kleines Gerät an unserem Zähler hängen? Gibt es im Keller eine Steckdose, die wir nutzen dürfen? Ist ein Smart-Meter-Einbau im Haus geplant? Gibt es WLAN oder LAN im Keller? | 0 € |
+| **Ergänzung: von Hand ablesen** | Ab und zu (z.B. wöchentlich) den Zählerstand ablesen und in HA eintragen | grob, als Wochenwert | Zugang zum Kellerraum | Kein Live-Wert, aber zeigt, wie groß der Anteil ist, den die Stecker nicht sehen | 0 € |
+
+Die Wege schließen sich nicht aus. Weg 1 läuft sofort, die Wege 4 bis 6 kosten nichts und klären, ob sich
+2, 3 oder 5 überhaupt lohnen.
+
+**Empfehlung (Annahme, Team entscheidet): Start mit Variante B, nur Zwischenstecker.** Sie funktioniert ohne
+Keller, ohne Hausverwaltung und ohne PIN, und "Wäsche ist fertig" ist am ersten Abend nutzbar. Parallel und
+ohne Kosten: Schaltschrank in der Wohnung ansehen, Hausverwaltung fragen, beim Netzbetreiber nach
+Smart Meter und Portal fragen, beim nächsten Kellergang Zählertyp und Typenschild notieren. Einen
+Funk-Lesekopf (Weg 2) erst bauen, wenn die Hausverwaltung zugestimmt hat und eine Reichweitenmessung
+mit zwei Boards vor Ort funktioniert hat. **(Offen)**
+
+### Simulation zum Ausprobieren
+
+[`sim/index.html`](sim/index.html) ist eine eigenständige Seite (im Browser öffnen, auch am Handy):
+eine virtuelle WG im Zeitraffer, Geräte mit änderbaren Leistungsprofilen (Schätzwerte), Haken für
+"hat Zwischenstecker", Abdeckungsgrad gemessener gegen wahren Verbrauch, Kosten mit änderbarem Tarif (P),
+Live-Vorschau der E-Paper-Anzeige und eine qualitative Funk-Abschätzung vom Keller in die Wohnung
+(Stockwerke, Decken- und Wanddämpfung als Parameter (P)). Alle Zahlen darin sind Annahmen, keine Messung.
+Die Funk-Abschätzung ersetzt die Messung vor Ort nicht.
+
+![Screenshot der Simulation](sim/screenshot.png)
 
 ## Lösungsvarianten
 
@@ -66,15 +111,16 @@ wenn wir unseren Zähler und den gekauften Lesekopf kennen. Hier wird nichts dav
 | Prinzip | Lesekopf am Zähler mit ESP32 (Tasmota oder ESPHome), dazu Messstecker an Großverbrauchern, alles in Home Assistant | Nur Messstecker, kein Gesamtverbrauch | Lesekopf mit Hersteller-App oder Cloud-Dienst | Optischer Sensor zählt Umdrehungen der Drehscheibe |
 | Gesamtverbrauch | ja | nein, nur gemessene Geräte | ja | ja, grob |
 | "Wer hat den Trockner" | ja | ja | meist nein | nur mit Steckern |
-| Kosten (Schätzung) | 90 bis 250 € | 50 bis 120 € | 80 bis 200 € | 70 bis 150 € |
+| Kosten (Schätzung) | 90 bis 250 € | 65 bis 180 € mit Flur-Anzeige, 30 bis 95 € ohne | 80 bis 200 € | 70 bis 150 € |
 | Aufwand | mittel | gering | gering | mittel bis hoch (Justage) |
 | Bastelanteil | Firmware, HA-Konfiguration, Display, Gehäuse (3D-Druck) | HA-Konfiguration, Display | fast keiner | Sensor, Justage, Firmware |
-| Risiko | Zähler liefert ohne PIN wenig, WLAN am Zählerort | Grundlast bleibt unsichtbar | Cloud, Daten beim Anbieter, wenig Lernwert | ungenau, Fehlzählungen |
+| Risiko | Zähler liefert ohne PIN wenig; bei uns Zähler im Keller, Strom und Funk dort offen | Grundlast bleibt unsichtbar | Cloud, Daten beim Anbieter, wenig Lernwert | ungenau, Fehlzählungen |
 | Voraussetzung | digitaler Zähler mit IR-Schnittstelle | keine | je nach Anbieter | Ferraris-Zähler |
 
-**Annahme als Ausgangspunkt: Variante A**, weil sie den Pi nutzt, Gesamt- und Geräteverbrauch
-verbindet und lokal bleibt. **(Offen, Entscheidung Team, hängt vom Zählertyp ab.)**
-B ist der sinnvolle erste Schritt, falls der Zähler sich als ungeeignet herausstellt.
+**Annahme als Ausgangspunkt: Variante B (nur Stecker)**, seit klar ist, dass der Zähler im Keller eines
+Mehrparteienhauses hängt (siehe [Zähler im Keller](#zähler-im-keller)). B läuft sofort und lokal. Variante A
+bleibt der Ausbau, falls einer der Keller-Wege trägt (Hausverwaltung einverstanden, Funk gemessen) oder
+Daten vom Netzbetreiber kommen. **(Offen, Entscheidung Team.)**
 
 ## Bausteine (Variante A)
 
@@ -115,6 +161,10 @@ B ist der sinnvolle erste Schritt, falls der Zähler sich als ungeeignet herauss
 | Gehäuse/Rahmen (3D-Druck), Kleinteile, Netzteil Display | 1 | 5 bis 15 |
 | **Summe Variante A** | | **ca. 90 bis 250** |
 
+Variante B (Startpunkt) besteht aus Pi, 2 bis 4 Zwischensteckern, Display, Display-ESP32 und Gehäuse:
+**ca. 65 bis 180 €**, ohne Flur-Anzeige ca. 30 bis 95 €. Für Weg 2 (Funk-Lesekopf) kämen Lesekopf, Board mit
+Funkmodul, Akku und Empfänger dazu, grob 40 bis 90 € (P), erst nach der Reichweitenmessung.
+
 Untere Spanne: Lesekopf mit integriertem ESP, zwei Stecker, kleineres Display.
 Obere Spanne: separater ESP32, vier Stecker, großes Display. Passt ins Budget von 300 €,
 zusammen mit dem Fenster-Checker (Variante A, ca. 60 bis 120 €) wird es knapp. **Alle Preise Schätzung.**
@@ -130,15 +180,16 @@ Der Reihe nach, jeder liefert für sich schon etwas Nutzbares.
 
 | | Ziel | Fertig, wenn |
 |---|---|---|
-| M0 | Zähler klären | Typ, Modell, Ort, Strom/WLAN am Zählerort bekannt, PIN beim Netzbetreiber angefragt |
+| M0 | Zähler klären | Zählertyp und Typenschild im Keller notiert (nur ansehen), Schaltschrank in der Wohnung angesehen, Hausverwaltung und Netzbetreiber (Smart Meter, Portal, PIN) angefragt |
 | M1 | Home Assistant auf dem Pi | HA läuft, im WG-WLAN erreichbar (gemeinsam mit Fenster-Checker, falls der zuerst kommt) |
 | M2 | Großverbraucher messen | 2 Zwischenstecker in HA, "Trockner läuft / fertig" als Sensor, Push bei "fertig" |
-| M3 | Zähler auslesen | Lesekopf liefert Zählerstand in HA, Energie-Dashboard zeigt Tageswerte; mit PIN auch Leistung |
+| M3 | Zähler auslesen (nur falls ein Keller-Weg trägt) | Reichweite vor Ort gemessen und Erlaubnis da, dann: Lesekopf liefert Zählerstand in HA, Energie-Dashboard zeigt Tageswerte; mit PIN auch Leistung. Alternativ Werte vom Netzbetreiber in HA |
 | M4 | Kosten und Vergleich | Arbeitspreis als Parameter, Kosten heute, Vergleich Vorwoche, 7-Tage-Verlauf |
 | M5 | Anzeige im Flur | E-Paper zeigt die Felder aus dem Mockup, Gehäuse gedruckt, läuft eine Woche stabil |
 | M6 (optional) | Balkonkraftwerk | Ertrag und Eigenverbrauch sichtbar |
 
-M2 vor M3, weil die Stecker sofort funktionieren, während der Zähler auf die PIN warten kann.
+M2 vor M3, weil die Stecker sofort funktionieren, während der Zähler auf Hausverwaltung, Funktest und PIN
+warten kann. M4 und M5 gehen auch ohne M3, dann eben mit "nur Geräte mit Stecker" auf der Anzeige.
 
 ## Synergien mit dem Fenster-Checker
 
@@ -174,7 +225,8 @@ Team entscheidet):
 ## Risiken und harte Stellen
 
 - **Zählertyp und PIN** (siehe oben): bestimmt, ob die Kernfunktion überhaupt geht.
-- **WLAN im Keller:** Zählerschrank oft außerhalb der Reichweite, eventuell Repeater nötig.
+- **Zähler im Keller (bei uns der Fall):** Strom, Funk und Erlaubnis dort offen. Funkreichweite durch
+  mehrere Decken lässt sich nicht vorhersagen, nur messen. Zähler anderer Parteien nie berühren.
 - **Lesekopf justieren:** Muss genau vor der Schnittstelle sitzen, Fremdlicht stört.
 - **Zwischenstecker-Last:** siehe Stückliste, Dauerlast je Modell prüfen.
 - **Stromtarif ändert sich:** Arbeitspreis muss als Parameter pflegbar sein, nicht im Code.
@@ -191,9 +243,12 @@ Team entscheidet):
 
 ## Offene Entscheidungen
 
-- Welcher Zähler hängt bei uns, und wo? (Klärt M0, bestimmt die Variante)
+- Welcher Zähler hängt bei uns im Keller (Typ, Modell, Smart Meter oder nicht)? (Klärt M0)
+- Start mit Variante B, wie hier angenommen?
 - PIN beim Netzbetreiber anfragen: wer, über wessen Vertrag?
-- Darf ein Gerät am Zähler hängen, falls er außerhalb der Wohnung liegt? (Hausverwaltung)
+- Darf ein Gerät an unserem Zähler im Keller hängen, und gibt es dort eine Steckdose, die wir nutzen dürfen? (Hausverwaltung)
+- Lohnt ein Funktest Keller nach Wohnung, und mit welcher Funktechnik (LoRa, ESP-NOW, WLAN mit Repeater)?
+- Bietet der Netz- bzw. Messstellenbetreiber ein Portal oder eine Schnittstelle für unsere Werte?
 - Tasmota oder ESPHome für den Lesekopf?
 - WLAN- oder Zigbee-Zwischenstecker (hängt am Fenster-Checker)?
 - Welche Geräte bekommen einen Stecker, und wer stimmt zu?

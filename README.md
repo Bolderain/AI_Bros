@@ -19,7 +19,7 @@ Budget 300 Euro, Raspberry Pi ist vorhanden. Doku auf Deutsch.
 | [Topf-Addon (Thermomix light)](ideen/topf-addon/) | Rührwerk, Temperatursonde und Waage mit Rezept-Schrittmodus für normale Töpfe | Konzept, Empfehlung Variante C, Ausbau zu B | ca. 90 bis 225 € (C), bis 310 € (B) |
 | [Powermeter](ideen/powermeter/) | Eigener Leistungsmesser am linken Kurbelarm (DMS-Vollbrücke), sendet per BLE an Garmin/Wahoo/Zwift | Konzept, Messprinzip-Skizze, Stückliste | ca. 125 bis 325 € |
 | [Gravel-Navi](ideen/gravel-navi/) | Eigenes Fahrradnavi mit Offline-OSM-Karten im Gravel-Stil, Routing am PC mit BRouter | Konzept, Display-Mockup, Varianten A bis D | ca. 165 bis 245 € (Variante A) |
-| [WG-Energie](ideen/wg-energie/) *(Vorschlag Claude)* | IR-Lesekopf am Stromzähler + Zwischenstecker, Home Assistant, E-Paper im Flur | Konzept, Dashboard-Mockup | ca. 90 bis 250 € |
+| [WG-Energie](ideen/wg-energie/) *(Vorschlag Claude)* | Zwischenstecker an Großgeräten (Start, Zähler hängt im Keller), Home Assistant, E-Paper im Flur; Zähler-Lesekopf als Ausbau | Konzept, Dashboard-Mockup, [Simulation](ideen/wg-energie/sim/index.html), Annahme: Start mit Variante B | ca. 65 bis 180 € (B), 90 bis 250 € (A) |
 | [Smart-Trainer](ideen/smart-trainer/) *(Vorschlag Claude)* | Einfachen Magnet-Rollentrainer zum BLE-Smart-Trainer (FTMS, ERG-Modus) umbauen | Konzept, Prinzip-Skizze | ca. 60 bis 110 € |
 
 ## Pflanzenautomat

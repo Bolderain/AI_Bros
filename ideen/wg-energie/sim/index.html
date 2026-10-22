@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WG-Energie Simulation</title>
+<meta name="description" content="Virtuelle WG im Zeitraffer: welche Geräte per Zwischenstecker erfasst sind, wie viel vom wahren Verbrauch man sieht, was es kostet, was die Flur-Anzeige zeigt und ob Funk aus dem Keller durchkommt. Alle Werte Schätzung.">
+<style>
+/* Farben als Tokens, hell und dunkel */
+:root {
+  --bg: #f4f3ef;
+  --panel: #ffffff;
+  --panel2: #f8f7f4;
+  --ink: #1c1e21;
+  --muted: #5b6169;
+  --line: #dcd9d1;
+  --accent: #1f63d6;
+  --true: #a3abb5;
+  --meas: #1d8a59;
+  --on: #d98c00;
+  --ok: #23804f;
+  --warn: #a96600;
+  --bad: #c0332b;
+  --room: #fbfaf7;
+  --wall: #8b8f96;
+  --field: #ffffff;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131518;
+    --panel: #1c1f23;
+    --panel2: #22262b;
+    --ink: #e6e8eb;
+    --muted: #9aa1a9;
+    --line: #343a41;
+    --accent: #79a8ff;
+    --true: #6b737d;
+    --meas: #3fc28a;
+    --on: #ffb43a;
+    --ok: #4cc386;
+    --warn: #f0a640;
+    --bad: #ff6b61;
+    --room: #20242a;
+    --wall: #8d949c;
+    --field: #15181b;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131518;
+  --panel: #1c1f23;
+  --panel2: #22262b;
+  --ink: #e6e8eb;
+  --muted: #9aa1a9;
+  --line: #343a41;
+  --accent: #79a8ff;
+  --true: #6b737d;
+  --meas: #3fc28a;
+  --on: #ffb43a;
+  --ok: #4cc386;
+  --warn: #f0a640;
+  --bad: #ff6b61;
+  --room: #20242a;
+  --wall: #8d949c;
+  --field: #15181b;
+  --shadow: none;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+header.top {
+  position: sticky; top: 0; z-index: 5;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 16px;
+}
+.toprow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; max-width: 1280px; margin: 0 auto; }
+h1 { font-size: 18px; margin: 0; letter-spacing: .01em; }
+h1 small { font-weight: 400; color: var(--muted); font-size: 13px; }
+@media (max-width: 600px) {
+  header.top { padding: 8px 16px; }
+  h1 small { display: none; }
+  .clock { min-width: 0; font-size: 15px; }
+  .ctrls { margin-left: 0; gap: 6px; }
+  .ctrls button, .ctrls select { padding: 4px 8px; font-size: 14px; }
+  .ctrls .tl { display: none; }
+}
+.clock { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 17px; min-width: 9.5em; }
+.ctrls { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-left: auto; }
+button, select, input { font: inherit; color: inherit; }
+button {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 11px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+:root[data-theme="dark"] button.primary { color: #0d1117; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) button.primary { color: #0d1117; } }
+select, input[type=number], input[type=text] {
+  background: var(--field); border: 1px solid var(--line); border-radius: 7px; padding: 4px 7px;
+}
+input[type=number] { width: 5.5em; }
+input.bad { border-color: var(--bad); outline: 1px solid var(--bad); }
+label { cursor: pointer; }
+main { max-width: 1280px; margin: 0 auto; padding: 14px 16px 40px; }
+.intro { color: var(--muted); margin: 0 0 12px; max-width: 75ch; }
+.wrap { display: flex; gap: 14px; align-items: flex-start; }
+.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.col.l { flex: 1.1 1 0; }
+.col.r { flex: 1 1 0; }
+@media (max-width: 900px) {
+  .wrap { flex-direction: column; align-items: stretch; }
+  .col { display: contents; }
+  #s-plan { order: 1; } #s-cover { order: 2; } #s-chart { order: 3; }
+  #s-epaper { order: 4; } #s-dev { order: 5; } #s-funk { order: 6; }
+}
+section.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px; box-shadow: var(--shadow); min-width: 0;
+}
+section.card h2 { font-size: 15px; margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+section.card h2 .sub { font-weight: 400; color: var(--muted); font-size: 13px; }
+canvas { display: block; width: 100%; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.p { color: var(--warn); font-weight: 600; font-size: 12px; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; align-items: center; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+
+/* Geräteliste */
+.devs { display: flex; flex-direction: column; gap: 6px; }
+.dev { border: 1px solid var(--line); border-radius: 9px; padding: 7px 9px; background: var(--panel2); }
+.dev .r1 { display: flex; align-items: center; gap: 8px; }
+.dev .name { font-weight: 600; }
+.dev .room { color: var(--muted); font-size: 12px; }
+.dev .pw { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; min-width: 5.2em; text-align: right; }
+.dev .pw.off { color: var(--muted); font-weight: 400; }
+.sw { min-width: 3.4em; padding: 3px 8px; font-size: 13px; }
+.sw[aria-pressed="true"] { background: var(--on); border-color: var(--on); color: #1a1200; }
+.dev .r2 { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px; font-size: 13px; }
+.dev .hint { color: var(--muted); font-size: 12px; }
+.dev details { width: 100%; }
+.dev summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+.dev .edit { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px; }
+.dev .edit label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+.dev .edit label.inl { flex-direction: row; align-items: center; gap: 6px; }
+.dev .edit input[type=text] { width: 100%; }
+.dev.plugged { border-left: 4px solid var(--meas); }
+
+/* Kennzahlen */
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.kpi { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; min-width: 0; }
+.kpi .k { font-size: 12px; color: var(--muted); }
+.kpi .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .v small { font-size: 13px; font-weight: 500; color: var(--muted); }
+@media (max-width: 420px) { .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); } .kpi .v { font-size: 18px; } }
+.bar { height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; margin: 10px 0 4px; position: relative; }
+.bar > div { height: 100%; background: var(--meas); width: 0; transition: width .25s; }
+.row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 8px; }
+.row label { display: inline-flex; align-items: center; gap: 6px; }
+table.mini { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 8px; }
+table.mini td { padding: 3px 4px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+table.mini td:last-child { text-align: right; }
+
+/* Funk */
+.verdict { font-weight: 700; font-size: 16px; padding: 6px 10px; border-radius: 8px; display: inline-block; margin-top: 6px; }
+.verdict.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.verdict.knapp { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.verdict.nein { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 10px; margin-top: 8px; }
+.fgrid label { display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 2px; }
+.fgrid input, .fgrid select { width: 100%; }
+.note { border-left: 3px solid var(--warn); padding: 6px 10px; background: var(--panel2); border-radius: 0 8px 8px 0; font-size: 13px; margin-top: 10px; }
+.epwrap { background: #3a3d42; border-radius: 10px; padding: 12px; }
+footer { color: var(--muted); font-size: 13px; max-width: 1280px; margin: 0 auto; padding: 0 16px 30px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="toprow">
+    <h1>WG-Energie <small>Simulation, alle Werte Schätzung</small></h1>
+    <div class="clock" id="clock">Tag 1, 06:00</div>
+    <div class="ctrls">
+      <button id="play" class="primary" aria-label="Abspielen oder anhalten">Pause</button>
+      <label class="small"><span class="tl">Tempo</span>
+        <select id="speed">
+          <option value="1">1 s = 1 min</option>
+          <option value="5">1 s = 5 min</option>
+          <option value="15" selected>1 s = 15 min</option>
+          <option value="60">1 s = 1 h</option>
+          <option value="240">1 s = 4 h</option>
+        </select>
+      </label>
+      <button id="reset" title="Alles auf Anfang, Einstellungen bleiben">Neu starten</button>
+      <button id="theme" title="Hell, dunkel oder wie das System">Auto</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<p class="intro">Eine virtuelle WG mit drei Leuten im Zeitraffer. Der Tagesablauf schaltet die Geräte, du kannst jederzeit selbst
+an- und ausschalten (auch durch Antippen im Grundriss). Haken bei <b>Zwischenstecker</b> bedeutet: dieses Gerät wird gemessen.
+Alles andere bleibt für das System unsichtbar, solange kein Zähler ausgelesen wird. Leistungen, Tarif und Funkwerte sind
+Schätzungen bzw. Platzhalter <span class="p">(P)</span>, nichts davon ist gemessen.</p>
+
+<div class="wrap">
+  <div class="col l">
+    <section class="card" id="s-plan">
+      <h2>Die WG <span class="sub">Antippen schaltet ein Gerät an oder aus</span></h2>
+      <canvas id="plan" aria-label="Grundriss der WG mit Geräten"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--on)"></i>läuft</span>
+        <span><i style="background:var(--meas)"></i>mit Zwischenstecker</span>
+        <span><i style="background:var(--true)"></i>nicht erfasst</span>
+      </div>
+      <div class="btnrow small">
+        <span class="muted">Stecker setzen:</span>
+        <button data-preset="none">keine</button>
+        <button data-preset="big">Wäsche + Kühlschrank</button>
+        <button data-preset="all">alle möglichen</button>
+        <label style="margin-left:auto"><input type="checkbox" id="auto" checked> Tagesablauf automatisch</label>
+        <label>Zufall <input type="number" id="jitter" min="0" max="120" value="20" style="width:4em"> min <span class="p">(P)</span></label>
+      </div>
+    </section>
+
+    <section class="card" id="s-dev">
+      <h2>Geräte und Leistungsprofile <span class="sub">Schätzwerte, frei änderbar</span></h2>
+      <p class="small muted" style="margin:0 0 8px">Profil als Leistung x Minuten, mehrere Phasen mit Komma, z.B. <code>2000x15, 250x60</code>.
+      "Wiederholen" heißt: das Profil läuft in Schleife, solange das Gerät an ist (Kühlschrank-Kompressor). Sonst läuft es einmal durch
+      und das Gerät geht von selbst aus (Waschprogramm). Tagesablauf: <code>immer</code>, Zeitraum <code>09:00-17:00</code> oder
+      Startzeit <code>19:00</code>. Ungültige Eingaben werden rot markiert und verworfen, der letzte gültige Wert bleibt.</p>
+      <div class="devs" id="devs"></div>
+    </section>
+  </div>
+
+  <div class="col r">
+    <section class="card" id="s-cover">
+      <h2>Abdeckung und Kosten <span class="sub">heute, seit Mitternacht</span></h2>
+      <div class="kpis">
+        <div class="kpi"><div class="k">Wahrer Verbrauch</div><div class="v" id="k-true">0</div></div>
+        <div class="kpi"><div class="k">Per Stecker gemessen</div><div class="v" id="k-meas">0</div></div>
+        <div class="kpi"><div class="k">Abdeckung</div><div class="v" id="k-cov">0 %</div></div>
+        <div class="kpi"><div class="k">Leistung jetzt (wahr)</div><div class="v" id="k-ptrue">0</div></div>
+        <div class="kpi"><div class="k">Leistung jetzt (Stecker)</div><div class="v" id="k-pmeas">0</div></div>
+        <div class="kpi"><div class="k">Kosten heute (wahr, mit Grundpreis)</div><div class="v" id="k-cost">0</div></div>
+      </div>
+      <div class="bar" aria-hidden="true"><div id="covbar"></div></div>
+      <div class="small muted" id="covtext"></div>
+      <div class="row small">
+        <label>Arbeitspreis <input type="number" id="tarif" value="35" min="0" max="200" step="0.1"> ct/kWh <span class="p">(P)</span></label>
+        <label>Grundpreis <input type="number" id="grund" value="12" min="0" max="100" step="0.5"> €/Monat <span class="p">(P)</span></label>
+      </div>
+      <table class="mini" id="costtab"></table>
+      <div class="small muted" style="margin-top:6px">Unsichtbar heißt: Das System ohne Zähler weiß nichts davon. Die "wahren" Werte kennt nur die Simulation.</div>
+    </section>
+
+    <section class="card" id="s-chart">
+      <h2>Tagesverlauf Leistung</h2>
+      <canvas id="chart" aria-label="Leistungsverlauf des Tages"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--true)"></i>wahrer Verbrauch</span>
+        <span><i style="background:var(--meas)"></i>per Stecker gemessen</span>
+      </div>
+    </section>
+
+    <section class="card" id="s-epaper">
+      <h2>Flur-Anzeige (E-Paper) <span class="sub">zeigt nur, was das System wirklich weiß</span></h2>
+      <div class="epwrap"><canvas id="epaper" aria-label="Vorschau der E-Paper-Anzeige"></canvas></div>
+      <div class="row small">
+        <label>Aktualisierung alle <input type="number" id="eprate" value="5" min="1" max="120" style="width:4em"> min <span class="p">(P)</span></label>
+        <button id="eprefresh">jetzt aktualisieren</button>
+      </div>
+      <div class="row small">
+        <label>"läuft" über <input type="number" id="runw" value="20" min="1" max="3000" style="width:4.5em"> W <span class="p">(P)</span></label>
+        <label>"fertig" unter <input type="number" id="idlew" value="5" min="0" max="500" style="width:4em"> W</label>
+        <label>für <input type="number" id="idlemin" value="5" min="1" max="60" style="width:4em"> min <span class="p">(P)</span></label>
+      </div>
+    </section>
+
+    <section class="card" id="s-funk">
+      <h2>Funk aus dem Keller <span class="sub">qualitativ, ersetzt keine Messung</span></h2>
+      <canvas id="funk" aria-label="Schnitt durch das Haus mit Funkstrecke vom Keller zur Wohnung"></canvas>
+      <div id="verdict" class="verdict knapp">...</div>
+      <div class="small" id="funktext" style="margin-top:6px"></div>
+      <div class="fgrid">
+        <label>Funktechnik
+          <select id="f-tech">
+            <option value="wlan">WLAN 2,4 GHz</option>
+            <option value="espnow">ESP-NOW (Long Range)</option>
+            <option value="lora">LoRa 868 MHz</option>
+          </select>
+        </label>
+        <label>Stockwerk der WG
+          <select id="f-floor">
+            <option value="0">EG</option><option value="1">1. OG</option><option value="2" selected>2. OG</option>
+            <option value="3">3. OG</option><option value="4">4. OG</option><option value="5">5. OG</option>
+          </select>
+        </label>
+        <label>Zwischenstation
+          <select id="f-rep"></select>
+        </label>
+        <label>Linkbudget (dB) <span class="p">(P)</span><input type="number" id="f-budget" step="1"></label>
+        <label>Dämpfung je Decke (dB) <span class="p">(P)</span><input type="number" id="f-decke" step="1" min="0"></label>
+        <label>Dämpfung je Wand (dB) <span class="p">(P)</span><input type="number" id="f-wand" step="1" min="0"></label>
+        <label>Wände waagerecht <span class="p">(P)</span><input type="number" id="f-walls" value="2" min="0" max="10"></label>
+        <label>Versatz waagerecht (m) <span class="p">(P)</span><input type="number" id="f-dist" value="8" min="0" max="60"></label>
+        <label>Metallschrank (dB) <span class="p">(P)</span><input type="number" id="f-schrank" value="10" min="0" max="40"></label>
+        <label>Geschosshöhe (m) <span class="p">(P)</span><input type="number" id="f-height" value="3" min="2" max="5" step="0.1"></label>
+        <label>Sicherheitsreserve (dB) <span class="p">(P)</span><input type="number" id="f-margin" value="10" min="0" max="40"></label>
+      </div>
+      <div class="row small">
+        <label><input type="checkbox" id="f-active"> Lesekopf im Keller aktiv (Variante A mit Funk)</label>
+        <label><input type="checkbox" id="f-power"> Zähler sendet Momentanleistung (meist nur mit PIN, offen)</label>
+      </div>
+      <div class="note">Die Zahlen sind keine Datenblattwerte, sondern Platzhalter für eine grobe Abschätzung
+      (Freiraumdämpfung plus Zuschläge je Decke und Wand). Stahlbeton, Metalltüren, Zählerschrank und Leitungen
+      verhalten sich in jedem Haus anders. <b>Ob es geht, zeigt nur ein Test vor Ort</b>: zwei Boards, eines im Keller,
+      eines in der Wohnung, Empfang ein paar Tage mitschreiben. Akku-Laufzeit im Keller ist hier nicht simuliert (offen).</div>
+    </section>
+  </div>
+</div>
+</main>
+<footer>Teil der Idee <a href="../README.md">WG-Energie</a>. Simulation zum Verstehen, keine Messung und keine Abrechnung.</footer>
+
+<script>
+"use strict";
+// ------------------------------------------------------------------
+// Parameter (alles Schätzung bzw. Platzhalter (P))
+// ------------------------------------------------------------------
+const PARAM = {
+  tarifCt: 35,        // Arbeitspreis ct/kWh (P)
+  grundEurMonat: 12,  // Grundpreis €/Monat (P)
+  epRateMin: 5,       // E-Paper-Aktualisierung in Sim-Minuten (P)
+  runW: 20,           // über dieser Leistung gilt ein Gerät als "läuft" (P)
+  idleW: 5,           // unter dieser Leistung ... (P)
+  idleMin: 5,         // ... für so viele Minuten gilt "fertig" (P)
+  fertigZeigenMin: 120, // so lange bleibt "fertig" auf der Anzeige (P)
+  jitterMin: 20,      // Zufallsverschiebung im Tagesablauf (P)
+};
+
+// Funktechniken: Linkbudget, Decke, Wand sind grobe Platzhalter (P), keine Datenblattwerte.
+const TECH = {
+  wlan:   { name: "WLAN 2,4 GHz",          f: 2440, budget: 100, decke: 20, wand: 8 },
+  espnow: { name: "ESP-NOW (Long Range)",  f: 2440, budget: 110, decke: 20, wand: 8 },
+  lora:   { name: "LoRa 868 MHz",          f: 868,  budget: 140, decke: 13, wand: 5 },
+};
+
+// Geräte: Profil "W x min", Schätzwerte. plugOk=false: kein Zwischenstecker möglich.
+const DEFAULT_DEVICES = [
+  { id: "kuehl",  name: "Kühlschrank",    room: "Küche",    x: .07, y: .80, prof: "80x18, 2x42",       rep: true,  sb: 0,   sch: "immer",                      plug: true,  plugOk: true },
+  { id: "herd",   name: "Herd",           room: "Küche",    x: .17, y: .88, prof: "1800x8, 900x22",    rep: false, sb: 0,   sch: "12:30, 19:00",               plug: false, plugOk: false, hint: "fest angeschlossen, kein Stecker" },
+  { id: "kocher", name: "Wasserkocher",   room: "Küche",    x: .27, y: .75, prof: "2000x3",            rep: false, sb: 0,   sch: "07:15, 16:00, 21:30",        plug: false, plugOk: true },
+  { id: "kaffee", name: "Kaffeemaschine", room: "Küche",    x: .35, y: .88, prof: "1000x5",            rep: false, sb: 0.5, sch: "07:00, 13:30",               plug: false, plugOk: true },
+  { id: "wasch",  name: "Waschmaschine",  room: "Bad",      x: .48, y: .80, prof: "2000x15, 250x60, 450x12", rep: false, sb: 1, sch: "09:30",                  plug: true,  plugOk: true, notify: true },
+  { id: "trock",  name: "Trockner",       room: "Bad",      x: .58, y: .80, prof: "2200x80, 400x15",   rep: false, sb: 1,   sch: "11:30",                      plug: true,  plugOk: true, notify: true },
+  { id: "router", name: "Router",         room: "Flur",     x: .93, y: .545, prof: "10x60",             rep: true,  sb: 0,   sch: "immer",                      plug: false, plugOk: true },
+  { id: "licht",  name: "Licht gesamt",   room: "Flur",     x: .30, y: .545, prof: "60x60",             rep: true,  sb: 0,   sch: "06:30-08:00, 17:30-23:30",   plug: false, plugOk: false, hint: "Deckenleuchten, fest" },
+  { id: "tv",     name: "Fernseher",      room: "Wohnen",   x: .76, y: .76, prof: "90x60",             rep: true,  sb: 0.5, sch: "20:00-22:30",                plug: false, plugOk: true },
+  { id: "klein",  name: "Kleinkram, Standby", room: "verteilt", x: .91, y: .90, prof: "25x60",         rep: true,  sb: 0,   sch: "immer",                      plug: false, plugOk: false, hint: "viele kleine Geräte, kein einzelner Stecker" },
+  { id: "lapA",   name: "Laptop A",       room: "Zimmer 1", x: .15, y: .25, prof: "40x60",             rep: true,  sb: 0.5, sch: "08:30-12:30, 14:00-18:00",   plug: false, plugOk: true, priv: true },
+  { id: "lapB",   name: "Laptop B",       room: "Zimmer 2", x: .45, y: .25, prof: "40x60",             rep: true,  sb: 0.5, sch: "10:00-16:00, 21:00-23:30",   plug: false, plugOk: true, priv: true },
+  { id: "pc",     name: "Gaming-PC",      room: "Zimmer 3", x: .80, y: .25, prof: "250x60",            rep: true,  sb: 3,   sch: "19:30-23:45",                plug: false, plugOk: true, priv: true },
+];
+
+const ROOMS = [
+  { name: "Zimmer 1", x: 0,    y: 0,    w: .30, h: .48 },
+  { name: "Zimmer 2", x: .30,  y: 0,    w: .30, h: .48 },
+  { name: "Zimmer 3", x: .60,  y: 0,    w: .40, h: .48 },
+  { name: "Flur",     x: 0,    y: .48,  w: 1,   h: .16 },
+  { name: "Küche",    x: 0,    y: .64,  w: .40, h: .36 },
+  { name: "Bad",      x: .40,  y: .64,  w: .27, h: .36 },
+  { name: "Wohnen",   x: .67,  y: .64,  w: .33, h: .36 },
+];
+
+// ------------------------------------------------------------------
+// Hilfen
+// ------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const nf = (v, d = 0) => v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const hhmm = (m) => { m = ((Math.round(m) % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+const kwh = (wh) => nf(wh / 1000, wh < 10000 ? 2 : 1) + " kWh";
+const watt = (w) => (w >= 10000 ? nf(w / 1000, 1) + " kW" : nf(w, w < 10 && w % 1 ? 1 : 0) + " W");
+const eur = (e) => nf(e, 2) + " €";
+let TOK = {};
+function readTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ["bg","panel","panel2","ink","muted","line","accent","true","meas","on","ok","warn","bad","room","wall"]) TOK[k] = cs.getPropertyValue("--" + k).trim();
+}
+
+function parseProfile(s) {
+  const re = /(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)/gi;
+  const out = []; let m; let rest = s;
+  while ((m = re.exec(s))) {
+    const w = parseFloat(m[1].replace(",", ".")), min = parseFloat(m[2].replace(",", "."));
+    if (!(w >= 0 && w <= 10000 && min > 0 && min <= 1440)) return null;
+    out.push({ w, min });
+    rest = rest.replace(m[0], "");
+  }
+  if (!out.length || /[0-9]/.test(rest)) return null;
+  return out;
+}
+function parseSchedule(s) {
+  s = s.trim();
+  if (s === "") return { always: false, ranges: [], starts: [] };
+  const res = { always: false, ranges: [], starts: [] };
+  const tm = (h, m) => { h = +h; m = +m; return (h >= 0 && h <= 24 && m >= 0 && m < 60 && h * 60 + m <= 1440) ? (h * 60 + m) % 1440 : NaN; };
+  for (let tok of s.split(",")) {
+    tok = tok.trim().toLowerCase();
+    if (!tok) continue;
+    let m;
+    if (tok === "immer") { res.always = true; continue; }
+    if ((m = tok.match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/))) {
+      const a = tm(m[1], m[2]), b = tm(m[3], m[4]);
+      if (isNaN(a) || isNaN(b) || a === b) return null;
+      res.ranges.push([a, b]); continue;
+    }
+    if ((m = tok.match(/^(\d{1,2}):(\d{2})$/))) {
+      const a = tm(m[1], m[2]); if (isNaN(a)) return null;
+      res.starts.push(a); continue;
+    }
+    return null;
+  }
+  return res;
+}
+const inRange = (t, a, b) => (a < b ? t >= a && t < b : t >= a || t < b);
+
+// ------------------------------------------------------------------
+// Zustand
+// ------------------------------------------------------------------
+let devices = [];
+const S = {
+  abs: 6 * 60,      // absolute Sim-Minute seit Start (Tag 1, 00:00 = 0)
+  frac: 0,
+  running: true,
+  speed: 15,
+  day: 1,
+  trueW: new Float32Array(1440), measW: new Float32Array(1440), filled: new Uint8Array(1440),
+  dayTrueWh: 0, dayMeasWh: 0,
+  history: [],      // {day, trueWh, measWh, sysWh}
+  meterWh: 0,       // wahrer Zählerstand seit Mitternacht (Zähler zählt alles)
+  meterSeenWh: null, meterSeenAt: null, meterSeenAbs: null,
+  epSnap: null, epFlashUntil: 0, lastEpAbs: -1,
+  pTrue: 0, pMeas: 0,
+};
+
+function initDevices() {
+  devices = DEFAULT_DEVICES.map((d) => ({
+    ...d,
+    phases: parseProfile(d.prof),
+    sched: parseSchedule(d.sch),
+    on: false, onSince: 0, p: 0, prevRange: null, dayItems: null,
+    run: { state: "aus", since: 0, wh: 0, low: 0, doneAt: null, doneAbs: null, doneWh: 0 },
+    todayWh: 0,
+  }));
+}
+
+function makeDayItems() {
+  const J = $("auto").checked ? Math.max(0, PARAM.jitterMin) : 0;
+  const rnd = () => (J ? Math.round((Math.random() * 2 - 1) * J) : 0);
+  const clamp = (m) => Math.min(1439, Math.max(0, m));
+  for (const d of devices) {
+    const s = d.sched;
+    d.dayItems = {
+      always: s.always,
+      ranges: s.ranges.map(([a, b]) => { const o = rnd(); let a2 = clamp(a + o), b2 = clamp(b + o + rnd() / 2 | 0); if (a2 === b2) b2 = clamp(b2 + 1); return [a2, b2]; }),
+      starts: s.starts.map((a) => clamp(a + rnd())),
+    };
+  }
+}
+
+function schedRange(d, t) {
+  const it = d.dayItems;
+  if (it.always) return true;
+  if (!it.ranges.length) return null;
+  return it.ranges.some(([a, b]) => inRange(t, a, b));
+}
+
+function setOn(d, on, abs) {
+  if (on && !d.on) { d.on = true; d.onSince = abs; }
+  else if (on && d.on && !d.rep) { d.onSince = abs; } // Programm neu starten
+  else if (!on) d.on = false;
+}
+
+function powerOf(d, abs) {
+  if (!d.on) return d.sb;
+  const ph = d.phases; let T = 0;
+  for (const p of ph) T += p.min;
+  let e = abs - d.onSince;
+  if (d.rep) e = ((e % T) + T) % T;
+  else if (e >= T) { d.on = false; return d.sb; }
+  for (const p of ph) { if (e < p.min) return p.w; e -= p.min; }
+  return ph[ph.length - 1].w;
+}
+
+function syncInitial() {
+  const t = S.abs % 1440;
+  for (const d of devices) {
+    const r = schedRange(d, t);
+    d.prevRange = r;
+    if (r === true) { d.on = true; d.onSince = S.abs - (d.id === "kuehl" ? 7 : 0); }
+    else d.on = false;
+  }
+}
+
+function stepMinute() {
+  const t = S.abs % 1440;
+  const auto = $("auto").checked;
+  let pt = 0, pm = 0;
+  for (const d of devices) {
+    if (auto) {
+      const r = schedRange(d, t);
+      if (r !== null && r !== d.prevRange) setOn(d, r, S.abs);
+      d.prevRange = r;
+      if (d.dayItems.starts.includes(t)) setOn(d, true, S.abs);
+    }
+    const p = powerOf(d, S.abs);
+    d.p = p;
+    d.todayWh += p / 60;
+    pt += p;
+    if (d.plug) pm += p;
+    detectRun(d, p, t);
+  }
+  S.trueW[t] = pt; S.measW[t] = pm; S.filled[t] = 1;
+  S.dayTrueWh += pt / 60; S.dayMeasWh += pm / 60;
+  S.meterWh += pt / 60;
+  S.pTrue = pt; S.pMeas = pm;
+
+  // Zähler per Funk: Übertragung klappt je nach Funkstrecke mal oder nicht
+  const L = link();
+  if ($("f-active").checked && L.state !== "nein") {
+    const pOk = L.state === "ok" ? 0.98 : 0.45;
+    if (Math.random() < pOk) { S.meterSeenWh = S.meterWh; S.meterSeenAt = t; S.meterSeenAbs = S.abs; S.meterSeenP = pt; }
+  }
+
+  // E-Paper
+  if (S.lastEpAbs < 0 || S.abs - S.lastEpAbs >= PARAM.epRateMin) epSnapshot();
+
+  // Tageswechsel
+  S.abs++;
+  if (S.abs % 1440 === 0) newDay();
+}
+
+function detectRun(d, p, t) {
+  const r = d.run;
+  if (!d.plug || d.sched.always) { r.state = "aus"; return; }
+  if (p > PARAM.runW) {
+    if (r.state !== "läuft") { r.state = "läuft"; r.since = S.abs; r.wh = 0; }
+    r.low = 0; r.wh += p / 60;
+  } else if (r.state === "läuft") {
+    r.wh += p / 60;
+    if (p < PARAM.idleW) { r.low++; } else r.low = 0;
+    if (r.low >= PARAM.idleMin) {
+      // "fertig"-Meldung nur für Geräte, bei denen sie gewünscht ist (Wäsche)
+      if (d.rep || !d.notify) { r.state = "aus"; }
+      else { r.state = "fertig"; r.doneAt = t; r.doneAbs = S.abs; r.doneWh = r.wh; }
+    }
+  } else if (r.state === "fertig" && S.abs - r.doneAbs > PARAM.fertigZeigenMin) {
+    r.state = "aus";
+  }
+}
+
+function newDay() {
+  S.history.push({ day: S.day, trueWh: S.dayTrueWh, measWh: S.dayMeasWh });
+  if (S.history.length > 6) S.history.shift();
+  S.day++;
+  S.trueW.fill(0); S.measW.fill(0); S.filled.fill(0);
+  S.dayTrueWh = 0; S.dayMeasWh = 0; S.meterWh = 0;
+  if (S.meterSeenWh !== null) { S.meterSeenWh = 0; S.meterSeenAt = 0; S.meterSeenAbs = S.abs; }
+  for (const d of devices) d.todayWh = 0;
+  makeDayItems();
+}
+
+function resetSim() {
+  const keep = devices.map((d) => ({ id: d.id, prof: d.prof, phases: d.phases, rep: d.rep, sb: d.sb, sch: d.sch, sched: d.sched, plug: d.plug }));
+  initDevices();
+  for (const k of keep) Object.assign(devices.find((d) => d.id === k.id), k);
+  Object.assign(S, { abs: 6 * 60, frac: 0, day: 1, dayTrueWh: 0, dayMeasWh: 0, history: [], meterWh: 0, meterSeenWh: null, meterSeenAt: null, meterSeenAbs: null, epSnap: null, lastEpAbs: -1, pTrue: 0, pMeas: 0 });
+  S.trueW.fill(0); S.measW.fill(0); S.filled.fill(0);
+  makeDayItems();
+  // Vorlauf 00:00 bis 06:00 rechnen, damit der Tag ab Mitternacht zählt
+  S.abs = 0; syncInitial();
+  for (let i = 0; i < 360; i++) stepMinute();
+  buildDeviceList();
+  epSnapshot();
+}
+
+// ------------------------------------------------------------------
+// Funkstrecke (qualitativ)
+// ------------------------------------------------------------------
+function fspl(dm, fMHz) { dm = Math.max(1, dm); return 20 * Math.log10(dm) + 20 * Math.log10(fMHz) - 27.55; }
+function num(id, def) { const v = parseFloat($(id).value); return isFinite(v) ? v : def; }
+let linkCache = null;
+function link() { return linkCache || (linkCache = computeLink()); }
+function computeLink() {
+  const tech = TECH[$("f-tech").value];
+  const floor = +$("f-floor").value;          // 0 = EG
+  const rep = $("f-rep").value === "" ? null : +$("f-rep").value; // Stockwerk der Zwischenstation, -1 = Keller
+  const budget = num("f-budget", tech.budget), decke = Math.max(0, num("f-decke", tech.decke)), wand = Math.max(0, num("f-wand", tech.wand));
+  const walls = Math.max(0, Math.round(num("f-walls", 2))), dist = Math.max(0, num("f-dist", 8));
+  const schrank = Math.max(0, num("f-schrank", 10)), H = Math.max(2, num("f-height", 3)), margin = Math.max(0, num("f-margin", 10));
+  const hop = (fromFloor, toFloor, horiz, wallsN, withSchrank) => {
+    const n = toFloor - fromFloor; // Anzahl Decken
+    const d = Math.hypot(n * H, horiz);
+    const loss = fspl(d, tech.f) + n * decke + wallsN * wand + (withSchrank ? schrank : 0);
+    return { n, d, fs: fspl(d, tech.f), loss, rest: budget - loss, from: fromFloor, to: toFloor };
+  };
+  let hops;
+  if (rep === null || rep >= floor) hops = [hop(-1, floor, dist, walls, true)];
+  else {
+    // Zwischenstation senkrecht über dem Zähler (Treppenhaus), danach waagerecht zur Wohnung
+    hops = [hop(-1, rep, 2, 0, true), hop(rep, floor, dist, walls, false)];
+  }
+  const worst = Math.min(...hops.map((h) => h.rest));
+  const state = worst >= margin ? "ok" : worst >= 0 ? "knapp" : "nein";
+  return { tech, floor, rep, budget, decke, wand, walls, dist, schrank, H, margin, hops, worst, state };
+}
+
+// ------------------------------------------------------------------
+// Canvas-Grundlagen
+// ------------------------------------------------------------------
+const DPR = () => Math.min(3, window.devicePixelRatio || 1);
+function fit(c, aspect, maxH) {
+  const w = Math.max(200, c.clientWidth || c.parentElement.clientWidth);
+  let h = Math.round(w * aspect); if (maxH) h = Math.min(h, maxH);
+  const r = DPR();
+  if (c.width !== Math.round(w * r) || c.height !== Math.round(h * r)) { c.width = Math.round(w * r); c.height = Math.round(h * r); c.style.height = h + "px"; }
+  const g = c.getContext("2d"); g.setTransform(r, 0, 0, r, 0, 0);
+  return { g, w, h };
+}
+function rr(g, x, y, w, h, r) { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); }
+
+// Grundriss
+const planC = $("plan");
+let planGeom = null;
+function drawPlan(now) {
+  const { g, w, h } = fit(planC, planC.clientWidth < 520 ? 0.95 : 0.68, 560);
+  const pad = 6, W = w - 2 * pad, H = h - 2 * pad;
+  planGeom = { pad, W, H };
+  g.clearRect(0, 0, w, h);
+  g.lineWidth = 2; g.strokeStyle = TOK.wall; g.fillStyle = TOK.room;
+  for (const r of ROOMS) {
+    g.fillRect(pad + r.x * W, pad + r.y * H, r.w * W, r.h * H);
+    g.strokeRect(pad + r.x * W, pad + r.y * H, r.w * W, r.h * H);
+  }
+  g.fillStyle = TOK.muted; g.font = "12px system-ui, sans-serif"; g.textBaseline = "top"; g.textAlign = "left";
+  const narrow = W < 500;
+  for (const r of ROOMS) g.fillText(narrow ? r.name.replace("Zimmer ", "Zi. ") : r.name + (r.name.startsWith("Zimmer") ? " (privat)" : ""), pad + r.x * W + 6, pad + r.y * H + 5);
+  // E-Paper im Flur
+  const ex = pad + .62 * W, ey = pad + .505 * H;
+  g.fillStyle = "#e9e7df"; g.strokeStyle = TOK.ink; g.lineWidth = 1.2;
+  g.fillRect(ex, ey, Math.min(60, W * .1), H * .1); g.strokeRect(ex, ey, Math.min(60, W * .1), H * .1);
+  g.fillStyle = TOK.muted; g.font = "11px system-ui, sans-serif"; g.textAlign = "right"; g.fillText("Anzeige", ex - 5, ey + 2); g.textAlign = "left";
+  // Geräte
+  const R = Math.max(13, Math.min(22, W / 34));
+  for (const d of devices) {
+    const x = pad + d.x * W, y = pad + d.y * H;
+    const active = d.p > d.sb + 0.01 && d.on;
+    if (active) {
+      const pulse = 0.5 + 0.5 * Math.sin(now / 300 + d.x * 9);
+      const glow = R + 4 + Math.min(14, Math.sqrt(d.p) / 4) * (0.7 + 0.3 * pulse);
+      g.beginPath(); g.arc(x, y, glow, 0, Math.PI * 2);
+      g.fillStyle = TOK.on + "44"; g.fill();
+    }
+    g.beginPath(); g.arc(x, y, R, 0, Math.PI * 2);
+    g.fillStyle = active ? TOK.on : TOK.panel2; g.fill();
+    g.lineWidth = d.plug ? 3.5 : 1.5;
+    g.strokeStyle = d.plug ? TOK.meas : TOK.true;
+    g.stroke();
+    g.fillStyle = active ? "#1a1200" : TOK.ink;
+    g.font = "600 " + Math.round(R * 0.62) + "px system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(abbr(d), x, y + 1);
+    g.font = "11px system-ui, sans-serif"; g.fillStyle = TOK.muted; g.textBaseline = "top";
+    const lbl = d.on || d.p > 0.01 ? watt(d.p) : "aus";
+    g.fillText(lbl, x, y + R + 3);
+  }
+  g.textAlign = "left";
+}
+function abbr(d) {
+  const m = { kuehl: "KS", herd: "HD", kocher: "WK", kaffee: "KM", wasch: "WM", trock: "TR", router: "RT", licht: "LI", tv: "TV", klein: "SB", lapA: "LA", lapB: "LB", pc: "PC" };
+  return m[d.id] || d.name.slice(0, 2);
+}
+planC.addEventListener("click", (ev) => {
+  if (!planGeom) return;
+  const b = planC.getBoundingClientRect();
+  const mx = ev.clientX - b.left, my = ev.clientY - b.top;
+  const { pad, W, H } = planGeom; const R = Math.max(13, Math.min(22, W / 34)) + 8;
+  let best = null, bd = 1e9;
+  for (const d of devices) { const dx = pad + d.x * W - mx, dy = pad + d.y * H - my, q = Math.hypot(dx, dy); if (q < bd) { bd = q; best = d; } }
+  if (best && bd <= R) toggleDevice(best);
+});
+planC.addEventListener("mousemove", (ev) => {
+  if (!planGeom) return;
+  const b = planC.getBoundingClientRect(); const { pad, W, H } = planGeom; const R = Math.max(13, Math.min(22, W / 34)) + 8;
+  const hit = devices.some((d) => Math.hypot(pad + d.x * W - (ev.clientX - b.left), pad + d.y * H - (ev.clientY - b.top)) <= R);
+  planC.style.cursor = hit ? "pointer" : "default";
+});
+function toggleDevice(d) {
+  setOn(d, !d.on, S.abs);
+  d.p = powerOf(d, S.abs);
+  updateDeviceRows(true);
+}
+
+// Tagesverlauf
+const chartC = $("chart");
+function drawChart() {
+  const { g, w, h } = fit(chartC, 0.42, 300);
+  g.clearRect(0, 0, w, h);
+  const L = 44, Rp = 8, T = 10, B = 22, W = w - L - Rp, H = h - T - B;
+  let max = 500; for (let i = 0; i < 1440; i++) if (S.filled[i] && S.trueW[i] > max) max = S.trueW[i];
+  const step = max > 4000 ? 1000 : max > 2000 ? 500 : max > 1000 ? 250 : 100;
+  max = Math.ceil(max * 1.08 / step) * step;
+  g.font = "11px system-ui, sans-serif"; g.fillStyle = TOK.muted; g.strokeStyle = TOK.line; g.lineWidth = 1;
+  g.textAlign = "right"; g.textBaseline = "middle";
+  const ticks = max / step > 6 ? step * 2 : step;
+  for (let v = 0; v <= max; v += ticks) {
+    const y = T + H - (v / max) * H;
+    g.beginPath(); g.moveTo(L, y + .5); g.lineTo(L + W, y + .5); g.stroke();
+    g.fillText(v >= 1000 ? nf(v / 1000, v % 1000 ? 1 : 0) + " kW" : v + " W", L - 5, y);
+  }
+  g.textAlign = "center"; g.textBaseline = "top";
+  for (let hh = 0; hh <= 24; hh += 3) { const x = L + (hh / 24) * W; g.fillText(String(hh).padStart(2, "0"), x, T + H + 5); }
+  const X = (i) => L + (i / 1440) * W, Y = (v) => T + H - (v / max) * H;
+  const area = (arr, color) => {
+    g.beginPath(); let started = false, lastI = 0;
+    for (let i = 0; i < 1440; i++) {
+      if (!S.filled[i]) continue;
+      if (!started) { g.moveTo(X(i), Y(0)); started = true; }
+      g.lineTo(X(i), Y(arr[i])); g.lineTo(X(i + 1), Y(arr[i])); lastI = i + 1;
+    }
+    if (!started) return;
+    g.lineTo(X(lastI), Y(0)); g.closePath(); g.fillStyle = color; g.fill();
+  };
+  area(S.trueW, TOK.true);
+  area(S.measW, TOK.meas);
+  const t = S.abs % 1440, xn = X(t);
+  g.strokeStyle = TOK.accent; g.lineWidth = 1.5; g.beginPath(); g.moveTo(xn, T); g.lineTo(xn, T + H); g.stroke();
+}
+
+// E-Paper (Farben fest, es ist ein echtes Display, kein Theme)
+const epC = $("epaper");
+function epSnapshot() {
+  S.lastEpAbs = S.abs;
+  const t = S.abs % 1440;
+  const meterOn = $("f-active").checked && S.meterSeenWh !== null;
+  const running = [], done = [];
+  for (const d of devices) {
+    if (!d.plug) continue;
+    if (d.run.state === "läuft") running.push({ name: d.name, min: S.abs - d.run.since, wh: d.run.wh });
+    else if (d.run.state === "fertig") done.push({ name: d.name, at: d.run.doneAt });
+  }
+  const hist = S.history.map((x) => ({ wh: meterOn ? x.trueWh : x.measWh, label: "T" + x.day }));
+  S.epSnap = {
+    time: t, meterOn,
+    meterAge: meterOn ? S.abs - S.meterSeenAbs : null,
+    todayWh: meterOn ? S.meterSeenWh : S.dayMeasWh,
+    measWh: S.dayMeasWh,
+    pNow: meterOn && $("f-power").checked ? S.meterSeenP : S.pMeas,
+    pFromMeter: meterOn && $("f-power").checked,
+    running, done, hist, nPlug: devices.filter((d) => d.plug).length,
+  };
+  // Kurzes Schwarz wie beim echten Vollrefresh, im Zeitraffer höchstens alle 4 s
+  const nowR = performance.now();
+  if (nowR - (S.epLastFlash || 0) > 4000) { S.epLastFlash = nowR; S.epFlashUntil = nowR + 140; }
+}
+function drawEpaper(now) {
+  const { g, w, h } = fit(epC, 0.6);
+  const sx = w / 400; g.save(); g.scale(sx, sx);
+  const PW = 400, PH = h / sx;
+  const paper = "#ebe9e1", ink = "#141414", red = "#b3261e";
+  if (now < S.epFlashUntil) { g.fillStyle = ink; g.fillRect(0, 0, PW, PH); g.restore(); return; }
+  g.fillStyle = paper; g.fillRect(0, 0, PW, PH);
+  const s = S.epSnap; if (!s) { g.restore(); return; }
+  const tarif = PARAM.tarifCt / 100;
+  g.fillStyle = ink; g.textBaseline = "alphabetic"; g.textAlign = "left";
+  g.font = "700 15px system-ui, sans-serif"; g.fillText("WG-Strom heute", 12, 22);
+  g.textAlign = "right"; g.font = "12px system-ui, sans-serif"; g.fillText("Stand " + hhmm(s.time), PW - 12, 21);
+  g.fillRect(12, 29, PW - 24, 1.5);
+  // Hauptwert
+  g.textAlign = "left";
+  g.font = "700 38px system-ui, sans-serif";
+  g.fillText(nf(s.todayWh / 1000, 2), 12, 72);
+  const wNum = g.measureText(nf(s.todayWh / 1000, 2)).width;
+  g.font = "16px system-ui, sans-serif"; g.fillText("kWh", 18 + wNum, 72);
+  g.font = "12px system-ui, sans-serif";
+  g.fillText(s.meterOn ? "laut Zähler" + (s.meterAge > 10 ? ", letzter Wert vor " + s.meterAge + " min" : "") : "nur Geräte mit Stecker (" + s.nPlug + ")", 12, 89);
+  g.font = "600 17px system-ui, sans-serif";
+  const cost = s.todayWh / 1000 * tarif;
+  g.fillText("ca. " + eur(cost), 12, 112);
+  g.font = "11px system-ui, sans-serif"; g.fillText("Arbeitspreis " + nf(PARAM.tarifCt, 1) + " ct/kWh, Schätzung", 12, 126);
+  // rechts: jetzt
+  g.textAlign = "right";
+  g.font = "12px system-ui, sans-serif"; g.fillText(s.pFromMeter ? "jetzt (Zähler)" : "jetzt (Stecker)", PW - 12, 50);
+  g.font = "700 22px system-ui, sans-serif"; g.fillText(watt(s.pNow), PW - 12, 74);
+  if (s.meterOn) {
+    const pct = s.todayWh > 0 ? Math.round(s.measWh / s.todayWh * 100) : 0;
+    g.font = "12px system-ui, sans-serif"; g.fillText("davon per Stecker " + pct + " %", PW - 12, 92);
+  }
+  // Laufende Geräte
+  g.textAlign = "left"; let y = 150;
+  g.fillRect(12, 136, PW - 24, 1);
+  g.font = "700 13px system-ui, sans-serif"; g.fillText("Läuft gerade", 12, y);
+  g.font = "13px system-ui, sans-serif";
+  const lines = [];
+  for (const r of s.running) lines.push({ t: r.name + " seit " + r.min + " min, " + nf(r.wh / 1000, 2) + " kWh", c: ink });
+  for (const d of s.done) lines.push({ t: d.name + " fertig seit " + hhmm(d.at), c: red, b: true });
+  if (!lines.length) lines.push({ t: s.nPlug ? "nichts Großes" : "keine Geräte mit Stecker", c: ink });
+  for (const l of lines.slice(0, 3)) { y += 17; g.fillStyle = l.c; g.font = (l.b ? "700 " : "") + "13px system-ui, sans-serif"; g.fillText(l.t, 12, y); }
+  // 7-Tage-Balken
+  g.fillStyle = ink;
+  const bx = 230, by = 150, bw = PW - 12 - bx, bh = PH - by - 26;
+  g.font = "700 13px system-ui, sans-serif"; g.fillText("7 Tage", bx, by);
+  const bars = s.hist.concat([{ wh: s.todayWh, label: "heute" }]).slice(-7);
+  const mx = Math.max(1, ...bars.map((b) => b.wh));
+  const n = 7, gap = 4, colW = (bw - gap * (n - 1)) / n;
+  g.font = "10px system-ui, sans-serif"; g.textAlign = "center";
+  for (let i = 0; i < n; i++) {
+    const b = bars[i - (n - bars.length)];
+    const x = bx + i * (colW + gap), base = by + 10 + bh;
+    if (!b) { g.fillRect(x, base - 1, colW, 1); continue; }
+    const hh = Math.max(1, (b.wh / mx) * (bh - 4));
+    if (b.label === "heute") { g.lineWidth = 1.5; g.strokeStyle = ink; g.strokeRect(x + .75, base - hh + .75, colW - 1.5, hh - 1.5); }
+    else g.fillRect(x, base - hh, colW, hh);
+    g.fillText(b.label === "heute" ? "heute" : b.label, x + colW / 2, base + 12);
+  }
+  if (!s.hist.length) { g.textAlign = "left"; g.font = "10px system-ui, sans-serif"; g.fillText("Vortage: erst nach Mitternacht", bx, by + 14); }
+  g.restore();
+}
+
+// Funk-Schnitt
+const funkC = $("funk");
+function drawFunk() {
+  const L = link();
+  const { g, w, h } = fit(funkC, 0.55, 360);
+  g.clearRect(0, 0, w, h);
+  const floors = L.floor + 2;            // Keller + EG..WG
+  const top = 14, groundPad = 6, fh = (h - top - groundPad) / (floors + 0.3);
+  const yOf = (fl) => top + (L.floor - fl + 0.3) * fh; // Oberkante des Stockwerks fl
+  const bx = 20, bw = w - 40;
+  // Erde
+  g.fillStyle = TOK.line; g.fillRect(0, yOf(-1), w, fh + groundPad);
+  // Stockwerke
+  for (let fl = -1; fl <= L.floor; fl++) {
+    const y = yOf(fl);
+    g.fillStyle = fl === L.floor ? TOK.accent + "22" : TOK.room;
+    g.fillRect(bx, y, bw, fh);
+    g.fillStyle = TOK.muted; g.font = "11px system-ui, sans-serif"; g.textAlign = "left"; g.textBaseline = "top";
+    g.fillText(fl === -1 ? "Keller" : fl === 0 ? "EG" : fl + ". OG", bx + 5, y + 4);
+    if (fl === L.floor) { g.fillStyle = TOK.accent; g.fillText("unsere WG", bx + 5, y + 18); }
+  }
+  // Decken
+  g.fillStyle = TOK.wall;
+  for (let fl = -1; fl <= L.floor; fl++) g.fillRect(bx, yOf(fl) - 2, bw, 4);
+  g.fillRect(bx - 2, yOf(L.floor) - 2, 4, (L.floor + 2) * fh + 2); g.fillRect(bx + bw - 2, yOf(L.floor) - 2, 4, (L.floor + 2) * fh + 2);
+  // Positionen
+  const sx = bx + bw * 0.16, sy = yOf(-1) + fh * 0.6;
+  const hfrac = Math.min(0.72, 0.1 + L.dist / 25 * 0.6);
+  const rx = sx + bw * hfrac, ry = yOf(L.floor) + fh * 0.6;
+  // Wände waagerecht in der WG-Etage andeuten
+  g.fillStyle = TOK.wall;
+  for (let i = 1; i <= L.walls; i++) { const x = sx + (rx - sx) * i / (L.walls + 1); g.fillRect(x - 1.5, yOf(L.floor) + 4, 3, fh - 6); }
+  // Pfad(e)
+  const pts = [[sx, sy]];
+  if (L.hops.length === 2) pts.push([sx + 16, yOf(L.rep) + fh * 0.6]);
+  pts.push([rx, ry]);
+  const col = (rest) => (rest >= L.margin ? TOK.ok : rest >= 0 ? TOK.warn : TOK.bad);
+  for (let i = 0; i < L.hops.length; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+    g.setLineDash([6, 5]); g.lineWidth = 3; g.strokeStyle = col(L.hops[i].rest);
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.setLineDash([]);
+    // Rest-dB nach jeder Decke entlang des Pfads
+    const hp = L.hops[i];
+    g.font = "11px system-ui, sans-serif"; g.textAlign = "left"; g.textBaseline = "middle";
+    for (let k = 1; k <= hp.n; k++) {
+      const px = x1 + (x2 - x1) * ((k - 0.5) / hp.n), py = y1 + (y2 - y1) * ((k - 0.5) / hp.n);
+      const restHere = L.budget - (fspl(hp.d * (k - 0.5) / hp.n, L.tech.f) + k * L.decke + (i === 0 ? L.schrank : 0));
+      g.fillStyle = TOK.panel; g.strokeStyle = col(restHere); g.lineWidth = 1;
+      const txt = "Rest " + Math.round(restHere) + " dB";
+      const tw = g.measureText(txt).width + 8;
+      rr(g, px + 6, py - 9, tw, 18, 4); g.fill(); g.stroke();
+      g.fillStyle = TOK.ink; g.fillText(txt, px + 10, py);
+    }
+  }
+  // Sender: Zählerschrank
+  g.fillStyle = TOK.panel2; g.strokeStyle = TOK.ink; g.lineWidth = 1.5;
+  g.fillRect(sx - 22, sy - 16, 44, 32); g.strokeRect(sx - 22, sy - 16, 44, 32);
+  g.fillStyle = TOK.ink; g.font = "600 10px system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText("Zähler", sx, sy - 5); g.fillText("+ Funk", sx, sy + 7);
+  if (L.hops.length === 2) {
+    const [qx, qy] = pts[1];
+    g.fillStyle = TOK.panel2; g.beginPath(); g.arc(qx, qy, 10, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = TOK.ink; g.fillText("R", qx, qy + 1);
+  }
+  g.fillStyle = TOK.panel2; g.beginPath(); g.arc(rx, ry, 12, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.fillStyle = TOK.ink; g.fillText("Pi", rx, ry + 1);
+  g.textAlign = "left";
+}
+function updateFunkText() {
+  linkCache = null;
+  const L = link();
+  const v = $("verdict");
+  v.className = "verdict " + L.state;
+  v.textContent = L.state === "ok" ? "könnte gehen (Reserve " + Math.round(L.worst) + " dB)" : L.state === "knapp" ? "knapp, unsicher (Reserve " + Math.round(L.worst) + " dB)" : "eher nicht (fehlen " + Math.round(-L.worst) + " dB)";
+  const parts = L.hops.map((hp, i) => {
+    const fromN = hp.from === -1 ? "Keller" : hp.from === 0 ? "EG" : hp.from + ". OG";
+    const toN = hp.to === 0 ? "EG" : hp.to + ". OG";
+    return (L.hops.length > 1 ? "Strecke " + (i + 1) + " " : "") + fromN + " nach " + toN + ": " + hp.n + " Decke" + (hp.n === 1 ? "" : "n") +
+      ", ca. " + nf(hp.d, 0) + " m, Dämpfung ca. " + Math.round(hp.loss) + " dB von " + Math.round(L.budget) + " dB Budget";
+  });
+  let extra = "";
+  if (L.hops.length === 2) extra = " Die Zwischenstation braucht dort eine Steckdose, die uns gehört oder die wir nutzen dürfen (Hausverwaltung).";
+  if ($("f-active").checked && L.state === "knapp") extra += " In der Simulation gehen bei \"knapp\" viele Zählerwerte verloren, die Anzeige zeigt dann ältere Stände.";
+  $("funktext").textContent = parts.join(". ") + "." + extra;
+}
+function fillRepOptions() {
+  const floor = +$("f-floor").value, sel = $("f-rep"), cur = sel.value;
+  sel.innerHTML = '<option value="">keine</option>';
+  for (let fl = -1; fl < floor; fl++) {
+    const o = document.createElement("option"); o.value = fl; o.textContent = "im " + (fl === -1 ? "Keller" : fl === 0 ? "EG" : fl + ". OG");
+    sel.appendChild(o);
+  }
+  if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
+}
+function applyTechDefaults() {
+  const t = TECH[$("f-tech").value];
+  $("f-budget").value = t.budget; $("f-decke").value = t.decke; $("f-wand").value = t.wand;
+}
+
+// ------------------------------------------------------------------
+// Geräteliste
+// ------------------------------------------------------------------
+function buildDeviceList() {
+  const box = $("devs"); box.innerHTML = "";
+  for (const d of devices) {
+    const el = document.createElement("div");
+    el.className = "dev" + (d.plug ? " plugged" : ""); el.dataset.id = d.id;
+    el.innerHTML = `
+      <div class="r1">
+        <button class="sw" aria-pressed="false">aus</button>
+        <span><span class="name"></span> <span class="room"></span></span>
+        <span class="pw off">0 W</span>
+      </div>
+      <div class="r2">
+        <label><input type="checkbox" class="plug"> Zwischenstecker</label>
+        <span class="hint"></span>
+        <span class="hint today"></span>
+        <details><summary>Profil und Tagesablauf</summary>
+          <div class="edit">
+            <label>Leistungsprofil, W x min (Schätzung)<input type="text" class="prof" spellcheck="false"></label>
+            <label class="inl"><input type="checkbox" class="rep"> wiederholen, solange an</label>
+            <label>Leistung im Aus bzw. Standby (W, Schätzung)<input type="number" class="sb" min="0" max="200" step="0.1"></label>
+            <label>Tagesablauf<input type="text" class="sch" spellcheck="false"></label>
+          </div>
+        </details>
+      </div>`;
+    el.querySelector(".name").textContent = d.name;
+    el.querySelector(".room").textContent = d.room;
+    const plug = el.querySelector(".plug"); plug.checked = d.plug; plug.disabled = !d.plugOk;
+    const hint = el.querySelector(".hint");
+    hint.textContent = d.hint ? d.hint : d.priv ? "Privatzimmer: nur mit Zustimmung" : "";
+    const prof = el.querySelector(".prof"); prof.value = d.prof;
+    const rep = el.querySelector(".rep"); rep.checked = d.rep;
+    const sb = el.querySelector(".sb"); sb.value = d.sb;
+    const sch = el.querySelector(".sch"); sch.value = d.sch;
+    el.querySelector(".sw").addEventListener("click", () => toggleDevice(d));
+    plug.addEventListener("change", () => { d.plug = plug.checked; el.classList.toggle("plugged", d.plug); d.run.state = "aus"; });
+    prof.addEventListener("input", () => { const p = parseProfile(prof.value); prof.classList.toggle("bad", !p); if (p) { d.phases = p; d.prof = prof.value; } });
+    rep.addEventListener("change", () => { d.rep = rep.checked; });
+    sb.addEventListener("input", () => { const v = parseFloat(sb.value); const ok = v >= 0 && v <= 200; sb.classList.toggle("bad", !ok); if (ok) d.sb = v; });
+    sch.addEventListener("input", () => {
+      const p = parseSchedule(sch.value); sch.classList.toggle("bad", !p);
+      if (p) { d.sched = p; d.sch = sch.value; d.dayItems = { always: p.always, ranges: p.ranges.slice(), starts: p.starts.slice() }; d.prevRange = schedRange(d, S.abs % 1440); }
+    });
+    d.el = el;
+    box.appendChild(el);
+  }
+  updateDeviceRows(true);
+}
+function updateDeviceRows(force) {
+  for (const d of devices) {
+    if (!d.el) continue;
+    const sw = d.el.querySelector(".sw"), pw = d.el.querySelector(".pw"), td = d.el.querySelector(".today");
+    const on = String(!!d.on);
+    if (force || sw.getAttribute("aria-pressed") !== on) { sw.setAttribute("aria-pressed", on); sw.textContent = d.on ? "an" : "aus"; }
+    const txt = watt(d.p);
+    if (pw.textContent !== txt) pw.textContent = txt;
+    pw.classList.toggle("off", !(d.on && d.p > d.sb + 0.01));
+    const t2 = "heute " + kwh(d.todayWh);
+    if (td.textContent !== t2) td.textContent = t2;
+  }
+}
+
+// ------------------------------------------------------------------
+// Kennzahlen
+// ------------------------------------------------------------------
+function updateKpis() {
+  const tru = S.dayTrueWh, mea = S.dayMeasWh, cov = tru > 0 ? mea / tru : 0;
+  const tarif = PARAM.tarifCt / 100, grundTag = PARAM.grundEurMonat * 12 / 365;
+  $("k-true").textContent = kwh(tru);
+  $("k-meas").textContent = kwh(mea);
+  $("k-cov").textContent = nf(cov * 100, 0) + " %";
+  $("k-ptrue").textContent = watt(S.pTrue);
+  $("k-pmeas").textContent = watt(S.pMeas);
+  $("k-cost").textContent = eur(tru / 1000 * tarif + grundTag);
+  $("covbar").style.width = (cov * 100).toFixed(1) + "%";
+  const inv = devices.filter((d) => !d.plug && d.todayWh > 0.5).sort((a, b) => b.todayWh - a.todayWh);
+  const nPlug = devices.filter((d) => d.plug).length;
+  $("covtext").textContent = nPlug + " von " + devices.length + " Geräten mit Stecker. Größte unsichtbare Posten heute: " +
+    (inv.length ? inv.slice(0, 4).map((d) => d.name + " " + kwh(d.todayWh)).join(", ") : "keine") + ".";
+  const meas = mea / 1000 * tarif, invis = (tru - mea) / 1000 * tarif;
+  const full = S.history.length ? S.history.reduce((s, x) => s + x.trueWh, 0) / S.history.length : null;
+  const rows = [
+    ["Arbeitspreis gemessener Anteil", eur(meas)],
+    ["Arbeitspreis unsichtbarer Anteil", eur(invis)],
+    ["Grundpreis anteilig pro Tag", eur(grundTag)],
+    ["Hochrechnung Monat (wahr, Mittel der simulierten Tage)", full === null ? "nach dem ersten vollen Tag" : eur(full / 1000 * tarif * 30.4 + PARAM.grundEurMonat)],
+  ];
+  const tab = $("costtab");
+  const html = rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
+  if (tab.innerHTML !== html) tab.innerHTML = html;
+  $("clock").textContent = "Tag " + S.day + ", " + hhmm(S.abs % 1440);
+}
+
+// ------------------------------------------------------------------
+// Steuerung
+// ------------------------------------------------------------------
+function bindNum(id, key, lo, hi) {
+  const el = $(id);
+  el.addEventListener("input", () => {
+    const v = parseFloat(el.value); const ok = isFinite(v) && v >= lo && v <= hi;
+    el.classList.toggle("bad", !ok); if (ok) { PARAM[key] = v; if (id === "tarif") epSnapshot(); }
+  });
+}
+bindNum("tarif", "tarifCt", 0, 200);
+bindNum("grund", "grundEurMonat", 0, 100);
+bindNum("eprate", "epRateMin", 1, 120);
+bindNum("runw", "runW", 1, 3000);
+bindNum("idlew", "idleW", 0, 500);
+bindNum("idlemin", "idleMin", 1, 60);
+bindNum("jitter", "jitterMin", 0, 120);
+$("play").addEventListener("click", () => { S.running = !S.running; $("play").textContent = S.running ? "Pause" : "Weiter"; });
+$("speed").addEventListener("change", () => { S.speed = +$("speed").value; });
+$("reset").addEventListener("click", resetSim);
+$("eprefresh").addEventListener("click", epSnapshot);
+document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => {
+  const p = b.dataset.preset;
+  for (const d of devices) {
+    if (!d.plugOk) continue;
+    d.plug = p === "all" ? true : p === "big" ? ["kuehl", "wasch", "trock"].includes(d.id) : false;
+    d.run.state = "aus";
+  }
+  buildDeviceList();
+}));
+const themes = ["auto", "light", "dark"], tnames = { auto: "Auto", light: "Hell", dark: "Dunkel" };
+let ti = 0;
+$("theme").addEventListener("click", () => {
+  ti = (ti + 1) % 3; const t = themes[ti];
+  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  $("theme").textContent = tnames[t];
+  readTokens(); drawFunk();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readTokens(); drawFunk(); });
+
+for (const id of ["f-budget", "f-decke", "f-wand", "f-walls", "f-dist", "f-schrank", "f-height", "f-margin", "f-rep", "f-active", "f-power"]) {
+  $(id).addEventListener("input", () => { updateFunkText(); drawFunk(); epSnapshot(); });
+  $(id).addEventListener("change", () => { updateFunkText(); drawFunk(); epSnapshot(); });
+}
+$("f-tech").addEventListener("change", () => { applyTechDefaults(); updateFunkText(); drawFunk(); });
+$("f-floor").addEventListener("change", () => { fillRepOptions(); updateFunkText(); drawFunk(); });
+new ResizeObserver(() => { drawFunk(); }).observe(funkC);
+
+// ------------------------------------------------------------------
+// Hauptschleife
+// ------------------------------------------------------------------
+let lastT = performance.now(), lastUi = 0;
+function frame(now) {
+  const dt = Math.min(0.25, (now - lastT) / 1000); lastT = now;
+  if (S.running) {
+    S.frac += dt * S.speed;
+    let n = Math.floor(S.frac); S.frac -= n;
+    n = Math.min(n, 600);
+    for (let i = 0; i < n; i++) stepMinute();
+  }
+  drawPlan(now);
+  drawChart();
+  drawEpaper(now);
+  if (now - lastUi > 150) { lastUi = now; updateKpis(); updateDeviceRows(false); }
+  requestAnimationFrame(frame);
+}
+
+// Start
+readTokens();
+initDevices();
+applyTechDefaults();
+fillRepOptions();
+updateFunkText();
+makeDayItems();
+resetSim();
+drawFunk();
+updateKpis();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
