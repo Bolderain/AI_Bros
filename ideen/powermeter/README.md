@@ -1,6 +1,7 @@
 # Idee: Powermeter (Fahrrad-Leistungsmesser zum Selberbauen)
 
-Stand: 22.10.2026. Noch nicht entschieden, eine von mehreren Ideen.
+Stand: 22.10.2026. Ob die Idee gebaut wird, ist noch nicht entschieden (eine von mehreren Ideen).
+**Innerhalb der Idee entschieden (Nutzer, 22.10.2026): Variante A, linker Kurbelarm, DMS-Vollbrücke.**
 Rahmen: 3 Leute, Hobby, Budget Team 300 €, Karlsruhe.
 
 ## Idee
@@ -12,6 +13,15 @@ machbar, weil das Messprinzip einfach ist. Schwer sind Genauigkeit, Temperaturve
 Wasserschutz und vor allem: **am Kurbelarm hängt die Sicherheit des Fahrers**.
 
 ![Blockdiagramm](aufbau.svg)
+
+**Interaktive Simulation:** [`sim/index.html`](sim/index.html) (im Browser öffnen, eine
+Datei, offline). Rechnet die Messkette von Variante A nach: Pedaltritt, Biegung, Dehnung,
+Vollbrücke, ADC mit Rauschen und Temperaturdrift, Nullabgleich und Kalibrierung mit
+Gewicht, Kadenz aus dem Gyro, 2 × links gegen wahre Leistung, BLE-CPS-Paket im Prinzip
+und einen Akkulaufzeit-Rechner. Alle Modellwerte sind Platzhalter (P) oder Schätzung,
+nichts ist gemessen.
+
+![Screenshot der Simulation](sim/screenshot.png)
 
 ## Physik
 
@@ -76,7 +86,10 @@ Wasserschutz und vor allem: **am Kurbelarm hängt die Sicherheit des Fahrers**.
 | Risiko Mechanik | mittel (Kurbel bleibt unbearbeitet, nur geklebt) | mittel bis hoch | hoch | mittel (Speichen, Lager) |
 | Budget 300 € | ja | knapp | eher nein | knapp |
 
-## Empfehlung
+## Entscheidung: Variante A
+
+**Entscheidung des Nutzers (22.10.2026): Variante A, linker Kurbelarm, einseitig, DMS-Vollbrücke.**
+Die Empfehlung lautete ebenfalls A, Begründung siehe unten.
 
 **Variante A: linker Kurbelarm, einseitig.** Das ist der Weg, den auch viele
 Kaufgeräte im Einstiegssegment gehen. Begründung:
@@ -235,7 +248,8 @@ Wer einen Smart-Trainer hat, kann ihn als Referenz nutzen.
 
 ## Offene Entscheidungen
 
-- Variante A bestätigen? Später zweiseitig? (Annahme: A, einseitig)
+- ~~Variante A bestätigen?~~ Entschieden vom Nutzer am 22.10.2026: Variante A, linker Kurbelarm, DMS-Vollbrücke.
+- Später zweiseitig? (Annahme: erst einseitig)
 - Mikrocontroller-Klasse: nRF52 oder ESP32 (Annahme: nRF52 wegen Stromverbrauch)
 - ADC: HX711 oder ADS1220-Klasse (nach Datenblattvergleich, Abtastrate entscheidend)
 - Nur BLE oder auch ANT+ (Annahme: erst BLE; ANT+-Bedingungen nicht geprüft)

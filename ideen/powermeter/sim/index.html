@@ -161,6 +161,13 @@ th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--grid
 th { color: var(--ink2); font-weight: 600; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+@media (max-width: 640px) {
+  .formula thead { display: none; }
+  .formula tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 6px 0; border-bottom: 1px solid var(--grid); }
+  .formula td { border: 0; padding: 0; }
+  .formula td.num { text-align: left; }
+  .formula td:first-child { grid-column: 1 / -1; }
+}
 .formula td:first-child { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.82rem; color: var(--ink); }
 details { border-top: 1px solid var(--grid); padding: 6px 0; }
 details > summary { cursor: pointer; font-weight: 600; font-size: 0.92rem; padding: 4px 0; }
@@ -362,9 +369,11 @@ const DT = 1e-4;            // interner Zeitschritt 0,1 ms
 const FS24 = 8388608;       // 2^23
 const $ = (s) => document.querySelector(s);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const fmt = (v, d = 0) => Number.isFinite(v)
-  ? v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d })
-  : '-';
+const fmt = (v, d = 0) => {
+  if (!Number.isFinite(v)) return '-';
+  const r = Number(v.toFixed(d));
+  return (r === 0 ? 0 : r).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+};
 const fmtS = (v, d = 1) => { if (!Number.isFinite(v)) return '-'; const r = Number(v.toFixed(d)); return (r > 0 ? '+' : '') + fmt(r === 0 ? 0 : r, d); };
 function randn() {
   let u = 0, v = 0;
@@ -512,7 +521,7 @@ const S = {
   t: 0, theta: Math.PI / 2, mode: 'fahren', mass: 10, paused: false,
   FL: 0, FR: 0, w: 0, UA: 0,
   acc: { u: 0, t: 0 }, thetaEst: Math.PI / 2, lastSampleT: 0,
-  revCount: 0, lastEventT: 0, rev: { sumP: 0, n: 0, eTrue: 0, eTrueL: 0, dt: 0 },
+  revCount: 0, lastEventT: 0, rev: { sumP: 0, n: 0, eTrue: 0, eTrueL: 0, dt: 0, partial: true },
   torque: [], samples: [], power: [], revs: [], win: [],
   nextTorqueT: 0, nextPowerT: 0,
   clipAdc: -10, clipGyro: -10,
@@ -575,11 +584,11 @@ function step(dt) {
     S.theta -= TAU;
     S.revCount++;
     S.lastEventT = t;
-    if (S.rev.n > 0) S.revs.push({ t, meas: S.rev.sumP / S.rev.n, tru: S.rev.eTrue / S.rev.dt, truL: S.rev.eTrueL / S.rev.dt });
+    if (S.rev.n > 0 && !S.rev.partial) S.revs.push({ t, meas: S.rev.sumP / S.rev.n, tru: S.rev.eTrue / S.rev.dt, truL: S.rev.eTrueL / S.rev.dt });
     S.rev = { sumP: 0, n: 0, eTrue: 0, eTrueL: 0, dt: 0 };
     S.thetaEst = S.theta;
   }
-  if (S.mode !== 'fahren') { S.rev = { sumP: 0, n: 0, eTrue: 0, eTrueL: 0, dt: 0 }; }
+  if (S.mode !== 'fahren') { S.rev = { sumP: 0, n: 0, eTrue: 0, eTrueL: 0, dt: 0, partial: true }; }
 
   if (t >= S.nextTorqueT) {
     S.nextTorqueT = t + 0.0025;
@@ -809,7 +818,7 @@ function attachHover(cv) {
 */
 function drawChart(cv, o) {
   const { ctx, w, h } = fit(cv);
-  const padL = 46, padR = 10, padT = 10, padB = 26;
+  const padL = 46, padR = 10, padT = 20, padB = 26;
   const pw = w - padL - padR, ph = h - padT - padB;
   let yMin = Infinity, yMax = -Infinity;
   for (const s of o.series) for (const p of s.pts) {
@@ -933,7 +942,7 @@ function drawPolar() {
     ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.stroke();
     const [lx, ly] = pt(Math.PI / 8, rr);
     ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-    ctx.fillText(fmt(F) + ' N', lx + 2, ly - 1);
+    if (F >= 0) ctx.fillText(fmt(F) + ' N', lx + 2, ly - 1);
   }
   // Speichen
   ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
@@ -959,15 +968,15 @@ function drawPolar() {
     }
     ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
   };
-  if (S.mode === 'fahren') { curve(pf.FpR, C.s3, true); curve(pf.FpL, C.s1, false); }
   // Messpunkte
   const revT = S.mode === 'fahren' ? 2 * 60 / P.rpm : 0.5;
   ctx.fillStyle = C.s2;
   for (const s of S.samples) {
     if (s.t < S.t - revT) continue;
     const [x, y] = pt(s.th, rad(s.F));
-    ctx.beginPath(); ctx.arc(x, y, 2.6, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, P.fs >= 320 ? 1.8 : 3, 0, TAU); ctx.fill();
   }
+  if (S.mode === 'fahren') { curve(pf.FpR, C.s3, true); curve(pf.FpL, C.s1, false); }
   // Kurbelarme
   const thL = S.theta;
   ctx.lineCap = 'round';
@@ -999,8 +1008,8 @@ function drawAll() {
   drawChart($('#cvTorque'), {
     xMin: t - 4, xMax: t, yUnit: 'Nm', xUnit: 's', xFmt: (x) => fmt(x - t, 0), minSpan: 2,
     series: [
-      { pts: S.torque.map(p => [p.t, p.M]), color: C.s1, name: 'wahr', d: 1 },
       { pts: S.samples.map(p => [p.t, p.M]), color: C.s2, dots: true, r: P.fs >= 320 ? 1.8 : 3, name: 'gemessen', d: 1 },
+      { pts: S.torque.map(p => [p.t, p.M]), color: C.s1, name: 'wahr', d: 1 },
     ],
   });
   drawChart($('#cvPower'), {
