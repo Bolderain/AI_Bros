@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" font-family="sans-serif" font-size="13">
+<rect width="800" height="360" fill="#fff"/>
+<text x="20" y="28" font-size="18" font-weight="bold">Prinzip: Wirbelstrombremse und Kennlinie (qualitativ)</text>
+<rect x="40" y="80" width="40" height="160" fill="#c33"/><text x="30" y="260">N/S Magnet</text>
+<rect x="110" y="60" width="16" height="200" fill="#aaa"/><text x="95" y="285">Alu-Scheibe</text>
+<line x1="118" y1="250" x2="118" y2="80" stroke="#333" stroke-width="2" marker-end="url(#b)"/><text x="130" y="170">bewegt sich</text>
+<text x="40" y="310">Bewegter Leiter im Magnetfeld: Wirbelströme,</text>
+<text x="40" y="328">deren Feld bremst. Wärme statt Reibung.</text>
+<line x1="80" y1="60" x2="110" y2="60" stroke="#333"/><text x="70" y="52">Spalt d</text>
+<line x1="420" y1="300" x2="760" y2="300" stroke="#333"/><line x1="420" y1="300" x2="420" y2="70" stroke="#333"/>
+<text x="680" y="320">Geschwindigkeit v</text><text x="380" y="60">Leistung P</text>
+<path d="M420,300 Q600,250 760,150" fill="none" stroke="#69c" stroke-width="2"/><text x="690" y="185">großer Spalt</text>
+<path d="M420,300 Q560,200 720,80" fill="none" stroke="#c33" stroke-width="2"/><text x="640" y="80">kleiner Spalt</text>
+<text x="430" y="345">Form der Kurven: Platzhalter (P), wird pro Trainer gemessen</text>
+<defs><marker id="b" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,8 L4,0 L8,8z"/></marker></defs>
+</svg>
