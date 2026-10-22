@@ -1,0 +1,1411 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gravel-Navi Simulation</title>
+<meta name="description" content="Energiebudget A gegen B und GPS-Simulation mit Track-Matching und Off-Course-Warnung für das Gravel-Navi. Alle Werte sind Schätzungen.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f9f9f7; --surface: #fcfcfb; --surface-2: #f0efec;
+  --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.12);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #6250d6;
+  --good: #0ca30c; --good-text: #006300; --warn: #fab219; --crit: #d03b3b;
+  --forest: #d6e9d2; --tree: #a3cba0; --paper: #e8e6df; --paper-ink: #1c1c1a; --paper-mid: #8e8c86;
+  --focus: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0d0d; --surface: #1a1a19; --surface-2: #262624;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.12);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9;
+    --good-text: #0ca30c;
+    --forest: #1d321f; --tree: #2c4d2e; --paper: #cfcdc5; --paper-ink: #151513; --paper-mid: #7b7973;
+    --focus: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0d; --surface: #1a1a19; --surface-2: #262624;
+  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.12);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  --good-text: #0ca30c;
+  --forest: #1d321f; --tree: #2c4d2e; --paper: #cfcdc5; --paper-ink: #151513; --paper-mid: #7b7973;
+  --focus: #3987e5;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 16px; }
+header { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0 0 2px; }
+h2 { font-size: 18px; margin: 0 0 8px; }
+h3 { font-size: 16px; margin: 0 0 8px; }
+p { margin: 0 0 10px; }
+.sub { color: var(--ink-2); margin: 0; max-width: 70ch; }
+.note { color: var(--ink-2); font-size: 13px; }
+button, select, input {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+button { padding: 7px 12px; cursor: pointer; min-height: 36px; }
+button:hover { background: var(--surface-2); }
+button.primary { background: var(--s1); border-color: var(--s1); color: #fff; }
+button.primary:hover { filter: brightness(1.08); }
+button.warnbtn { border-color: var(--s2); }
+button[aria-pressed="true"] { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--s2); }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+select { padding: 6px 8px; min-height: 34px; max-width: 100%; }
+input[type="number"] { width: 92px; padding: 5px 7px; min-height: 32px; text-align: right; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--s1); }
+.tabs { display: flex; gap: 6px; margin: 16px 0 12px; flex-wrap: wrap; }
+.tabs button { border-radius: 999px; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.stack > * + * { margin-top: 14px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fields { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+.fields label { color: var(--ink-2); font-size: 14px; }
+.fields .unit { display: inline-block; min-width: 30px; color: var(--muted); font-size: 13px; margin-left: 4px; }
+.fields .sep { grid-column: 1 / -1; border-top: 1px solid var(--border); margin: 4px 0 0; padding-top: 6px; font-weight: 600; font-size: 13px; color: var(--ink); }
+.fields .hint { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-top: -3px; }
+.fields .out { font-variant-numeric: tabular-nums; text-align: right; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
+canvas { display: block; width: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); margin: 4px 0 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw.line { height: 3px; width: 16px; border-radius: 2px; }
+.sw.dot { border-radius: 50%; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ok { color: var(--good-text); font-weight: 600; }
+.bad { color: var(--crit); font-weight: 600; }
+.tip {
+  position: fixed; pointer-events: none; z-index: 10; display: none;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 9px; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  max-width: 260px;
+}
+.tip b { font-variant-numeric: tabular-nums; }
+.gps-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.mapbox { position: relative; }
+#mapC { height: 460px; border-radius: 10px; background: var(--surface); touch-action: none; }
+#tlC { height: 150px; }
+.status { font-size: 14px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); margin-top: 8px; min-height: 38px; }
+.device {
+  background: #2a2a28; border-radius: 22px; padding: 14px; width: 100%; max-width: 300px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25); margin: 0 auto;
+}
+#epC { aspect-ratio: 240 / 320; border-radius: 4px; }
+.devbtns { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 6px; }
+.devbtns i { width: 34px; height: 8px; border-radius: 4px; background: #555; display: block; }
+.stats td:first-child { color: var(--ink-2); }
+details { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; }
+summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.ctrl { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; margin-top: 8px; }
+.ctrl label { display: block; font-size: 13px; color: var(--ink-2); }
+.ctrl .val { float: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ctrl select, .ctrl input[type="number"] { width: 100%; text-align: left; }
+.mc { font-size: 14px; margin-top: 8px; }
+.hidden { display: none !important; }
+@media (max-width: 900px) {
+  .grid2, .gps-layout { grid-template-columns: 1fr; }
+  #mapC { height: 380px; }
+}
+@media (max-width: 480px) {
+  h1 { font-size: 19px; }
+  .panel { padding: 11px; }
+  #mapC { height: 330px; }
+  input[type="number"] { width: 80px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Gravel-Navi: Simulation A gegen B</h1>
+      <p class="sub">Zwei Werkzeuge zu den Muss-Kriterien aus der Nutzerentscheidung vom 22.10.2026: Akku 10 h und mehr, gutes GPS.
+        Alle Zahlen sind <b>Schätzungen (P)</b> oder Modellannahmen, keine Datenblattwerte und keine Messungen.</p>
+    </div>
+    <button id="themeBtn" type="button" aria-label="Hell oder dunkel umschalten">Dunkel</button>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabE" aria-selected="true" aria-controls="secE" type="button">1 Energiebudget</button>
+    <button role="tab" id="tabG" aria-selected="false" aria-controls="secG" type="button">2 GPS und Track-Matching</button>
+  </div>
+
+  <!-- ================= Energiebudget ================= -->
+  <section id="secE" role="tabpanel" aria-labelledby="tabE" class="stack">
+    <div class="panel">
+      <h2>Energiebudget A gegen B</h2>
+      <p class="note">Jede Zahl ist editierbar. Die Vorgaben sind grobe Schätzungen (P), damit man eine Größenordnung sieht.
+        Sobald Bauteile gewählt sind: Werte aus dem Datenblatt eintragen, danach messen (USB-Leistungsmesser, 1 h Fahrbetrieb).
+        Leistung am Akku = Summe der Verbraucher geteilt durch den Wandler-Wirkungsgrad.</p>
+      <div class="row" style="gap:14px 22px">
+        <label>Temperatur
+          <select id="tempSel">
+            <option value="1.00">20 °C, Faktor 1,00</option>
+            <option value="0.95">10 °C, Faktor 0,95</option>
+            <option value="0.85">0 °C, Faktor 0,85</option>
+            <option value="0.70">-10 °C, Faktor 0,70</option>
+          </select>
+        </label>
+        <label>Temperatur-Faktor <input type="number" id="tempF" step="0.05" min="0.1" max="1.2" value="1.00"></label>
+        <label>Nutzbare Kapazität <input type="number" id="usable" step="1" min="10" max="100" value="85"> %</label>
+      </div>
+      <p class="note" style="margin-top:8px">Temperatur-Faktoren und nutzbare Kapazität (Alterung, Abschaltreserve) sind Schätzungen (P). Für die echte Zelle gilt ihr Datenblatt.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="panel" id="cardA"></div>
+      <div class="panel" id="cardB"></div>
+    </div>
+    <div class="row">
+      <button type="button" id="copyAB">Display, Licht und GNSS von A nach B übernehmen</button>
+      <button type="button" id="resetE">Vorgaben wiederherstellen</button>
+    </div>
+
+    <div class="panel">
+      <h3>Leistung am Akku je Komponente</h3>
+      <div class="legend" id="legE"></div>
+      <canvas id="powC" height="130" aria-label="Gestapelte Balken: Leistung je Komponente für A und B"></canvas>
+    </div>
+    <div class="panel">
+      <h3>Laufzeit</h3>
+      <div class="legend">
+        <span><i class="sw line" style="background:var(--crit)"></i>10 h Muss-Kriterium</span>
+        <span><i class="sw line" style="background:var(--muted)"></i>14 h Wunsch (P)</span>
+      </div>
+      <canvas id="runC" height="130" aria-label="Balken: Laufzeit A und B mit roter Linie bei 10 Stunden"></canvas>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table id="sumT"></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= GPS ================= -->
+  <section id="secG" role="tabpanel" aria-labelledby="tabG" class="stack hidden">
+    <div class="panel">
+      <h2>GPS-Simulation mit Track-Matching</h2>
+      <p class="note">Synthetische Gravel-Runde (Feld, zwei Waldstücke mit Serpentinen, Abzweige). Der Fahrer fährt den Track ab,
+        das GNSS-Modell erzeugt Fixe mit Fehler. Das Gerät ordnet jeden Fix dem Track zu (nur im Suchfenster um die letzte Stelle)
+        und warnt mit Hysterese, wenn der Abstand zu lange zu groß ist. Fehlermodell und Vorgaben sind Annahmen (P), nicht gemessen.</p>
+      <div class="row">
+        <button type="button" id="playBtn" class="primary">Start</button>
+        <label>Tempo
+          <select id="tempo">
+            <option value="1">1x</option><option value="2">2x</option><option value="5" selected>5x</option>
+            <option value="10">10x</option><option value="30">30x</option>
+          </select>
+        </label>
+        <button type="button" id="missBtn" class="warnbtn" aria-pressed="false">Abzweig absichtlich verpassen</button>
+        <button type="button" id="viewBtn">Ansicht: nah</button>
+        <button type="button" id="resetG">Neu starten</button>
+        <button type="button" id="seedBtn">Neu würfeln</button>
+      </div>
+    </div>
+
+    <div class="gps-layout">
+      <div class="stack">
+        <div class="panel">
+          <div class="mapbox"><canvas id="mapC" aria-label="Karte der synthetischen Route mit Fahrer, GNSS-Fixen und Suchfenster"></canvas></div>
+          <div class="legend" style="margin-top:8px">
+            <span><i class="sw line" style="background:var(--ink-2)"></i>Track</span>
+            <span><i class="sw line" style="background:var(--s1);opacity:.45;height:7px"></i>Suchfenster</span>
+            <span><i class="sw line" style="background:var(--muted)"></i>andere Wege, Abzweige</span>
+            <span><i class="sw" style="background:var(--forest);border:1px solid var(--tree)"></i>Wald</span>
+            <span><i class="sw dot" style="background:var(--ink)"></i>wahre Position</span>
+            <span><i class="sw dot" style="background:var(--s2)"></i>GNSS-Fix, Kreis = Schwelle ein</span>
+            <span><i class="sw dot" style="border:2px solid var(--s1)"></i>zugeordnete Stelle</span>
+          </div>
+          <div class="status" id="status" aria-live="polite">Bereit. Start drücken.</div>
+        </div>
+        <div class="panel">
+          <h3>Abstand Fix zum Track, letzte 3 Minuten</h3>
+          <div class="legend">
+            <span><i class="sw line" style="background:var(--s1)"></i>Abstand laut Gerät</span>
+            <span><i class="sw line" style="background:var(--crit)"></i>Schwelle ein</span>
+            <span><i class="sw line" style="background:var(--good)"></i>Schwelle aus</span>
+            <span><i class="sw" style="background:var(--warn);opacity:.45"></i>Warnung aktiv</span>
+            <span><i class="sw" style="background:var(--muted);opacity:.35"></i>Fahrer wirklich falsch</span>
+          </div>
+          <canvas id="tlC" aria-label="Zeitverlauf des Abstands zum Track mit Schwellen und Warnphasen"></canvas>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <h3>Anzeige am Lenker (E-Paper-Stil)</h3>
+          <div class="device"><canvas id="epC" aria-label="Simulierte E-Paper-Anzeige mit Abbiegehinweis"></canvas>
+            <div class="devbtns"><i></i><i></i><i></i></div></div>
+          <p class="note" style="margin-top:8px">Zeigt nur, was das Gerät weiß (Fixe, Track). Aktualisiert im eingestellten Takt, alle 20 Teilaktualisierungen ein Vollbild mit Blinken.</p>
+        </div>
+        <div class="panel">
+          <h3>Statistik dieser Fahrt</h3>
+          <table class="stats" id="statT"></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Einstellungen</h3>
+      <div class="ctrl">
+        <div><label>GNSS-Modus
+          <select id="pMode"><option value="single">Einband L1</option><option value="multi" selected>Mehrband L1/L5</option></select></label></div>
+        <div><label>Aktualisierungsrate
+          <select id="pRate"><option value="0.2">0,2 Hz (alle 5 s)</option><option value="0.5">0,5 Hz (alle 2 s)</option><option value="1" selected>1 Hz</option><option value="2">2 Hz</option><option value="5">5 Hz</option></select></label></div>
+        <div><label>Wald-Multipath-Faktor <span class="val" id="vForest"></span>
+          <input type="range" id="pForest" min="1" max="8" step="0.5" value="3"></label></div>
+        <div><label>Geschwindigkeit <span class="val" id="vSpeed"></span>
+          <input type="range" id="pSpeed" min="8" max="35" step="1" value="18"></label></div>
+        <div><label>Suchfenster zurück <span class="val" id="vBack"></span>
+          <input type="range" id="pBack" min="0" max="300" step="10" value="30"></label></div>
+        <div><label>Suchfenster vor <span class="val" id="vFwd"></span>
+          <input type="range" id="pFwd" min="30" max="2000" step="10" value="150"></label></div>
+        <div><label>Off-Course Schwelle ein <span class="val" id="vOn"></span>
+          <input type="range" id="pOn" min="10" max="100" step="5" value="40"></label></div>
+        <div><label>Off-Course Schwelle aus <span class="val" id="vOff"></span>
+          <input type="range" id="pOff" min="5" max="100" step="5" value="25"></label></div>
+        <div><label>Haltezeit ein <span class="val" id="vHoldOn"></span>
+          <input type="range" id="pHoldOn" min="0" max="30" step="1" value="8"></label></div>
+        <div><label>Haltezeit aus <span class="val" id="vHoldOff"></span>
+          <input type="range" id="pHoldOff" min="0" max="30" step="1" value="4"></label></div>
+        <div><label>Display-Aktualisierung <span class="val" id="vDisp"></span>
+          <input type="range" id="pDisp" min="0.5" max="10" step="0.5" value="2"></label></div>
+        <div><label>Reaktionszeit Fahrer nach Warnung <span class="val" id="vReact"></span>
+          <input type="range" id="pReact" min="0" max="30" step="1" value="5"></label></div>
+      </div>
+      <details>
+        <summary>Fehlermodell (Annahmen, P)</summary>
+        <p class="note">Fehler je Achse = langsam driftender Anteil (Gauss-Markov mit Korrelationszeit) plus Rauschen plus seltene Ausreißer im Wald,
+          die einige Sekunden abklingen. Im Wald wird der Grundfehler mit dem Wald-Faktor multipliziert. Beim Mehrband-Modus wirkt nur der eingestellte Anteil davon
+          (Annahme: L5/E5a hat die zehnfache Chiprate von L1 C/A und trennt Umwege besser). Alle Zahlen sind Platzhalter bis zur Messfahrt.</p>
+        <div class="ctrl">
+          <div><label>Grundfehler Einband, freie Sicht (m, 1 Sigma)<input type="number" id="pSigS" step="0.1" min="0.1" value="3.0"></label></div>
+          <div><label>Grundfehler Mehrband, freie Sicht (m, 1 Sigma)<input type="number" id="pSigM" step="0.1" min="0.1" value="1.5"></label></div>
+          <div><label>Mehrband: wirksamer Anteil Wald-Multipath (%)<input type="number" id="pMpM" step="5" min="0" max="100" value="60"></label></div>
+          <div><label>Korrelationszeit Drift (s)<input type="number" id="pTau" step="1" min="1" value="20"></label></div>
+          <div><label>Ausreißer im Wald (je Minute)<input type="number" id="pOutR" step="0.1" min="0" value="1.0"></label></div>
+          <div><label>Ausreißer Größe (m)<input type="number" id="pOutS" step="1" min="0" value="25"></label></div>
+        </div>
+      </details>
+      <details open>
+        <summary>Viele Fahrten durchrechnen</summary>
+        <p class="note">Rechnet die Runde mehrfach ohne Anzeige, jedes Mal mit anderem Zufall und einem anderen verpassten Abzweig. Gut zum Einstellen von Schwellen und Haltezeit.</p>
+        <div class="row"><button type="button" id="mcBtn">20 Fahrten durchrechnen</button></div>
+        <div class="mc" id="mcOut"></div>
+      </details>
+    </div>
+  </section>
+
+  <p class="note" style="margin-top:16px">Teil der Idee <a href="../README.md">Gravel-Navi</a>. Nichts hiervon ist gemessen. Die Wahl zwischen A und B trifft das Team.</p>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   Gemeinsames: Theme, Tokens, Formatierung, Canvas, Tooltip
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const fmt = (x, d = 0) => Number.isFinite(x)
+  ? x.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d })
+  : 'n. v.';
+const tok = {};
+const TOKENS = ['bg','surface','surface-2','ink','ink-2','muted','grid','axis','border','s1','s2','s3','s4','s5','s6','s7',
+  'good','good-text','warn','crit','forest','tree','paper','paper-ink','paper-mid'];
+function readTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of TOKENS) tok[k] = cs.getPropertyValue('--' + k).trim();
+}
+function isDark() {
+  const t = document.documentElement.dataset.theme;
+  if (t) return t === 'dark';
+  return matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function updateThemeBtn() { $('themeBtn').textContent = isDark() ? 'Hell' : 'Dunkel'; }
+$('themeBtn').addEventListener('click', () => {
+  document.documentElement.dataset.theme = isDark() ? 'light' : 'dark';
+  try { localStorage.setItem('gn-theme', document.documentElement.dataset.theme); } catch (e) { /* egal */ }
+  readTokens(); updateThemeBtn(); redrawAll();
+});
+try { const t = localStorage.getItem('gn-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) { /* egal */ }
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readTokens(); updateThemeBtn(); redrawAll(); });
+
+function prepCanvas(c, cssH) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(50, c.clientWidth);
+  const h = cssH || Math.max(50, c.clientHeight);
+  if (cssH) c.style.height = cssH + 'px';
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+  }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h };
+}
+function roundRectR(ctx, x, y, w, h, r) {
+  /* nur rechte Ecken gerundet (Datenende), links am Nullpunkt eckig */
+  r = Math.min(r, w, h / 2);
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r); ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r); ctx.lineTo(x, y + h); ctx.closePath();
+}
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const e = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * e >= v) return m * e;
+  return 10 * e;
+}
+const tip = $('tip');
+function showTip(html, ev) {
+  tip.innerHTML = html; tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tip.style.left = Math.max(4, x) + 'px'; tip.style.top = Math.max(4, y) + 'px';
+}
+function hideTip() { tip.style.display = 'none'; }
+
+/* =========================================================
+   Teil 1: Energiebudget
+   ========================================================= */
+const COMP = [
+  { key: 'soc', name: 'SoC/MCU', c: 's1' },
+  { key: 'disp', name: 'Display', c: 's2' },
+  { key: 'bl', name: 'Licht', c: 's3' },
+  { key: 'gnss', name: 'GNSS', c: 's4' },
+  { key: 'ble', name: 'BLE', c: 's5' },
+  { key: 'other', name: 'Sonstiges', c: 's6' },
+  { key: 'loss', name: 'Wandlerverlust', c: 's7' },
+];
+/* Alle Vorgaben: Schätzung (P), keine Datenblattwerte */
+const DISP = {
+  epaper:  { label: 'E-Paper, Teilaktualisierung', base: 0.5, mj: 40, int: 3, bl: 0, duty: 0,
+             hint: 'Strom fast nur beim Umschalten. Bei Kälte langsamer, Datenblatt prüfen. Kein eigenes Licht.' },
+  mip:     { label: 'Memory-LCD (MIP), reflektiv', base: 1, mj: 0.5, int: 1, bl: 30, duty: 0,
+             hint: 'Pixel halten ihren Zustand, sehr geringe Grundlast (Schätzung). Licht nur als Option.' },
+  transfl: { label: 'Transflektives TFT', base: 15, mj: 0, int: 1, bl: 150, duty: 0,
+             hint: 'In der Sonne reflektiv lesbar, Licht für Wald und Nacht. Grundlast höher als MIP (Schätzung).' },
+  tft:     { label: 'TFT/IPS mit Hintergrundlicht', base: 40, mj: 0, int: 1, bl: 400, duty: 100,
+             hint: 'Licht muss in der Sonne dauernd an sein, dominiert das Budget (Schätzung).' },
+};
+const GNSSP = {
+  single:    { label: 'Einband L1, dauerhaft', mw: 75 },
+  multi:     { label: 'Mehrband L1/L5, dauerhaft', mw: 120 },
+  single_ps: { label: 'Einband, Energiesparmodus', mw: 35 },
+};
+const VAR = {
+  a: { title: 'A: ESP32-S3', badge: 'eigene Platine', soc: 100, socHint: 'Mittelwert mit Light-Sleep zwischen den Fixen (Schätzung P). BLE-Funk getrennt unten.',
+       ble: 15, other: 10, eff: 90, mah: 2500, volt: 3.7, disp: 'epaper', gnss: 'multi',
+       effHint: 'Li-Ion auf 3,3 V, Schaltregler (Schätzung P).' },
+  b: { title: 'B: Raspberry Pi Zero 2 W', badge: 'Linux', soc: 750, socHint: 'Linux läuft durch, kein Tiefschlaf mit Weiterlaufen der Anwendung. WLAN und HDMI aus, Größenordnung aus Erfahrungsberichten, nicht Datenblatt (Schätzung P).',
+       ble: 30, other: 30, eff: 87, mah: 2500, volt: 3.7, disp: 'epaper', gnss: 'multi',
+       effHint: 'Li-Ion auf 5 V hochsetzen, der Pi braucht 5 V am Eingang (Schätzung P).' },
+};
+
+function num(id, unit, step) {
+  return `<span><input type="number" id="${id}" step="${step || 'any'}" min="0"><span class="unit">${unit}</span></span>`;
+}
+function cardHTML(v) {
+  const d = VAR[v];
+  const dOpts = Object.entries(DISP).map(([k, o]) => `<option value="${k}">${o.label}</option>`).join('');
+  const gOpts = Object.entries(GNSSP).map(([k, o]) => `<option value="${k}">${o.label}</option>`).join('');
+  return `
+  <div class="card-head"><h3>${d.title}</h3><span class="badge">${d.badge}</span></div>
+  <div class="fields">
+    <div class="sep">Rechner</div>
+    <label for="${v}_soc">SoC/MCU, mittlere Leistung</label>${num(v + '_soc', 'mW', 5)}
+    <div class="hint">${d.socHint}</div>
+    <div class="sep">Display</div>
+    <label for="${v}_dtype">Typ</label><select id="${v}_dtype">${dOpts}</select>
+    <div class="hint" id="${v}_dhint"></div>
+    <label for="${v}_dbase">Grundlast</label>${num(v + '_dbase', 'mW', 0.5)}
+    <label for="${v}_dmj">Energie je Aktualisierung</label>${num(v + '_dmj', 'mJ', 1)}
+    <label for="${v}_dint">Aktualisierung alle</label>${num(v + '_dint', 's', 0.5)}
+    <label>ergibt im Mittel</label><span class="out" id="${v}_dout"></span>
+    <div class="sep">Licht</div>
+    <label for="${v}_bl">Leistung, wenn an</label>${num(v + '_bl', 'mW', 10)}
+    <label for="${v}_duty">an, Anteil der Fahrzeit</label>${num(v + '_duty', '%', 5)}
+    <div class="sep">GNSS</div>
+    <label for="${v}_gtype">Modus</label><select id="${v}_gtype">${gOpts}</select>
+    <label for="${v}_gnss">Leistung</label>${num(v + '_gnss', 'mW', 5)}
+    <div class="sep">Funk und Rest</div>
+    <label for="${v}_ble">BLE zu 2 Sensoren</label>${num(v + '_ble', 'mW', 5)}
+    <label for="${v}_other">Sonstiges (SD, Summer, Ruhestrom)</label>${num(v + '_other', 'mW', 5)}
+    <label for="${v}_eff">Wandler-Wirkungsgrad</label>${num(v + '_eff', '%', 1)}
+    <div class="hint">${d.effHint}</div>
+    <div class="sep">Akku</div>
+    <label for="${v}_mah">Kapazität</label>${num(v + '_mah', 'mAh', 100)}
+    <label for="${v}_volt">Nennspannung</label>${num(v + '_volt', 'V', 0.1)}
+    <label>Energieinhalt</label><span class="out" id="${v}_wh"></span>
+  </div>`;
+}
+$('cardA').innerHTML = cardHTML('a');
+$('cardB').innerHTML = cardHTML('b');
+
+function setDisp(v, key) {
+  const o = DISP[key];
+  $(v + '_dtype').value = key;
+  $(v + '_dbase').value = o.base; $(v + '_dmj').value = o.mj; $(v + '_dint').value = o.int;
+  $(v + '_bl').value = o.bl; $(v + '_duty').value = o.duty;
+  $(v + '_dhint').textContent = o.hint + ' Werte Schätzung (P).';
+}
+function setGnss(v, key) { $(v + '_gtype').value = key; $(v + '_gnss').value = GNSSP[key].mw; }
+function resetEnergy() {
+  for (const v of ['a', 'b']) {
+    const d = VAR[v];
+    $(v + '_soc').value = d.soc; $(v + '_ble').value = d.ble; $(v + '_other').value = d.other;
+    $(v + '_eff').value = d.eff; $(v + '_mah').value = d.mah; $(v + '_volt').value = d.volt;
+    setDisp(v, d.disp); setGnss(v, d.gnss);
+  }
+  $('tempSel').value = '1.00'; $('tempF').value = '1.00'; $('usable').value = 85;
+}
+const val = id => { const x = parseFloat(String($(id).value).replace(',', '.')); return Number.isFinite(x) ? x : 0; };
+
+function energyCalc(v) {
+  const dint = val(v + '_dint');
+  const disp = val(v + '_dbase') + (dint > 0 ? val(v + '_dmj') / dint : 0);
+  const bl = val(v + '_bl') * clamp(val(v + '_duty'), 0, 100) / 100;
+  const parts = { soc: val(v + '_soc'), disp, bl, gnss: val(v + '_gnss'), ble: val(v + '_ble'), other: val(v + '_other') };
+  const load = Object.values(parts).reduce((a, b) => a + b, 0);
+  const eff = clamp(val(v + '_eff'), 10, 100) / 100;
+  const batt = load / eff;
+  parts.loss = batt - load;
+  const k = clamp(val('tempF'), 0.05, 1.5) * clamp(val('usable'), 1, 100) / 100;
+  const volt = val(v + '_volt');
+  const wh = val(v + '_mah') * volt / 1000;
+  const usableWh = wh * k;
+  const hours = batt > 0 ? usableWh / (batt / 1000) : Infinity;
+  const need10Wh = 10 * (batt / 1000) / k;
+  const need10mAh = volt > 0 ? need10Wh / volt * 1000 : Infinity;
+  return { parts, load, batt, wh, usableWh, hours, need10Wh, need10mAh };
+}
+
+let eRes = {};
+let powHits = [], runHits = [];
+function updateEnergy() {
+  for (const v of ['a', 'b']) {
+    eRes[v] = energyCalc(v);
+    $(v + '_dout').textContent = fmt(eRes[v].parts.disp, 1) + ' mW';
+    $(v + '_wh').textContent = fmt(eRes[v].wh, 1) + ' Wh';
+  }
+  drawPower(); drawRuntime(); fillSummary();
+}
+function drawPower() {
+  const c = $('powC');
+  const narrow = c.clientWidth < 520;
+  const { ctx, w, h } = prepCanvas(c, 136);
+  ctx.clearRect(0, 0, w, h);
+  const L = narrow ? 34 : 190, R = 74, top = 10, bh = 30, gap = 26;
+  const max = niceMax(Math.max(eRes.a.batt, eRes.b.batt) * 1.05);
+  const sx = x => L + x / max * (w - L - R);
+  ctx.font = '12px system-ui, sans-serif';
+  /* Gitter */
+  ctx.strokeStyle = tok.grid; ctx.lineWidth = 1; ctx.fillStyle = tok.muted; ctx.textAlign = 'center';
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const x = Math.round(sx(max * i / ticks)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(x, top - 4); ctx.lineTo(x, top + 2 * bh + gap + 4); ctx.stroke();
+    ctx.fillText(fmt(max * i / ticks) + (i === ticks ? ' mW' : ''), x, h - 8);
+  }
+  powHits = [];
+  ['a', 'b'].forEach((v, row) => {
+    const y = top + row * (bh + gap);
+    const r = eRes[v];
+    ctx.fillStyle = tok.ink; ctx.textAlign = 'left'; ctx.font = '600 13px system-ui, sans-serif';
+    ctx.fillText(narrow ? v.toUpperCase() : VAR[v].title, 0, y + bh / 2 + 5);
+    let x0 = 0;
+    const segs = COMP.filter(cp => r.parts[cp.key] > 0);
+    segs.forEach((cp, i) => {
+      const val = r.parts[cp.key];
+      const xa = sx(x0), xb = sx(x0 + val);
+      const last = i === segs.length - 1;
+      const wseg = Math.max(0.5, xb - xa - (last ? 0 : 2));
+      ctx.fillStyle = tok[cp.c];
+      if (last) { roundRectR(ctx, xa, y, wseg, bh, 4); ctx.fill(); } else ctx.fillRect(xa, y, wseg, bh);
+      powHits.push({ x: xa, y, w: Math.max(xb - xa, 3), h: bh, html: `<b>${VAR[v].title}</b><br>${cp.name}: <b>${fmt(val, 1)} mW</b> (${fmt(val / r.batt * 100, 0)} %)` });
+      x0 += val;
+    });
+    ctx.fillStyle = tok.ink; ctx.textAlign = 'left'; ctx.font = '600 13px system-ui, sans-serif';
+    ctx.fillText(fmt(r.batt) + ' mW', sx(r.batt) + 6, y + bh / 2 + 5);
+  });
+  ctx.strokeStyle = tok.axis; ctx.beginPath(); ctx.moveTo(L + 0.5, top - 4); ctx.lineTo(L + 0.5, top + 2 * bh + gap + 4); ctx.stroke();
+}
+function drawRuntime() {
+  const c = $('runC');
+  const narrow = c.clientWidth < 520;
+  const { ctx, w, h } = prepCanvas(c, 150);
+  ctx.clearRect(0, 0, w, h);
+  const L = narrow ? 34 : 190, R = narrow ? 92 : 130, top = 24, bh = 30, gap = 26;
+  const hmax = Math.max(eRes.a.hours, eRes.b.hours);
+  const max = Math.min(96, niceMax(Math.max(16, (Number.isFinite(hmax) ? hmax : 96) * 1.05)));
+  const sx = x => L + Math.min(x, max) / max * (w - L - R);
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.strokeStyle = tok.grid; ctx.lineWidth = 1; ctx.fillStyle = tok.muted; ctx.textAlign = 'center';
+  const step = max <= 20 ? 2 : max <= 40 ? 5 : max <= 80 ? 10 : 20;
+  for (let t = 0; t <= max + 1e-9; t += step) {
+    const x = Math.round(sx(t)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(x, top - 2); ctx.lineTo(x, top + 2 * bh + gap + 4); ctx.stroke();
+    ctx.fillText(fmt(t) + (t + step > max ? ' h' : ''), x, h - 8);
+  }
+  runHits = [];
+  ['a', 'b'].forEach((v, row) => {
+    const y = top + row * (bh + gap);
+    const r = eRes[v];
+    ctx.fillStyle = tok.ink; ctx.textAlign = 'left'; ctx.font = '600 13px system-ui, sans-serif';
+    ctx.fillText(narrow ? v.toUpperCase() : VAR[v].title, 0, y + bh / 2 + 5);
+    const xb = sx(Number.isFinite(r.hours) ? r.hours : max);
+    ctx.fillStyle = tok.s1;
+    roundRectR(ctx, L, y, Math.max(1, xb - L), bh, 4); ctx.fill();
+    const ok = r.hours >= 10;
+    ctx.font = '600 13px system-ui, sans-serif'; ctx.fillStyle = tok.ink;
+    const label = fmt(r.hours, 1) + ' h' + (r.hours > max ? ' (gekappt)' : '');
+    ctx.fillText(label, xb + 6, y + 13);
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillStyle = ok ? tok['good-text'] : tok.crit;
+    ctx.fillText(ok ? '✓ erfüllt' : '✗ nicht erfüllt', xb + 6, y + 28);
+    runHits.push({ x: L, y, w: xb - L, h: bh, html: `<b>${VAR[v].title}</b><br>Laufzeit <b>${fmt(r.hours, 1)} h</b><br>Leistung am Akku ${fmt(r.batt)} mW<br>nutzbar ${fmt(r.usableWh, 1)} Wh<br>${ok ? 'erfüllt 10 h' : 'erfüllt 10 h nicht'}` });
+  });
+  /* Linien 10 h (Muss) und 14 h (Wunsch, P) */
+  const yb = top + 2 * bh + gap + 6;
+  const line = (t, col, dash, txt) => {
+    if (t > max) return;
+    const x = Math.round(sx(t)) + 0.5;
+    ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(x, top - 8); ctx.lineTo(x, yb); ctx.stroke(); ctx.restore();
+    ctx.fillStyle = col; ctx.font = '600 12px system-ui, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(txt, x, top - 11);
+  };
+  line(10, tok.crit, [], '10 h');
+  line(14, tok.muted, [5, 4], '14 h (P)');
+}
+function fillSummary() {
+  const rows = [
+    ['Leistung am Akku', r => fmt(r.batt) + ' mW'],
+    ['Akku, Energieinhalt', r => fmt(r.wh, 1) + ' Wh'],
+    ['davon nutzbar (Temperatur, Reserve)', r => fmt(r.usableWh, 1) + ' Wh'],
+    ['Laufzeit', r => `<span class="${r.hours >= 10 ? 'ok' : 'bad'}">${r.hours >= 10 ? '✓' : '✗'} ${fmt(r.hours, 1)} h</span>`],
+    ['Akku nötig für 10 h', r => fmt(r.need10mAh, 0) + ' mAh, ' + fmt(r.need10Wh, 1) + ' Wh'],
+  ];
+  let html = `<thead><tr><th>Schätzung (P)</th><th class="num">${VAR.a.title}</th><th class="num">${VAR.b.title}</th></tr></thead><tbody>`;
+  for (const [n, f] of rows) html += `<tr><td>${n}</td><td class="num">${f(eRes.a)}</td><td class="num">${f(eRes.b)}</td></tr>`;
+  html += '</tbody>';
+  $('sumT').innerHTML = html;
+}
+function hitTest(hits, c) {
+  return ev => {
+    const r = c.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    const hgt = hits().find(hh => x >= hh.x && x <= hh.x + hh.w && y >= hh.y - 4 && y <= hh.y + hh.h + 4);
+    if (hgt) showTip(hgt.html, ev); else hideTip();
+  };
+}
+$('powC').addEventListener('pointermove', hitTest(() => powHits, $('powC')));
+$('runC').addEventListener('pointermove', hitTest(() => runHits, $('runC')));
+$('powC').addEventListener('pointerleave', hideTip);
+$('runC').addEventListener('pointerleave', hideTip);
+
+$('legE').innerHTML = COMP.map(cp => `<span><i class="sw" style="background:var(--${cp.c})"></i>${cp.name}</span>`).join('');
+for (const v of ['a', 'b']) {
+  $(v + '_dtype').addEventListener('change', e => { setDisp(v, e.target.value); updateEnergy(); });
+  $(v + '_gtype').addEventListener('change', e => { setGnss(v, e.target.value); updateEnergy(); });
+}
+$('secE').addEventListener('input', e => { if (e.target.id === 'tempSel') $('tempF').value = e.target.value; updateEnergy(); });
+$('copyAB').addEventListener('click', () => {
+  for (const f of ['dtype', 'dbase', 'dmj', 'dint', 'bl', 'duty', 'gtype', 'gnss']) $('b_' + f).value = $('a_' + f).value;
+  $('b_dhint').textContent = $('a_dhint').textContent;
+  updateEnergy();
+});
+$('resetE').addEventListener('click', () => { resetEnergy(); updateEnergy(); });
+
+/* =========================================================
+   Teil 2: GPS-Simulation
+   ========================================================= */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function makeGauss(rnd) {
+  let spare = null;
+  return () => {
+    if (spare !== null) { const s = spare; spare = null; return s; }
+    let u = 0, v = 0; while (u === 0) u = rnd(); v = rnd();
+    const m = Math.sqrt(-2 * Math.log(u));
+    spare = m * Math.sin(2 * Math.PI * v);
+    return m * Math.cos(2 * Math.PI * v);
+  };
+}
+
+/* ---------- Polylinie mit Bogenlänge ---------- */
+function makePoly(pts) {
+  const cs = [0];
+  for (let i = 1; i < pts.length; i++) cs.push(cs[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  return { pts, cs, total: cs[cs.length - 1] };
+}
+function segIndex(poly, s) {
+  let lo = 0, hi = poly.cs.length - 1;
+  if (s <= 0) return 0;
+  if (s >= poly.total) return poly.cs.length - 2;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (poly.cs[m] <= s) lo = m; else hi = m; }
+  return lo;
+}
+function posAt(poly, s) {
+  s = clamp(s, 0, poly.total);
+  const i = segIndex(poly, s);
+  const a = poly.pts[i], b = poly.pts[i + 1];
+  const L = poly.cs[i + 1] - poly.cs[i] || 1;
+  const t = (s - poly.cs[i]) / L;
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, h: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+
+/* ---------- Synthetische Gravel-Runde ---------- */
+function buildWorld(CMDS) {
+  const rnd = mulberry32(7);
+  const STEP = 5;
+  const pts = [{ x: 0, y: 0 }];
+  let x = 0, y = 0, h = 0.35, s = 0;
+  const forest = []; let fStart = null;
+  const junctions = []; const side = [];
+  function path(x0, y0, hh, L, curv) {
+    const p = [{ x: x0, y: y0 }]; let px = x0, py = y0, ph = hh;
+    const n = Math.round(L / STEP);
+    for (let i = 0; i < n; i++) { ph += curv * STEP; px += Math.cos(ph) * STEP; py += Math.sin(ph) * STEP; p.push({ x: px, y: py }); }
+    return p;
+  }
+  function adv(len, curv) {
+    const n = Math.max(1, Math.round(len / STEP)); const ds = len / n;
+    for (let i = 0; i < n; i++) {
+      h += curv * ds / 2; x += Math.cos(h) * ds; y += Math.sin(h) * ds; h += curv * ds / 2;
+      pts.push({ x, y }); s += ds;
+    }
+  }
+  const D = Math.PI / 180;
+  /* s = gerade, a = Bogen (Krümmung 1/R, + = links), t = Abbiegen an Abzweig (Grad, + = links),
+     k = Kehre mit 20 m Radius, x = abgehender Weg ohne Abbiegen, f = Wald an/aus */
+  const C = CMDS || [
+    ['s', 250], ['a', 220, 1 / 300], ['x', 70], ['s', 200], ['t', -80], ['f', 1],
+    ['a', 250, -1 / 250], ['s', 150], ['a', 150, 1 / 200], ['t', 65], ['s', 200], ['s', 160],
+    ['k', 1], ['s', 180], ['k', -1], ['s', 180], ['k', 1], ['s', 150], ['x', -60],
+    ['a', 300, -1 / 400], ['t', -95], ['s', 120], ['f', 0], ['s', 180], ['a', 200, 1 / 250], ['s', 250],
+    ['t', 75], ['s', 200], ['x', 80], ['a', 300, -1 / 300], ['f', 1], ['s', 200], ['t', -70],
+    ['a', 200, 1 / 150], ['s', 250], ['t', 110], ['s', 200], ['f', 0], ['a', 300, -1 / 500], ['s', 300],
+  ];
+  for (const c of C) {
+    if (c[0] === 's') adv(c[1], 0);
+    else if (c[0] === 'a') adv(c[1], c[2]);
+    else if (c[0] === 'k') adv(Math.PI * 20, c[1] / 20);
+    else if (c[0] === 'f') { if (c[1]) fStart = s; else { forest.push([fStart, s]); fStart = null; } }
+    else if (c[0] === 'x') side.push(path(x, y, h + c[1] * D, 200, (rnd() - 0.5) / 300));
+    else if (c[0] === 't') {
+      const br = path(x, y, h, 320, (rnd() - 0.5) / 400);
+      side.push(br);
+      junctions.push({ s, branch: makePoly(br), turn: c[1] });
+      h += c[1] * D;
+    }
+  }
+  if (fStart !== null) forest.push([fStart, s]);
+  const route = makePoly(pts);
+
+  /* Fahrtrichtung je Segment, ohne Sprung bei +-180 Grad */
+  const hd = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    let a = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
+    if (i > 0) { while (a - hd[i - 1] > Math.PI) a -= 2 * Math.PI; while (a - hd[i - 1] < -Math.PI) a += 2 * Math.PI; }
+    hd.push(a);
+  }
+  const headingAt = ss => hd[segIndex(route, ss)];
+
+  /* Abbiegehinweise aus dem Track berechnen: Richtungsänderung über +-15 m > 35 Grad (P),
+     lokales Maximum, Art über +-40 m bestimmt */
+  const cand = route.cs.map(ss => headingAt(Math.min(route.total, ss + 15)) - headingAt(Math.max(0, ss - 15)));
+  const hints = [];
+  let i = 0;
+  while (i < cand.length) {
+    if (Math.abs(cand[i]) > 35 * D) {
+      let j = i; while (j + 1 < cand.length && Math.abs(cand[j + 1]) > 35 * D) j++;
+      let best = 0; for (let k = i; k <= j; k++) best = Math.max(best, Math.abs(cand[k]));
+      const ties = []; for (let k = i; k <= j; k++) if (Math.abs(cand[k]) >= best - 1e-6) ties.push(k);
+      const at = ties[Math.floor(ties.length / 2)];
+      const ss = route.cs[at];
+      const ang = (headingAt(Math.min(route.total, ss + 40)) - headingAt(Math.max(0, ss - 40))) / D;
+      const side = ang > 0 ? 'links' : 'rechts';
+      const a = Math.abs(ang);
+      const text = a >= 135 ? 'Kehre ' + side : a >= 100 ? 'scharf ' + side : a >= 55 ? side + ' abbiegen' : 'leicht ' + side;
+      const p = route.pts[at];
+      hints.push({ s: ss, ang, text, x: p.x, y: p.y });
+      i = j + 1;
+    } else i++;
+  }
+
+  /* Wald-Gewicht mit 40 m Übergang */
+  const forestW = ss => {
+    let w = 0;
+    for (const [a, b] of forest) {
+      if (ss >= a && ss <= b) return 1;
+      const d = ss < a ? a - ss : ss - b;
+      w = Math.max(w, 1 - d / 40);
+    }
+    return Math.max(0, w);
+  };
+  /* Bäume für die Darstellung */
+  const trees = [];
+  for (const [a, b] of forest) {
+    for (let ss = a; ss < b; ss += 9) {
+      const p = posAt(route, ss);
+      for (let k = 0; k < 2; k++) {
+        const o = (rnd() < 0.5 ? -1 : 1) * (9 + rnd() * 34);
+        trees.push({ x: p.x - Math.sin(p.h) * o + (rnd() - 0.5) * 6, y: p.y + Math.cos(p.h) * o + (rnd() - 0.5) * 6, r: 2.5 + rnd() * 3 });
+      }
+    }
+  }
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of pts.concat(...side)) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
+  return { route, forest, junctions, side, hints, forestW, trees, bounds: { minX, minY, maxX, maxY } };
+}
+
+/* ---------- Track-Matching: reine Funktionen ohne I/O ----------
+   Diese Logik ist so geschrieben, dass sie 1:1 auf dem Gerät oder am PC
+   mit aufgezeichneten Fahrten laufen kann. Kein Zugriff auf Zufall, Zeit oder DOM. */
+function projectWindow(track, fix, lo, hi) {
+  const { pts, cs } = track;
+  let i0 = segIndex(track, Math.max(0, lo));
+  let best = { d: Infinity, s: 0, x: 0, y: 0 };
+  for (let i = i0; i < pts.length - 1 && cs[i] <= hi; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1;
+    const t = clamp(((fix.x - a.x) * dx + (fix.y - a.y) * dy) / L2, 0, 1);
+    const px = a.x + dx * t, py = a.y + dy * t;
+    const d = Math.hypot(fix.x - px, fix.y - py);
+    if (d < best.d) best = { d, s: cs[i] + t * Math.sqrt(L2), x: px, y: py };
+  }
+  return best;
+}
+/* state: { s, off, tAbove, tBelow, init }  p: { back, fwd, on, offThr, holdOn, holdOff } */
+function matchStep(track, state, fix, t, p) {
+  const lo = state.init ? state.s - p.back : 0;
+  const hi = state.init ? state.s + p.fwd : track.total;
+  const m = projectWindow(track, fix, lo, hi);
+  const offThr = Math.min(p.offThr, p.on);           // Hysterese: aus-Schwelle nie über ein-Schwelle
+  let { s, off, tAbove, tBelow } = state;
+  let event = null;
+  if (m.d <= p.on) s = m.s;                            // Fortschritt nur übernehmen, wenn Fix nah genug
+  if (!off) {
+    if (m.d > p.on) {
+      if (tAbove === null) tAbove = t;
+      if (t - tAbove >= p.holdOn) { off = true; tBelow = null; event = 'alarm'; }
+    } else tAbove = null;
+  } else {
+    if (m.d < offThr) {
+      if (tBelow === null) tBelow = t;
+      if (t - tBelow >= p.holdOff) { off = false; tAbove = null; event = 'clear'; }
+    } else tBelow = null;
+  }
+  return { state: { s, off, tAbove, tBelow, init: true }, d: m.d, sProj: m.s, px: m.x, py: m.y, event };
+}
+function nextHint(hints, s) { return hints.find(h => h.s > s + 2) || null; }
+
+/* ---------- Parameter aus der Oberfläche ---------- */
+const P = {};
+const SL = [
+  ['pForest', 'vForest', 'forest', v => 'x ' + fmt(v, 1)],
+  ['pSpeed', 'vSpeed', 'speed', v => fmt(v) + ' km/h'],
+  ['pBack', 'vBack', 'back', v => fmt(v) + ' m'],
+  ['pFwd', 'vFwd', 'fwd', v => fmt(v) + ' m'],
+  ['pOn', 'vOn', 'on', v => fmt(v) + ' m'],
+  ['pOff', 'vOff', 'offThr', v => fmt(v) + ' m'],
+  ['pHoldOn', 'vHoldOn', 'holdOn', v => fmt(v) + ' s'],
+  ['pHoldOff', 'vHoldOff', 'holdOff', v => fmt(v) + ' s'],
+  ['pDisp', 'vDisp', 'disp', v => fmt(v, 1) + ' s'],
+  ['pReact', 'vReact', 'react', v => fmt(v) + ' s'],
+];
+function readParams() {
+  for (const [id, vid, key, f] of SL) { P[key] = parseFloat($(id).value); $(vid).textContent = f(P[key]); }
+  if (P.offThr > P.on) $('vOff').textContent += ' (wirkt wie ' + fmt(P.on) + ' m)';
+  P.mode = $('pMode').value;
+  P.rate = parseFloat($('pRate').value);
+  P.sigSingle = Math.max(0.1, val('pSigS'));
+  P.sigMulti = Math.max(0.1, val('pSigM'));
+  P.mpMulti = clamp(val('pMpM'), 0, 100);
+  P.tau = Math.max(1, val('pTau'));
+  P.outRate = Math.max(0, val('pOutR'));
+  P.outSize = Math.max(0, val('pOutS'));
+}
+
+/* ---------- Simulation (Welt, Fahrer, GNSS-Modell, Gerät) ---------- */
+function createSim(world, P, seed, keepHist) {
+  const rnd = mulberry32(seed);
+  const gauss = makeGauss(rnd);
+  const R = world.route;
+  const S = {
+    t: 0, s: 0, mode: 'route', b: 0, j: null, armed: false, armedJ: -1, done: false,
+    truePos: posAt(R, 0), g: { bx: 0, by: 0, ix: 0, iy: 0, nextFix: 0 },
+    fix: null, fixes: [], m: { s: 0, off: false, tAbove: null, tBelow: null, init: false }, mr: null,
+    dev: { speed: 0, cx: 0, cy: 0, alarmT: null, lastFix: null, acc: 0 },
+    pending: null, hist: [],
+    st: { fixes: 0, eOpen: 0, nOpen: 0, eForest: 0, nForest: 0, eMax: 0, falseAlarms: 0, falseTime: 0,
+          missed: 0, detected: 0, undetected: 0, detTimes: [], detDists: [], jumps: 0, dist: 0 },
+  };
+  function forestHere() { return S.mode === 'route' ? world.forestW(S.s) : world.forestW(S.j.s); }
+  function makeFix() {
+    const w = forestHere();
+    const multi = P.mode === 'multi';
+    const mp = multi ? P.mpMulti / 100 : 1;
+    const sig = (multi ? P.sigMulti : P.sigSingle) * (1 + (P.forest - 1) * w * mp);
+    const dtf = 1 / P.rate;
+    const a = Math.exp(-dtf / P.tau), q = Math.sqrt(1 - a * a);
+    const g = S.g;
+    g.bx = a * g.bx + q * 0.85 * sig * gauss();
+    g.by = a * g.by + q * 0.85 * sig * gauss();
+    const ai = Math.exp(-dtf / 6); g.ix *= ai; g.iy *= ai;
+    if (w > 0 && rnd() < P.outRate / 60 * dtf * w * mp) {
+      const ang = rnd() * 2 * Math.PI, mag = P.outSize * (0.6 + 0.8 * rnd());
+      g.ix += Math.cos(ang) * mag; g.iy += Math.sin(ang) * mag;
+    }
+    const ex = g.bx + 0.5 * sig * gauss() + g.ix, ey = g.by + 0.5 * sig * gauss() + g.iy;
+    S.dev.acc = 2 * sig;
+    return { x: S.truePos.x + ex, y: S.truePos.y + ey, err: Math.hypot(ex, ey), w, t: S.t };
+  }
+  function onFix(fix) {
+    const st = S.st;
+    st.fixes++;
+    if (fix.w > 0.5) { st.eForest += fix.err; st.nForest++; } else { st.eOpen += fix.err; st.nOpen++; }
+    st.eMax = Math.max(st.eMax, fix.err);
+    const prevS = S.m.s, wasInit = S.m.init;
+    const r = matchStep(R, S.m, fix, S.t, { back: P.back, fwd: P.fwd, on: P.on, offThr: P.offThr, holdOn: P.holdOn, holdOff: P.holdOff });
+    S.m = r.state; S.mr = r;
+    const ds = S.m.s - prevS;
+    if (wasInit && (ds > Math.max(60, 3 * P.speed / 3.6 / P.rate + 30) || ds < -40)) st.jumps++;
+    if (r.event === 'alarm') {
+      S.dev.alarmT = S.t;
+      if (S.pending && !S.pending.detected) {
+        S.pending.detected = true; st.detected++;
+        st.detTimes.push(S.t - S.pending.t0); st.detDists.push(S.b);
+      } else if (S.mode === 'route') st.falseAlarms++;
+    } else if (r.event === 'clear') S.dev.alarmT = null;
+    /* Geschwindigkeit und Kurs nur aus Fixen, wie im Gerät */
+    const lf = S.dev.lastFix;
+    if (lf) {
+      const dt = fix.t - lf.t || 1;
+      const vx = (fix.x - lf.x) / dt, vy = (fix.y - lf.y) / dt;
+      const k = Math.min(1, 0.35 * dt);
+      S.dev.cx += (vx - S.dev.cx) * k; S.dev.cy += (vy - S.dev.cy) * k;
+      S.dev.speed += (Math.hypot(vx, vy) - S.dev.speed) * k;
+    }
+    S.dev.lastFix = fix;
+    S.fix = fix;
+    if (keepHist) {
+      S.fixes.push(fix); if (S.fixes.length > 60) S.fixes.shift();
+      S.hist.push({ t: S.t, d: r.d, off: S.m.off, wrong: S.mode !== 'route' });
+      while (S.hist.length && S.t - S.hist[0].t > 200) S.hist.shift();
+    }
+  }
+  function step(dt) {
+    if (S.done) return;
+    const st = S.st;
+    const fwHere = forestHere();
+    const v = P.speed / 3.6 * (1 + 0.08 * Math.sin(S.t / 23)) * (fwHere > 0.5 ? 0.9 : 1);
+    if (S.mode === 'route') {
+      const sNew = S.s + v * dt;
+      let took = null;
+      if (S.armed) {
+        world.junctions.forEach((jn, idx) => {
+          if (!took && jn.s > S.s && jn.s <= sNew && (S.armedJ < 0 || S.armedJ === idx)) took = jn;
+        });
+      }
+      if (took) {
+        S.mode = 'out'; S.j = took; S.b = sNew - took.s; S.s = took.s; S.armed = false;
+        S.pending = { t0: S.t, detected: false }; st.missed++;
+      } else {
+        S.s = sNew;
+        if (S.s >= R.total) { S.s = R.total; S.done = true; }
+      }
+    } else if (S.mode === 'out') {
+      S.b += v * dt;
+      const reacted = S.m.off && S.dev.alarmT !== null && S.t - S.dev.alarmT >= P.react;
+      if (reacted || S.b >= S.j.branch.total) { S.b = Math.min(S.b, S.j.branch.total); S.mode = 'back'; }
+    } else if (S.mode === 'back') {
+      S.b -= v * dt;
+      if (S.b <= 0) {
+        S.b = 0; S.mode = 'route';
+        if (S.pending && !S.pending.detected) st.undetected++;
+        S.pending = null;
+      }
+    }
+    S.t += dt; st.dist += v * dt;
+    S.truePos = S.mode === 'route' ? posAt(R, S.s) : posAt(S.j.branch, S.b);
+    if (S.m.off && S.mode === 'route') st.falseTime += dt;
+    while (S.t >= S.g.nextFix) { S.g.nextFix += 1 / P.rate; onFix(makeFix()); }
+  }
+  return { S, step };
+}
+
+/* ---------- Oberfläche GPS ---------- */
+const world = buildWorld();
+let seed = 1;
+let sim, playing = false, tempo = 5, viewNear = true, cam = null;
+let epSnap = null, epNextT = 0, epCount = 0, epFlashUntil = 0;
+function newSim() {
+  readParams();
+  sim = createSim(world, P, seed, true);
+  sim.step(0.001);
+  cam = { x: sim.S.truePos.x, y: sim.S.truePos.y };
+  epSnap = null; epNextT = 0; epCount = 0;
+  takeSnapshot();
+  $('missBtn').setAttribute('aria-pressed', 'false');
+  renderGps(true);
+}
+function takeSnapshot() {
+  const S = sim.S;
+  const h = nextHint(world.hints, S.m.s);
+  let back = null;
+  if (S.m.off && S.mr && S.fix) {
+    const brg = Math.atan2(S.mr.py - S.fix.y, S.mr.px - S.fix.x);
+    const cog = Math.atan2(S.dev.cy, S.dev.cx);
+    back = { rel: brg - cog, d: S.mr.d };
+  }
+  epSnap = {
+    off: S.m.off, back, hint: h, dh: h ? h.s - S.m.s : 0, speed: S.dev.speed * 3.6,
+    rest: Math.max(0, world.route.total - S.m.s) / 1000, acc: S.dev.acc,
+    fix: S.fix ? { x: S.fix.x, y: S.fix.y } : { x: S.truePos.x, y: S.truePos.y },
+    cog: Math.atan2(S.dev.cy, S.dev.cx), done: S.done, rate: P.rate,
+  };
+  epCount++;
+  if (epCount % 20 === 0) epFlashUntil = performance.now() + 180;
+}
+
+function drawArrow(ctx, cx, cy, size, angDeg, ink) {
+  /* Abbiegepfeil: Stiel von unten, dann in Richtung der Abbiegung. + = links */
+  const a = angDeg * Math.PI / 180;
+  ctx.save(); ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineWidth = size * 0.16; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (Math.abs(angDeg) >= 135) {
+    const dir = angDeg > 0 ? -1 : 1; const r = size * 0.22;
+    ctx.beginPath(); ctx.moveTo(cx - dir * r, cy + size * 0.45); ctx.lineTo(cx - dir * r, cy - size * 0.05);
+    ctx.arc(cx, cy - size * 0.05, r, Math.PI, 0, dir < 0);
+    ctx.lineTo(cx + dir * r, cy + size * 0.12); ctx.stroke();
+    const tx = cx + dir * r, ty = cy + size * 0.3;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - size * 0.15, ty - size * 0.2); ctx.lineTo(tx + size * 0.15, ty - size * 0.2); ctx.closePath(); ctx.fill();
+  } else {
+    const dx = -Math.sin(a), dy = -Math.cos(a);
+    const ex = cx + dx * size * 0.32, ey = cy + dy * size * 0.32;
+    ctx.beginPath(); ctx.moveTo(cx, cy + size * 0.45); ctx.lineTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+    const hx = cx + dx * size * 0.5, hy = cy + dy * size * 0.5;
+    const nx = -dy, ny = dx;
+    ctx.beginPath(); ctx.moveTo(hx, hy);
+    ctx.lineTo(ex + nx * size * 0.17 - dx * size * 0.02, ey + ny * size * 0.17 - dy * size * 0.02);
+    ctx.lineTo(ex - nx * size * 0.17 - dx * size * 0.02, ey - ny * size * 0.17 - dy * size * 0.02);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawEpaper() {
+  const c = $('epC');
+  const { ctx, w } = prepCanvas(c);
+  const k = w / 240;
+  ctx.setTransform(ctx.getTransform().a * k, 0, 0, ctx.getTransform().a * k, 0, 0);
+  const W = 240, H = 320;
+  const flash = performance.now() < epFlashUntil;
+  const paper = tok.paper, ink = tok['paper-ink'], mid = tok['paper-mid'];
+  ctx.fillStyle = flash ? ink : paper; ctx.fillRect(0, 0, W, H);
+  if (flash || !epSnap) return;
+  const E = epSnap;
+  const mono = 'ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace';
+  /* oben: Hinweis */
+  if (E.done) {
+    ctx.fillStyle = ink; ctx.font = `bold 30px ${mono}`; ctx.textAlign = 'center'; ctx.fillText('ZIEL', W / 2, 58);
+    ctx.font = `14px ${mono}`; ctx.fillText('Runde beendet', W / 2, 84);
+  } else if (E.off) {
+    ctx.fillStyle = ink; ctx.fillRect(0, 0, W, 112);
+    ctx.fillStyle = paper; ctx.font = `bold 17px ${mono}`; ctx.textAlign = 'left';
+    ctx.fillText('VOM TRACK', 92, 34); ctx.fillText('ABGEKOMMEN', 92, 54);
+    ctx.font = `bold 24px ${mono}`;
+    ctx.fillText(E.back ? fmt(Math.round(E.back.d / 5) * 5) + ' m' : '', 92, 88);
+    if (E.back) {
+      let rel = E.back.rel * 180 / Math.PI;
+      while (rel > 180) rel -= 360; while (rel < -180) rel += 360;
+      drawArrow(ctx, 46, 58, 76, rel, paper);
+    }
+  } else if (E.hint) {
+    let rel = E.hint.ang;
+    drawArrow(ctx, 46, 56, 76, rel, ink);
+    ctx.fillStyle = ink; ctx.textAlign = 'left';
+    ctx.font = `bold 32px ${mono}`;
+    const dd = E.dh < 20 ? 'jetzt' : E.dh >= 1000 ? fmt(E.dh / 1000, 1) + ' km' : fmt(Math.round(E.dh / 10) * 10) + ' m';
+    ctx.fillText(dd, 92, 54);
+    ctx.font = `14px ${mono}`;
+    ctx.fillText(E.hint.text, 92, 80);
+  } else {
+    ctx.fillStyle = ink; ctx.font = `bold 22px ${mono}`; ctx.textAlign = 'left'; ctx.fillText('geradeaus', 20, 60);
+  }
+  ctx.fillStyle = ink; ctx.fillRect(0, 112, W, 2);
+  /* Mitte: Kartenausschnitt, Norden oben, wie Rasterkacheln */
+  const my0 = 114, mh = 136, sc = 240 / 260;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, my0, W, mh); ctx.clip();
+  const X = x => W / 2 + (x - E.fix.x) * sc, Y = y => my0 + mh / 2 - (y - E.fix.y) * sc;
+  ctx.strokeStyle = mid; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+  for (const p of world.side) { ctx.beginPath(); p.forEach((q, i) => i ? ctx.lineTo(X(q.x), Y(q.y)) : ctx.moveTo(X(q.x), Y(q.y))); ctx.stroke(); }
+  ctx.setLineDash([]);
+  /* Wald als Punktraster */
+  ctx.fillStyle = mid;
+  for (const tr of world.trees) {
+    const x = X(tr.x), y = Y(tr.y);
+    if (x > -4 && x < W + 4 && y > my0 - 4 && y < my0 + mh + 4) ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+  }
+  ctx.strokeStyle = ink; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath(); world.route.pts.forEach((q, i) => i ? ctx.lineTo(X(q.x), Y(q.y)) : ctx.moveTo(X(q.x), Y(q.y))); ctx.stroke();
+  /* Position als Dreieck in Kursrichtung */
+  const px = W / 2, py = my0 + mh / 2, a = -E.cog;
+  ctx.save(); ctx.translate(px, py); ctx.rotate(a);
+  ctx.fillStyle = paper; ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-9, 9); ctx.lineTo(-5, 0); ctx.lineTo(-9, -9); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-7, 7); ctx.lineTo(-4, 0); ctx.lineTo(-7, -7); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = ink; ctx.font = `9px ${mono}`; ctx.textAlign = 'left';
+  ctx.fillText('© OpenStreetMap-Mitwirkende (Bsp.)', 4, my0 + mh - 4);
+  ctx.textAlign = 'right'; ctx.font = `bold 11px ${mono}`; ctx.fillText('N↑', W - 6, my0 + 14);
+  ctx.restore();
+  ctx.fillStyle = ink; ctx.fillRect(0, my0 + mh, W, 2);
+  /* unten: Werte */
+  const vy = my0 + mh + 2;
+  ctx.textAlign = 'left'; ctx.font = `11px ${mono}`;
+  ctx.fillText('km/h', 10, vy + 18); ctx.fillText('Rest km', 90, vy + 18); ctx.fillText('GNSS', 176, vy + 18);
+  ctx.font = `bold 24px ${mono}`;
+  ctx.fillText(fmt(E.speed, 0), 10, vy + 44); ctx.fillText(fmt(E.rest, 1), 90, vy + 44);
+  ctx.font = `bold 18px ${mono}`; ctx.fillText('±' + fmt(E.acc, 0), 176, vy + 44);
+  ctx.font = `10px ${mono}`;
+  ctx.fillText((P.mode === 'multi' ? 'L1/L5 ' : 'L1 ') + fmt(E.rate, 1) + ' Hz', 176, vy + 60);
+}
+
+function drawMap() {
+  const c = $('mapC');
+  const { ctx, w, h } = prepCanvas(c);
+  const S = sim.S, B = world.bounds;
+  ctx.fillStyle = tok.surface; ctx.fillRect(0, 0, w, h);
+  let cx, cy, sc;
+  if (viewNear) {
+    cam.x += (S.truePos.x - cam.x) * 0.2; cam.y += (S.truePos.y - cam.y) * 0.2;
+    cx = cam.x; cy = cam.y; sc = Math.min(w, h) / 330;
+  } else {
+    cx = (B.minX + B.maxX) / 2; cy = (B.minY + B.maxY) / 2;
+    sc = Math.min((w - 24) / (B.maxX - B.minX), (h - 24) / (B.maxY - B.minY));
+  }
+  const X = x => w / 2 + (x - cx) * sc, Y = y => h / 2 - (y - cy) * sc;
+  const strokePoly = (pts, s0, s1, cs) => {
+    ctx.beginPath(); let started = false;
+    for (let i = 0; i < pts.length; i++) {
+      if (cs && (cs[i] < s0 - 5 || cs[i] > s1 + 5)) continue;
+      const x = X(pts[i].x), y = Y(pts[i].y);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  };
+  /* Gitter 100 m */
+  const gs = viewNear ? 100 : 500;
+  ctx.strokeStyle = tok.grid; ctx.lineWidth = 1;
+  const x0 = cx - w / 2 / sc, x1 = cx + w / 2 / sc, y0 = cy - h / 2 / sc, y1 = cy + h / 2 / sc;
+  for (let gx = Math.floor(x0 / gs) * gs; gx <= x1; gx += gs) { const x = Math.round(X(gx)) + 0.5; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let gy = Math.floor(y0 / gs) * gs; gy <= y1; gy += gs) { const y = Math.round(Y(gy)) + 0.5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  /* Wald */
+  ctx.strokeStyle = tok.forest; ctx.lineWidth = Math.max(8, 90 * sc);
+  for (const [a, b] of world.forest) strokePoly(world.route.pts, a, b, world.route.cs);
+  ctx.fillStyle = tok.tree;
+  for (const tr of world.trees) {
+    const x = X(tr.x), y = Y(tr.y);
+    if (x < -10 || x > w + 10 || y < -10 || y > h + 10) continue;
+    ctx.beginPath(); ctx.arc(x, y, Math.max(1.2, tr.r * sc), 0, 2 * Math.PI); ctx.fill();
+  }
+  /* andere Wege */
+  ctx.strokeStyle = tok.muted; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+  for (const p of world.side) strokePoly(p);
+  ctx.setLineDash([]);
+  /* Suchfenster */
+  if (S.m.init) {
+    ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = tok.s1; ctx.lineWidth = Math.max(9, 16 * sc);
+    strokePoly(world.route.pts, S.m.s - P.back, S.m.s + P.fwd, world.route.cs); ctx.restore();
+  }
+  /* Track */
+  ctx.strokeStyle = tok['ink-2']; ctx.lineWidth = viewNear ? 4 : 2.5;
+  strokePoly(world.route.pts);
+  /* Hinweispunkte */
+  ctx.font = '600 11px system-ui, sans-serif'; ctx.textAlign = 'center';
+  world.hints.forEach((hn, i) => {
+    const x = X(hn.x), y = Y(hn.y);
+    if (x < -20 || x > w + 20 || y < -20 || y > h + 20) return;
+    ctx.fillStyle = tok.surface; ctx.strokeStyle = tok['ink-2']; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, 8, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = tok.ink; ctx.fillText(String(i + 1), x, y + 4);
+  });
+  /* Start/Ziel */
+  const st = world.route.pts[0];
+  ctx.fillStyle = tok.ink; ctx.font = '600 12px system-ui, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('Start', X(st.x) + 8, Y(st.y) + 4);
+  const en = world.route.pts[world.route.pts.length - 1];
+  ctx.fillText('Ziel', X(en.x) + 8, Y(en.y) + 4);
+  /* GNSS-Fixe */
+  const n = S.fixes.length;
+  S.fixes.forEach((f, i) => {
+    ctx.globalAlpha = 0.15 + 0.6 * (i / Math.max(1, n - 1));
+    ctx.fillStyle = tok.s2; ctx.beginPath(); ctx.arc(X(f.x), Y(f.y), viewNear ? 3 : 2, 0, 2 * Math.PI); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  if (S.fix && S.mr) {
+    const fx = X(S.fix.x), fy = Y(S.fix.y);
+    ctx.strokeStyle = tok.s2; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(fx, fy, P.on * sc, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = tok.s2; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(X(S.mr.px), Y(S.mr.py)); ctx.stroke();
+    ctx.fillStyle = tok.s2; ctx.strokeStyle = tok.surface; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(fx, fy, 5.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    const mp = posAt(world.route, S.m.s);
+    ctx.strokeStyle = tok.s1; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(X(mp.x), Y(mp.y), 8, 0, 2 * Math.PI); ctx.stroke();
+  }
+  /* wahre Position */
+  ctx.fillStyle = tok.ink; ctx.strokeStyle = tok.surface; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(X(S.truePos.x), Y(S.truePos.y), 6.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+  /* Maßstab */
+  const bar = viewNear ? 100 : 1000;
+  const bx = 12, by = h - 14;
+  ctx.strokeStyle = tok.ink; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(bx, by - 5); ctx.lineTo(bx, by); ctx.lineTo(bx + bar * sc, by); ctx.lineTo(bx + bar * sc, by - 5); ctx.stroke();
+  ctx.fillStyle = tok.ink; ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(bar >= 1000 ? '1 km' : '100 m', bx + bar * sc + 6, by);
+  if (S.m.off) {
+    ctx.fillStyle = tok.warn; ctx.fillRect(w - 168, 10, 158, 26);
+    ctx.fillStyle = '#111'; ctx.font = '600 13px system-ui, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('⚠ Off-Course-Warnung', w - 89, 28);
+  }
+}
+
+let tlHover = null;
+function drawTimeline() {
+  const c = $('tlC');
+  const { ctx, w, h } = prepCanvas(c, 150);
+  ctx.clearRect(0, 0, w, h);
+  const S = sim.S;
+  const L = 34, Rm = 8, T = 8, Bm = 22, span = 180;
+  const tEnd = Math.max(span, S.t), tStart = tEnd - span;
+  const ymax = Math.max(80, P.on * 2);
+  const sx = t => L + (t - tStart) / span * (w - L - Rm);
+  const sy = d => T + (1 - Math.min(d, ymax) / ymax) * (h - T - Bm);
+  const H = S.hist;
+  /* Phasen schattieren */
+  const shade = (key, col, alpha) => {
+    ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = col;
+    let a = null;
+    for (let i = 0; i < H.length; i++) {
+      if (H[i][key] && a === null) a = H[i].t;
+      if ((!H[i][key] || i === H.length - 1) && a !== null) {
+        const b = H[i].t; const xa = Math.max(L, sx(a)), xb = sx(b);
+        if (xb > L) ctx.fillRect(xa, T, xb - xa, h - T - Bm);
+        a = null;
+      }
+    }
+    ctx.restore();
+  };
+  shade('wrong', tok.muted, 0.25);
+  shade('off', tok.warn, 0.4);
+  ctx.strokeStyle = tok.grid; ctx.lineWidth = 1; ctx.fillStyle = tok.muted; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'right';
+  for (let d = 0; d <= ymax; d += ymax > 120 ? 50 : 20) {
+    const y = Math.round(sy(d)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - Rm, y); ctx.stroke();
+    ctx.fillText(fmt(d), L - 4, y + 4);
+  }
+  ctx.textAlign = 'center';
+  for (let t = Math.ceil(tStart / 30) * 30; t <= tEnd; t += 30) {
+    ctx.fillText(Math.floor(t / 60) + ':' + String(Math.round(t % 60)).padStart(2, '0'), sx(t), h - 6);
+  }
+  ctx.textAlign = 'left'; ctx.fillText('m', 2, 12);
+  const hline = (d, col) => { const y = Math.round(sy(d)) + 0.5; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - Rm, y); ctx.stroke(); ctx.setLineDash([]); };
+  hline(P.on, tok.crit); hline(Math.min(P.offThr, P.on), tok.good);
+  ctx.strokeStyle = tok.s1; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  H.forEach((p, i) => { const x = sx(p.t), y = sy(p.d); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+  ctx.stroke();
+  if (tlHover !== null && H.length) {
+    const t = tStart + (tlHover - L) / (w - L - Rm) * span;
+    let best = H[0]; for (const p of H) if (Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
+    const x = sx(best.t);
+    ctx.strokeStyle = tok.axis; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, h - Bm); ctx.stroke();
+    ctx.fillStyle = tok.s1; ctx.strokeStyle = tok.surface; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, sy(best.d), 4.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    tlHover.best = best;
+  }
+}
+$('tlC').addEventListener('pointermove', ev => {
+  const r = $('tlC').getBoundingClientRect();
+  tlHover = new Number(ev.clientX - r.left);
+  drawTimeline();
+  const b = tlHover.best;
+  if (b) showTip(`Zeit <b>${Math.floor(b.t / 60)}:${String(Math.round(b.t % 60)).padStart(2, '0')}</b><br>Abstand <b>${fmt(b.d, 1)} m</b><br>Warnung ${b.off ? 'an' : 'aus'}<br>Fahrer ${b.wrong ? 'im falschen Weg' : 'auf dem Track'}`, ev);
+});
+$('tlC').addEventListener('pointerleave', () => { tlHover = null; hideTip(); drawTimeline(); });
+
+function mmss(t) { return Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); }
+function fillStats() {
+  const S = sim.S, st = S.st;
+  const hrs = S.t / 3600;
+  const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN;
+  const rows = [
+    ['Fahrzeit (Simulation)', mmss(S.t)],
+    ['gefahren', fmt(st.dist / 1000, 2) + ' km von ' + fmt(world.route.total / 1000, 2)],
+    ['GNSS-Fixe', fmt(st.fixes)],
+    ['mittlerer Fehler offen', st.nOpen ? fmt(st.eOpen / st.nOpen, 1) + ' m' : 'n. v.'],
+    ['mittlerer Fehler Wald', st.nForest ? fmt(st.eForest / st.nForest, 1) + ' m' : 'n. v.'],
+    ['größter Fehler', fmt(st.eMax, 1) + ' m'],
+    ['Fehlalarme', `<span class="${st.falseAlarms ? 'bad' : 'ok'}">${fmt(st.falseAlarms)}</span>` + (hrs > 0.05 ? ' (' + fmt(st.falseAlarms / hrs, 1) + ' je h)' : '')],
+    ['Zeit im Fehlalarm', fmt(st.falseTime, 0) + ' s'],
+    ['Abzweige verpasst', fmt(st.missed)],
+    ['davon erkannt', fmt(st.detected) + (st.undetected ? `, <span class="bad">nicht erkannt ${fmt(st.undetected)}</span>` : '')],
+    ['Erkennungszeit letzte', st.detTimes.length ? fmt(st.detTimes[st.detTimes.length - 1], 1) + ' s, ' + fmt(st.detDists[st.detDists.length - 1]) + ' m' : 'n. v.'],
+    ['Erkennungszeit Mittel', st.detTimes.length ? fmt(mean(st.detTimes), 1) + ' s, ' + fmt(mean(st.detDists)) + ' m' : 'n. v.'],
+    ['Sprünge im Fortschritt', `<span class="${st.jumps ? 'bad' : ''}">${fmt(st.jumps)}</span>`],
+  ];
+  $('statT').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td class="num">${r[1]}</td></tr>`).join('');
+}
+function statusText() {
+  const S = sim.S;
+  let t;
+  if (S.done) t = 'Ziel erreicht. Neu starten oder viele Fahrten durchrechnen.';
+  else if (S.mode === 'out') t = `Fahrer ist im falschen Weg, ${fmt(S.b)} m hinter dem Abzweig.` + (S.m.off ? ' Warnung ist da, er kehrt gleich um.' : ' Noch keine Warnung.');
+  else if (S.mode === 'back') t = `Fahrer kehrt um, noch ${fmt(S.b)} m bis zum Abzweig.`;
+  else {
+    t = S.m.off ? 'Fahrer ist auf dem Track, aber die Warnung ist an: Fehlalarm.' : 'Fahrer ist auf dem Track.';
+    if (S.armed) {
+      const jn = world.junctions.find(j => j.s > S.s);
+      t += jn ? ` Nächster Abzweig wird verpasst (in ${fmt(jn.s - S.s)} m).` : ' Kein Abzweig mehr vor dem Ziel.';
+    }
+  }
+  $('status').textContent = t;
+}
+let lastStats = 0;
+function renderGps(force) {
+  if ($('secG').classList.contains('hidden') && !force) return;
+  drawMap(); drawTimeline(); drawEpaper();
+  const now = performance.now();
+  if (force || now - lastStats > 250) { fillStats(); statusText(); lastStats = now; }
+  $('missBtn').setAttribute('aria-pressed', sim.S.armed ? 'true' : 'false');
+}
+
+let lastFrame = null;
+function frame(now) {
+  if (playing && sim && !sim.S.done) {
+    const real = lastFrame === null ? 0 : Math.min(0.1, (now - lastFrame) / 1000);
+    let adv = real * tempo;
+    const DT = 0.1;
+    let n = 0;
+    while (adv > 1e-9 && n < 400) { const d = Math.min(DT, adv); sim.step(d); adv -= d; n++;
+      if (sim.S.t >= epNextT) { takeSnapshot(); epNextT = sim.S.t + P.disp; } }
+    if (sim.S.done) { takeSnapshot(); setPlaying(false); }
+  }
+  lastFrame = now;
+  if (sim) renderGps(false);
+  requestAnimationFrame(frame);
+}
+function setPlaying(p) {
+  playing = p;
+  $('playBtn').textContent = p ? 'Pause' : (sim && sim.S.done ? 'Ziel' : 'Start');
+  $('playBtn').disabled = !!(sim && sim.S.done && !p);
+}
+
+$('playBtn').addEventListener('click', () => setPlaying(!playing));
+$('tempo').addEventListener('change', e => { tempo = parseFloat(e.target.value); });
+$('viewBtn').addEventListener('click', () => { viewNear = !viewNear; $('viewBtn').textContent = 'Ansicht: ' + (viewNear ? 'nah' : 'Übersicht'); renderGps(true); });
+$('resetG').addEventListener('click', () => { newSim(); setPlaying(false); });
+$('seedBtn').addEventListener('click', () => { seed = (seed * 48271 + 11) % 2147483647; newSim(); setPlaying(false); });
+$('missBtn').addEventListener('click', () => {
+  const S = sim.S;
+  if (S.done) return;
+  S.armed = !S.armed; S.armedJ = -1;
+  renderGps(true);
+});
+$('secG').addEventListener('input', e => {
+  if (e.target.closest('.ctrl')) { readParams(); renderGps(true); }
+});
+$('secG').addEventListener('change', e => {
+  if (e.target.closest('.ctrl')) { readParams(); renderGps(true); }
+});
+
+/* Viele Fahrten ohne Anzeige */
+$('mcBtn').addEventListener('click', () => {
+  readParams();
+  $('mcBtn').disabled = true; $('mcOut').textContent = 'rechnet ...';
+  setTimeout(() => {
+    const N = 20, J = world.junctions.length;
+    let hours = 0, fa = 0, det = 0, undet = 0, jumps = 0, falseT = 0;
+    const times = [], dists = [];
+    for (let i = 0; i < N; i++) {
+      const sm = createSim(world, P, 1000 + seed * 31 + i * 7919, false);
+      sm.S.armed = true; sm.S.armedJ = i % J;
+      let guard = 0;
+      while (!sm.S.done && guard < 200000) { sm.step(0.1); guard++; }
+      const st = sm.S.st;
+      hours += sm.S.t / 3600; fa += st.falseAlarms; det += st.detected; undet += st.undetected; jumps += st.jumps; falseT += st.falseTime;
+      times.push(...st.detTimes); dists.push(...st.detDists);
+    }
+    const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN;
+    const mx = a => a.length ? Math.max(...a) : NaN;
+    $('mcOut').innerHTML = `<table>
+      <tr><td>Fahrten, je ein Abzweig verpasst</td><td class="num">${N} (zusammen ${fmt(hours, 1)} h)</td></tr>
+      <tr><td>Fehlalarme</td><td class="num"><span class="${fa ? 'bad' : 'ok'}">${fmt(fa)}</span> (${fmt(fa / hours, 2)} je h, ${fmt(falseT, 0)} s gesamt)</td></tr>
+      <tr><td>Verpasste Abzweige erkannt</td><td class="num"><span class="${undet ? 'bad' : 'ok'}">${fmt(det)} von ${N}</span></td></tr>
+      <tr><td>Erkennungszeit Mittel / größte</td><td class="num">${fmt(mean(times), 1)} s / ${fmt(mx(times), 1)} s</td></tr>
+      <tr><td>Strecke bis Warnung Mittel / größte</td><td class="num">${fmt(mean(dists))} m / ${fmt(mx(dists))} m</td></tr>
+      <tr><td>Sprünge im Fortschritt</td><td class="num">${fmt(jumps)}</td></tr>
+    </table><p class="note" style="margin-top:6px">Modus ${P.mode === 'multi' ? 'Mehrband L1/L5' : 'Einband L1'}, ${fmt(P.rate, 1)} Hz, Wald-Faktor ${fmt(P.forest, 1)}, Schwelle ${fmt(P.on)}/${fmt(Math.min(P.offThr, P.on))} m, Haltezeit ${fmt(P.holdOn)}/${fmt(P.holdOff)} s. Ergebnis eines Modells, keine Messung.</p>`;
+    $('mcBtn').disabled = false;
+  }, 30);
+});
+
+/* =========================================================
+   Tabs, Start
+   ========================================================= */
+function showTab(which) {
+  const g = which === 'G';
+  $('tabE').setAttribute('aria-selected', String(!g)); $('tabG').setAttribute('aria-selected', String(g));
+  $('secE').classList.toggle('hidden', g); $('secG').classList.toggle('hidden', !g);
+  try { history.replaceState(null, '', g ? '#gps' : '#energie'); } catch (e) { /* egal */ }
+  redrawAll();
+}
+$('tabE').addEventListener('click', () => showTab('E'));
+$('tabG').addEventListener('click', () => showTab('G'));
+function redrawAll() {
+  if (!$('secE').classList.contains('hidden')) updateEnergy();
+  if (sim && !$('secG').classList.contains('hidden')) renderGps(true);
+}
+let rzT = null;
+addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(redrawAll, 80); });
+
+readTokens(); updateThemeBtn();
+resetEnergy();
+newSim();
+showTab(location.hash === '#gps' ? 'G' : 'E');
+requestAnimationFrame(frame);
+window.__gn = { world, get sim() { return sim; }, P, createSim, matchStep, showTab, setPlaying };
+</script>
+</body>
+</html>

@@ -1,0 +1,1162 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Powermeter Simulation</title>
+<meta name="description" content="Interaktive Simulation eines einseitigen Powermeters am linken Kurbelarm: Pedaltritt, DMS-Vollbrücke, ADC, Temperaturdrift, Kalibrierung, Gyro-Kadenz, BLE CPS und Akkulaufzeit.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f1;
+  --surface: #fcfcfb;
+  --surface2: #f0efec;
+  --ink: #0b0b0b;
+  --ink2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --good: #0ca30c;
+  --goodText: #006300;
+  --warn: #fab219;
+  --crit: #d03b3b;
+  --btn: #2a78d6;
+  --btnInk: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --surface: #1a1a19;
+    --surface2: #242422;
+    --ink: #f0efec;
+    --ink2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --goodText: #0ca30c;
+    --btn: #3987e5;
+    --btnInk: #0b0b0b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --surface: #1a1a19;
+  --surface2: #242422;
+  --ink: #f0efec;
+  --ink2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --goodText: #0ca30c;
+  --btn: #3987e5;
+  --btnInk: #0b0b0b;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 16px; }
+header h1 { font-size: 1.5rem; margin: 0 0 4px; line-height: 1.2; }
+header p { margin: 4px 0; color: var(--ink2); max-width: 75ch; }
+.tag {
+  display: inline-block; font-size: 0.72rem; font-weight: 600; line-height: 1;
+  padding: 3px 5px; border-radius: 4px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--ink2); vertical-align: 1px; margin-left: 4px;
+  white-space: nowrap;
+}
+.kpis {
+  display: grid; gap: 10px; margin: 14px 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+}
+.kpi {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; min-width: 0;
+}
+.kpi .lbl { font-size: 0.8rem; color: var(--ink2); }
+.kpi .val { font-size: 1.6rem; font-weight: 650; line-height: 1.15; white-space: nowrap; }
+.kpi .val small { font-size: 0.9rem; font-weight: 500; color: var(--ink2); margin-left: 2px; }
+.kpi .sub { font-size: 0.78rem; color: var(--ink2); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
+.grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  align-items: start;
+}
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px; min-width: 0;
+}
+.card h2 { font-size: 1.05rem; margin: 0 0 6px; }
+.card h3 { font-size: 0.92rem; margin: 12px 0 4px; }
+.card p, .card li { color: var(--ink2); font-size: 0.88rem; }
+.card p { margin: 4px 0 8px; }
+.span2 { grid-column: 1 / -1; }
+.row { margin: 8px 0 10px; }
+.row .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 0.88rem; }
+.row .top label { color: var(--ink); min-width: 0; }
+.row .top output { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+input[type=range] { width: 100%; margin: 4px 0 0; accent-color: var(--s1); height: 22px; }
+select, input[type=number] {
+  font: inherit; font-size: 0.9rem; padding: 4px 6px; border-radius: 6px;
+  border: 1px solid var(--axis); background: var(--surface); color: var(--ink);
+  max-width: 100%;
+}
+input[type=number] { width: 7.5em; }
+.chk { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; margin: 8px 0; }
+.chk input { margin-top: 3px; }
+button {
+  font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  padding: 8px 12px; border-radius: 8px; border: 1px solid var(--btn);
+  background: var(--btn); color: var(--btnInk); min-height: 38px;
+}
+button.ghost { background: transparent; color: var(--ink); border-color: var(--axis); }
+button[aria-pressed="true"] { outline: 2px solid var(--s1); outline-offset: 1px; }
+button:disabled { opacity: 0.5; cursor: default; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.seg { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--axis); border-radius: 9px; overflow: hidden; width: fit-content; max-width: 100%; }
+.seg button { border: 0; border-radius: 0; background: transparent; color: var(--ink); border-right: 1px solid var(--axis); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--btn); color: var(--btnInk); outline: none; }
+.plot { display: block; width: 100%; height: 220px; touch-action: pan-y; }
+.plot.polar { height: auto; aspect-ratio: 1 / 1; max-height: 420px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8rem; color: var(--ink2); margin: 2px 0 6px; }
+.legend span { white-space: nowrap; }
+.ln { display: inline-block; width: 16px; height: 0; border-top: 2px solid; margin-right: 5px; vertical-align: 3px; }
+.ln.dash { border-top-style: dashed; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+.status { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; padding: 3px 8px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface2); color: var(--ink);
+}
+.chip i { font-style: normal; font-weight: 700; }
+.chip.ok i { color: var(--goodText); }
+.chip.no i { color: var(--crit); }
+.chip.warn { border-color: var(--warn); }
+.chip.warn i { color: var(--warn); }
+.log {
+  font-size: 0.85rem; background: var(--surface2); border-radius: 8px; padding: 8px 10px;
+  margin: 8px 0; min-height: 2.6em; color: var(--ink);
+}
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--ink2); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+.formula td:first-child { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.82rem; color: var(--ink); }
+details { border-top: 1px solid var(--grid); padding: 6px 0; }
+details > summary { cursor: pointer; font-weight: 600; font-size: 0.92rem; padding: 4px 0; }
+.pkts { list-style: none; padding: 0; margin: 6px 0; }
+.pkts li { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; margin: 6px 0; background: var(--surface2); color: var(--ink); }
+.pkts li.new { border-color: var(--s1); }
+.pkts .h { display: flex; justify-content: space-between; gap: 8px; font-size: 0.8rem; color: var(--ink2); }
+.pkts dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 4px 0 0; font-size: 0.82rem; }
+.pkts dt { color: var(--ink2); }
+.pkts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.blink { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--axis); margin-right: 6px; vertical-align: 0; transition: background 0.3s; }
+.blink.on { background: var(--s1); transition: none; }
+.akku { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; font-size: 0.88rem; }
+.akku label { min-width: 0; }
+.result { font-size: 1.05rem; font-weight: 650; }
+.muted { color: var(--ink2); }
+.small { font-size: 0.8rem; }
+footer { color: var(--ink2); font-size: 0.82rem; margin: 18px 0 8px; }
+@media (max-width: 520px) {
+  .wrap { padding: 16px 16px; }
+  header h1 { font-size: 1.3rem; }
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .kpi .val { font-size: 1.3rem; }
+  .plot { height: 200px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Powermeter am linken Kurbelarm: Simulation</h1>
+  <p>Variante A: DMS-Vollbrücke am linken Kurbelarm, angezeigt wird 2 × links. Die Simulation rechnet die Messkette von der Pedalkraft bis zum BLE-Paket nach.
+  Alle Modellwerte sind Annahmen: <span class="tag">(P)</span> = Platzhalter, <span class="tag">Schätzung</span> = nicht gemessen. Nichts davon ist an echter Hardware geprüft.</p>
+</header>
+
+<section class="kpis" aria-label="Messwerte">
+  <div class="kpi"><div class="lbl"><span class="sw" style="background:var(--s1)"></span>Wahre Leistung, 3-s-Mittel</div><div class="val" id="kTrue">-</div><div class="sub" id="kTrueSub">links + rechts</div></div>
+  <div class="kpi"><div class="lbl"><span class="sw" style="background:var(--s2)"></span>Gemessen: 2 × links, 3-s-Mittel</div><div class="val" id="kMeas">-</div><div class="sub" id="kMeasSub">-</div></div>
+  <div class="kpi"><div class="lbl">Fehler gesamt</div><div class="val" id="kErr">-</div><div class="sub" id="kErrSub">-</div></div>
+  <div class="kpi"><div class="lbl">Kadenz aus Gyro</div><div class="val" id="kCad">-</div><div class="sub" id="kCadSub">-</div></div>
+</section>
+<div class="status" id="status" aria-live="polite"></div>
+
+<div class="grid">
+
+<section class="card" id="cardMain">
+  <h2>Fahrer und Umgebung</h2>
+  <div class="seg" role="group" aria-label="Betriebsart">
+    <button type="button" data-mode="fahren" aria-pressed="true">Fahren</button>
+    <button type="button" data-mode="still" aria-pressed="false">Stillstand</button>
+    <button type="button" data-mode="gewicht" aria-pressed="false">Gewicht hängt</button>
+  </div>
+  <div id="grp-main"></div>
+  <div class="btns">
+    <button type="button" class="ghost" id="btnPause">Pause</button>
+  </div>
+</section>
+
+<section class="card" id="cardAblauf">
+  <h2>Nullabgleich und Kalibrierung</h2>
+  <p>Ablauf wie in der README: 1. Nullabgleich unbelastet, 2. Gewicht an die waagerechte Kurbel (vorne, Rad blockiert), mehrere Stufen, Ausgleichsgerade, 3. fahren. Die Firmware kennt nur Codes vom ADC, nicht die wahren Werte.</p>
+  <h3>1. Nullabgleich</h3>
+  <div class="btns">
+    <button type="button" id="btnZero">Nullabgleich (1 s mitteln)</button>
+  </div>
+  <h3>2. Kalibrierung mit Gewicht</h3>
+  <div class="row">
+    <div class="top"><label for="mass">Masse am linken Pedal, Kurbel waagerecht</label><output id="massOut">10 kg</output></div>
+    <input type="range" id="mass" min="0" max="30" step="0.5" value="10">
+  </div>
+  <div class="btns">
+    <button type="button" class="ghost" id="btnHang">Gewicht anhängen</button>
+    <button type="button" id="btnPoint">Messpunkt aufnehmen (1 s)</button>
+    <button type="button" class="ghost" id="btnFit" disabled>Gerade übernehmen</button>
+    <button type="button" class="ghost" id="btnClearPts">Punkte löschen</button>
+  </div>
+  <div class="tablewrap"><table id="calTable"><thead><tr><th class="num">Masse</th><th class="num">M = m·g·L</th><th class="num">Code / G</th><th class="num">Rest</th></tr></thead><tbody></tbody></table></div>
+  <p class="small" id="fitInfo">Noch keine Messpunkte.</p>
+  <h3>Zustand der Firmware</h3>
+  <div class="log" id="log" aria-live="polite">Start: ideal abgeglichen und kalibriert bei 20 °C (Abkürzung). Mit "Werkszustand" den Ablauf selbst durchspielen.</div>
+  <div class="btns">
+    <button type="button" class="ghost" id="btnFactory">Werkszustand</button>
+    <button type="button" class="ghost" id="btnIdeal">Abkürzung: ideal abgleichen</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Kraft über Kurbelwinkel</h2>
+  <p>Tangentialkraft je Bein über dem eigenen Kurbelwinkel, 0° = oberer Totpunkt, Drehrichtung im Uhrzeigersinn (Ansicht von rechts). Der innere Ring ist 0 N, nach innen negativ (Gegenkraft im Aufwärtshub).</p>
+  <div class="legend">
+    <span><span class="ln" style="border-color:var(--s1)"></span>links wahr</span>
+    <span><span class="ln dash" style="border-color:var(--s3)"></span>rechts wahr (wird nicht gemessen)</span>
+    <span><span class="dot" style="background:var(--s2)"></span>links gemessen, letzte 2 Umdrehungen</span>
+  </div>
+  <canvas class="plot polar" id="cvPolar" aria-label="Polardiagramm der Tangentialkraft über dem Kurbelwinkel"></canvas>
+</section>
+
+<section class="card">
+  <h2>Drehmoment links, Zeitverlauf</h2>
+  <p>Wahres Drehmoment am linken Arm und die ADC-Abtastwerte nach Umrechnung durch die Firmware. Bei niedriger Abtastrate fehlt die Form, das Mittel kann trotzdem stimmen.</p>
+  <div class="legend">
+    <span><span class="ln" style="border-color:var(--s1)"></span>wahr</span>
+    <span><span class="dot" style="background:var(--s2)"></span>gemessen (Abtastwerte)</span>
+  </div>
+  <canvas class="plot" id="cvTorque" aria-label="Zeitverlauf Drehmoment links"></canvas>
+</section>
+
+<section class="card">
+  <h2>Leistung</h2>
+  <p>3-s-Mittel wahr gegen gemessen, gebildet aus den ganzen Umdrehungen der letzten 3 s. Punkte = gemessene Leistung je Umdrehung. Ein reines Zeitfenster würde schwanken, weil es meist einen Tritt links oder rechts zu viel enthält.</p>
+  <div class="legend">
+    <span><span class="ln" style="border-color:var(--s1)"></span>wahr, 3 s</span>
+    <span><span class="ln" style="border-color:var(--s2)"></span>gemessen 2 × links, 3 s</span>
+    <span><span class="dot" style="background:var(--s2)"></span>je Umdrehung</span>
+  </div>
+  <canvas class="plot" id="cvPower" aria-label="Zeitverlauf Leistung"></canvas>
+</section>
+
+<section class="card">
+  <h2>Fehler und woher er kommt</h2>
+  <p>Gesamtfehler = (1 + Asymmetrie) · (1 + Messkette) - 1. Asymmetrie: 2 · P<sub>L</sub>/P - 1, entsteht allein durch "2 × links". Messkette: gemessenes links gegen wahres links (Offset, Drift, Kalibrierung, Rauschen, Gyro).</p>
+  <div class="legend">
+    <span><span class="ln" style="border-color:var(--ink)"></span>gesamt</span>
+    <span><span class="ln dash" style="border-color:var(--s3)"></span>Anteil Asymmetrie</span>
+    <span><span class="ln" style="border-color:var(--s2)"></span>Anteil Messkette</span>
+  </div>
+  <canvas class="plot" id="cvErr" aria-label="Zeitverlauf Fehler in Prozent"></canvas>
+</section>
+
+<section class="card">
+  <h2>Beinungleichheit</h2>
+  <p>Ein einseitiger Messer sieht nur links und verdoppelt. Tritt links 48 % der Leistung, zeigt er 2 · 0,48 = 0,96, also 4 % zu wenig, auch bei perfekter Messkette. Das lässt sich nicht wegkalibrieren, weil die Balance von Tag, Ermüdung und Leistung abhängt (Schätzung).</p>
+  <div class="legend">
+    <span><span class="ln" style="border-color:var(--ink2)"></span>Fehler = 2 · b - 1</span>
+    <span><span class="dot" style="background:var(--s3)"></span>aktuelle Balance</span>
+  </div>
+  <canvas class="plot" id="cvBal" aria-label="Fehler über Balance"></canvas>
+  <p id="balText"></p>
+</section>
+
+<section class="card span2">
+  <h2>Messkette mit eingesetzten Werten</h2>
+  <p id="formulaHead">Werte für die Spitzenkraft links.</p>
+  <div class="tablewrap"><table class="formula"><thead><tr><th>Formel</th><th class="num">Wert</th><th>Bedeutung</th></tr></thead><tbody id="formulaBody"></tbody></table></div>
+</section>
+
+<section class="card">
+  <h2>Modellparameter</h2>
+  <p>Alle Werte hier sind Annahmen. Wer an der Geometrie dreht, ändert den "echten" Arm; die Firmware behält ihre Kalibrierung, bis neu kalibriert wird.</p>
+  <details open><summary>Pedaltritt</summary><div id="grp-tritt"></div></details>
+  <details open><summary>Kurbelarm und DMS</summary><div id="grp-arm"></div></details>
+  <details open><summary>Brücke und ADC</summary><div id="grp-adc"></div></details>
+  <details><summary>Temperaturdrift</summary><div id="grp-temp"></div></details>
+  <details><summary>Gyroskop (Kadenz)</summary><div id="grp-gyro"></div></details>
+</section>
+
+<section class="card">
+  <h2>BLE Cycling Power Service, Prinzip</h2>
+  <p>Etwa einmal pro Sekunde <span class="tag">(P)</span> schickt das Gerät eine Notification der Characteristic "Cycling Power Measurement" (0x2A63). Gezeigt sind die Feldinhalte als Zahlen, nicht die Bytes: Flags, Bytebreiten, Einheiten und Auflösungen stehen in der Bluetooth-SIG-Spezifikation und werden hier bewusst nicht nachgebildet.</p>
+  <p>Je Paket: Flags (hier: "Kurbel-Umdrehungsdaten vorhanden" gesetzt, übrige Optionen aus), Momentanleistung (Pflichtfeld, hier die gemessene Leistung der letzten ganzen Umdrehung), kumulierte Kurbelumdrehungen und Zeitpunkt des letzten Kurbelereignisses (im Paket in Einheit und Auflösung laut Spezifikation, hier in Sekunden).</p>
+  <p><span class="blink" id="bleBlink"></span><span id="bleState">wartet</span></p>
+  <ul class="pkts" id="pkts"></ul>
+  <p class="small">Der Empfänger rechnet die Kadenz selbst aus zwei Paketen: Δ Umdrehungen / Δ Ereigniszeit · 60. Pedal Power Balance ist ein optionales Feld; ein einseitiger Messer kann sie nicht messen und lässt es weg.</p>
+</section>
+
+<section class="card">
+  <h2>Akkulaufzeit (Schätzung)</h2>
+  <p>Alle Ströme sind Platzhalter <span class="tag">(P)</span>, nicht aus Datenblättern. Brückenstrom = U<sub>S</sub> / R<sub>Brücke</sub>, mit U<sub>S</sub> aus den Modellparametern. Annahme: Versorgung über Linearregler, Akkustrom = Laststrom.</p>
+  <div class="akku" id="akku"></div>
+  <h3>Ergebnis</h3>
+  <div id="akkuOut"></div>
+</section>
+
+<section class="card span2">
+  <h2>Modellannahmen</h2>
+  <ul>
+    <li>Pedaltritt: Tangentialkraft als Halbsinus im Abwärtshub, an den Totpunkten 0° und 180° kraftfrei, im Aufwärtshub eine Gegenkraft r · Spitze (Bein wird nicht ganz angehoben) <span class="tag">(P)</span>. Echte Profile sind schief, individuell und ändern sich mit Leistung und Ermüdung.</li>
+    <li>Kadenz konstant innerhalb der Umdrehung, Kurbel starr bis auf die Biegung.</li>
+    <li>Radialkraft (längs zum Arm) und Torsion werden nicht modelliert, die DMS-Anordnung blendet sie hier ideal aus. Real gibt es Übersprechen, das muss gemessen werden.</li>
+    <li>Arm als Rechteckquerschnitt b × h mit Widerstandsmoment W = b · h² / 6 <span class="tag">(P)</span>. Echte Kurbeln sind hohl oder profiliert.</li>
+    <li>Vollbrücke ideal: 4 aktive DMS, zwei gedehnt, zwei gestaucht, U<sub>A</sub>/U<sub>S</sub> = k · ε. Linearität ideal.</li>
+    <li>ADC ratiometrisch (Referenz = Brückenspeisung), Eingangsbereich ± U<sub>S</sub>/G, 24 Bit, weißes Rauschen. Vereinfacht, beim gewählten ADC im Datenblatt prüfen. Abtastraten in der Auswahl sind Beispielwerte <span class="tag">(P)</span>.</li>
+    <li>Temperatur: Nullpunkt und Empfindlichkeit driften linear um 20 °C <span class="tag">(P)</span>. Keine Temperaturkompensation in der Firmware.</li>
+    <li>Gyro: weißes Rauschen plus konstanter Nullpunktfehler, begrenzt am Messbereich, abgetastet zusammen mit dem ADC.</li>
+    <li>Umdrehungen werden fehlerfrei erkannt (z. B. über den Beschleunigungssensor), der Winkel wird aus dem Gyro integriert und je Umdrehung neu gesetzt.</li>
+    <li>Leistung in der Firmware: P = M · ω je Abtastwert, verdoppelt, gemittelt je Umdrehung; das 3-s-Mittel ist der Mittelwert der ganzen Umdrehungen der letzten 3 s. BLE-Leistung = letzte ganze Umdrehung (Annahme).</li>
+  </ul>
+</section>
+
+</div>
+<footer>Simulation für die Idee Powermeter im Repo AI_Bros. Läuft vollständig im Browser, keine Daten werden gesendet. Stand 22.10.2026.</footer>
+</div>
+
+<script>
+'use strict';
+const TAU = 2 * Math.PI;
+const G = 9.80665;
+const DT = 1e-4;            // interner Zeitschritt 0,1 ms
+const FS24 = 8388608;       // 2^23
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const fmt = (v, d = 0) => Number.isFinite(v)
+  ? v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d })
+  : '-';
+const fmtS = (v, d = 1) => { if (!Number.isFinite(v)) return '-'; const r = Number(v.toFixed(d)); return (r > 0 ? '+' : '') + fmt(r === 0 ? 0 : r, d); };
+function randn() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+}
+
+/* ---------- Parameter ---------- */
+const PARAMS = [
+  { id: 'rpm', g: 'main', label: 'Kadenz', min: 30, max: 140, step: 1, v: 90, unit: 'U/min' },
+  { id: 'power', g: 'main', label: 'Zielleistung, wahr, beide Beine', min: 0, max: 1000, step: 5, v: 200, unit: 'W' },
+  { id: 'bal', g: 'main', label: 'Balance: Anteil links', min: 40, max: 60, step: 0.5, v: 48, unit: '%', d: 1 },
+  { id: 'balAmp', g: 'main', label: 'Balance schwankt um ± (Periode 20 s)', min: 0, max: 5, step: 0.5, v: 0, unit: '%-Pkt.', d: 1, tag: 'P' },
+  { id: 'lc', g: 'main', label: 'Kurbellänge', min: 150, max: 185, step: 2.5, v: 172.5, unit: 'mm', d: 1 },
+  { id: 'temp', g: 'main', label: 'Temperatur am Arm', min: -5, max: 45, step: 1, v: 20, unit: '°C' },
+
+  { id: 'r', g: 'tritt', label: 'Gegenkraft im Aufwärtshub r, Anteil der Spitze', min: 0, max: 0.3, step: 0.01, v: 0.10, unit: '', d: 2, tag: 'P' },
+
+  { id: 'x', g: 'arm', label: 'DMS-Mitte: Abstand von der Tretlagerachse x', min: 15, max: 80, step: 1, v: 30, unit: 'mm', tag: 'P' },
+  { id: 'b', g: 'arm', label: 'Querschnitt Breite b', min: 10, max: 40, step: 1, v: 20, unit: 'mm', tag: 'P' },
+  { id: 'h', g: 'arm', label: 'Querschnitt Höhe h (in Biegerichtung)', min: 8, max: 30, step: 0.5, v: 15, unit: 'mm', d: 1, tag: 'P' },
+  { id: 'E', g: 'arm', label: 'E-Modul Aluminium', min: 60, max: 80, step: 1, v: 70, unit: 'GPa', tag: 'S' },
+  { id: 'dev', g: 'arm', label: 'Echte Empfindlichkeit weicht vom Nennwert ab (Klebung, Lage, Toleranz)', min: -15, max: 15, step: 0.5, v: 6, unit: '%', d: 1, tag: 'P' },
+
+  { id: 'k', g: 'adc', label: 'k-Faktor der DMS', min: 1.8, max: 2.2, step: 0.01, v: 2.0, unit: '', d: 2, tag: 'P' },
+  { id: 'us', g: 'adc', label: 'Brückenspeisung U_S', min: 1.0, max: 5.0, step: 0.1, v: 3.0, unit: 'V', d: 1, tag: 'P' },
+  { id: 'off0', g: 'adc', label: 'Montage-Offset der Brücke bei 20 °C', min: -1, max: 1, step: 0.01, v: 0.20, unit: 'mV/V', d: 2, tag: 'P' },
+  { id: 'gain', g: 'adc', type: 'select', label: 'Verstärkung G (PGA)', opts: [32, 64, 128], v: 128, unit: '', tag: 'P' },
+  { id: 'fs', g: 'adc', type: 'select', label: 'Abtastrate ADC', opts: [10, 40, 80, 320, 640, 1000], v: 320, unit: 'SPS', tag: 'P' },
+  { id: 'noise', g: 'adc', label: 'Rauschen am ADC-Eingang (RMS)', min: 0, max: 50, step: 0.5, v: 2, unit: 'µV', d: 1, tag: 'P' },
+  { id: 'box', g: 'adc', type: 'check', label: 'ADC mittelt über die Wandlungszeit (Delta-Sigma, vereinfacht). Aus = Momentanwert.', v: true },
+
+  { id: 'tk0', g: 'temp', label: 'Nullpunktdrift', min: 0, max: 5, step: 0.1, v: 1.0, unit: 'µV/V pro K', d: 1, tag: 'P' },
+  { id: 'tks', g: 'temp', label: 'Empfindlichkeitsdrift', min: -0.1, max: 0.1, step: 0.005, v: 0.02, unit: '% pro K', d: 3, tag: 'P' },
+
+  { id: 'gNoise', g: 'gyro', label: 'Gyro-Rauschen (RMS je Abtastwert)', min: 0, max: 20, step: 0.5, v: 2, unit: '°/s', d: 1, tag: 'P' },
+  { id: 'gBias', g: 'gyro', label: 'Gyro-Nullpunktfehler', min: -10, max: 10, step: 0.5, v: 1, unit: '°/s', d: 1, tag: 'P' },
+  { id: 'gRange', g: 'gyro', type: 'select', label: 'Gyro-Messbereich ±', opts: [250, 500, 1000, 2000], v: 2000, unit: '°/s', tag: 'P' },
+];
+const AKKU = [
+  { id: 'cap', label: 'Kapazität', v: 220, unit: 'mAh', tag: 'P', step: 10 },
+  { id: 'use', label: 'Davon nutzbar', v: 70, unit: '%', tag: 'S', step: 5 },
+  { id: 'rb', label: 'Brückenwiderstand', v: 350, unit: 'Ω', tag: 'P', step: 50 },
+  { id: 'duty', label: 'Brücke eingeschaltet', v: 100, unit: '%', tag: 'P', step: 5 },
+  { id: 'iAdc', label: 'ADC aktiv', v: 1.5, unit: 'mA', tag: 'P', step: 0.1 },
+  { id: 'iImu', label: 'IMU aktiv', v: 0.5, unit: 'mA', tag: 'P', step: 0.1 },
+  { id: 'iMcu', label: 'Mikrocontroller + BLE, Mittel', v: 1.0, unit: 'mA', tag: 'P', step: 0.1 },
+  { id: 'iSleep', label: 'Schlafstrom gesamt', v: 10, unit: 'µA', tag: 'P', step: 1 },
+  { id: 'hours', label: 'Fahrstunden pro Woche', v: 5, unit: 'h', tag: '', step: 0.5 },
+];
+const P = {};
+const A = {};
+const tagHtml = (t) => t === 'P' ? '<span class="tag">(P)</span>' : t === 'S' ? '<span class="tag">Schätzung</span>' : '';
+
+function paramText(p) {
+  const v = P[p.id];
+  if (p.type === 'check') return '';
+  const d = p.d || 0;
+  return (typeof v === 'number' ? fmt(v, d) : v) + (p.unit ? ' ' + p.unit : '');
+}
+function buildParams() {
+  for (const p of PARAMS) {
+    P[p.id] = p.v;
+    const host = $('#grp-' + p.g);
+    const el = document.createElement('div');
+    el.className = p.type === 'check' ? 'chk' : 'row';
+    const iid = 'p_' + p.id;
+    if (p.type === 'check') {
+      el.innerHTML = `<input type="checkbox" id="${iid}" ${p.v ? 'checked' : ''}><label for="${iid}">${p.label}</label>`;
+    } else if (p.type === 'select') {
+      el.innerHTML = `<div class="top"><label for="${iid}">${p.label}${tagHtml(p.tag)}</label>
+        <select id="${iid}">${p.opts.map(o => `<option value="${o}" ${o === p.v ? 'selected' : ''}>${fmt(o)} ${p.unit}</option>`).join('')}</select></div>`;
+    } else {
+      el.innerHTML = `<div class="top"><label for="${iid}">${p.label}${tagHtml(p.tag)}</label><output id="o_${p.id}"></output></div>
+        <input type="range" id="${iid}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.v}">`;
+    }
+    host.appendChild(el);
+    const inp = el.querySelector('input,select');
+    const out = el.querySelector('output');
+    if (out) out.textContent = paramText(p);
+    inp.addEventListener('input', () => {
+      P[p.id] = p.type === 'check' ? inp.checked : parseFloat(inp.value);
+      if (out) out.textContent = paramText(p);
+      if (p.id === 'fs') { S.acc.u = 0; S.acc.t = 0; }
+      if (p.id === 'us') renderAkku();
+    });
+  }
+  const host = $('#akku');
+  for (const a of AKKU) {
+    A[a.id] = a.v;
+    const lab = document.createElement('label');
+    lab.htmlFor = 'a_' + a.id;
+    lab.innerHTML = a.label + tagHtml(a.tag);
+    const wrap = document.createElement('span');
+    wrap.innerHTML = `<input type="number" id="a_${a.id}" value="${a.v}" min="0" step="${a.step}"> ${a.unit}`;
+    host.append(lab, wrap);
+    wrap.querySelector('input').addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      A[a.id] = Number.isFinite(v) && v >= 0 ? v : 0;
+      renderAkku();
+    });
+  }
+}
+
+/* ---------- Physik ---------- */
+// Profil: Halbsinus im Abwärtshub, Gegenkraft r im Aufwärtshub. Mittelwert = (1 - r) / pi
+function prof(th) {
+  th = ((th % TAU) + TAU) % TAU;
+  return th <= Math.PI ? Math.sin(th) : -P.r * Math.sin(th - Math.PI);
+}
+function balanceNow(t) {
+  return clamp(P.bal + P.balAmp * Math.sin(TAU * t / 20), 0, 100) / 100;
+}
+function peakForces(t) {
+  const w = TAU * P.rpm / 60, Lc = P.lc / 1000;
+  const b = balanceNow(t);
+  const k = Math.PI / (w * Lc * (1 - P.r));
+  return { FpL: P.power * b * k, FpR: P.power * (1 - b) * k, w, b };
+}
+function sectionW() { return P.b * P.h * P.h / 6 * 1e-9; }          // m^3
+function strainPerN() {                                               // Nenn-Dehnung je N am Pedal
+  return (P.lc - P.x) / 1000 / (sectionW() * P.E * 1e9);
+}
+function bridgeVoltage(F) {
+  const dT = P.temp - 20;
+  const eps = F * strainPerN();
+  const sens = (1 + P.dev / 100) * (1 + P.tks / 100 * dT);
+  return P.us * (P.k * eps * sens + P.off0 * 1e-3 + P.tk0 * 1e-6 * dT);
+}
+// Nenn-Steigung der Firmware: Code/G je Nm Drehmoment (ratiometrisch, U_S kuerzt sich)
+function nominalSlopeN() {
+  return P.k * strainPerN() / (P.lc / 1000) * FS24;
+}
+function trueSlopeN() {
+  return nominalSlopeN() * (1 + P.dev / 100) * (1 + P.tks / 100 * (P.temp - 20));
+}
+function trueOffsetN() {
+  const dT = P.temp - 20;
+  return (P.off0 * 1e-3 + P.tk0 * 1e-6 * dT) * FS24;
+}
+
+/* ---------- Zustand ---------- */
+const S = {
+  t: 0, theta: Math.PI / 2, mode: 'fahren', mass: 10, paused: false,
+  FL: 0, FR: 0, w: 0, UA: 0,
+  acc: { u: 0, t: 0 }, thetaEst: Math.PI / 2, lastSampleT: 0,
+  revCount: 0, lastEventT: 0, rev: { sumP: 0, n: 0, eTrue: 0, eTrueL: 0, dt: 0 },
+  torque: [], samples: [], power: [], revs: [], win: [],
+  nextTorqueT: 0, nextPowerT: 0,
+  clipAdc: -10, clipGyro: -10,
+  task: null,
+  ble: { next: 1, seq: 0, pkts: [], prev: null, flash: 0 },
+  last: { code: 0, gd: 0, M: 0 },
+};
+const FW = { offsetN: 0, slopeN: 1, zeroed: false, cal: false, zeroTemp: null, calTemp: null, pts: [], fit: null };
+
+function logMsg(html) { $('#log').innerHTML = html; }
+
+function setIdeal() {
+  FW.offsetN = trueOffsetN();
+  FW.slopeN = trueSlopeN();
+  FW.zeroed = true; FW.cal = true;
+  FW.zeroTemp = P.temp; FW.calTemp = P.temp;
+  logMsg(`Ideal abgeglichen bei ${fmt(P.temp)} °C: Offset und Steigung exakt aus dem Modell übernommen (gibt es in echt nicht). Die Messkette ist damit bei dieser Temperatur fehlerfrei bis auf Rauschen und Gyro.`);
+}
+function setFactory() {
+  FW.offsetN = 0;
+  FW.slopeN = nominalSlopeN();
+  FW.zeroed = false; FW.cal = false; FW.zeroTemp = null; FW.calTemp = null;
+  logMsg('Werkszustand: kein Nullabgleich (Offset 0), Steigung aus Nennwerten berechnet. Der Montage-Offset der Brücke und die Abweichung der Empfindlichkeit sind noch drin. Weiter mit Schritt 1.');
+}
+
+function setMode(m) {
+  if (S.mode === m) return;
+  S.mode = m;
+  if (m !== 'fahren') { S.theta = Math.PI / 2; S.thetaEst = Math.PI / 2; }
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+}
+
+function step(dt) {
+  S.t += dt;
+  const t = S.t;
+  const Lc = P.lc / 1000;
+  let FL = 0, FR = 0, w = 0;
+  if (S.mode === 'fahren') {
+    const pf = peakForces(t);
+    w = pf.w;
+    S.theta += w * dt;
+    FL = pf.FpL * prof(S.theta);
+    FR = pf.FpR * prof(S.theta + Math.PI);
+  } else if (S.mode === 'gewicht') {
+    FL = S.mass * G;
+  }
+  S.FL = FL; S.FR = FR; S.w = w;
+  const pTrueL = FL * Lc * w, pTrue = (FL + FR) * Lc * w;
+  const UA = bridgeVoltage(FL);
+  S.UA = UA;
+  S.acc.u += UA * dt; S.acc.t += dt;
+
+  // Energie je Umdrehung (wahr)
+  S.rev.eTrue += pTrue * dt; S.rev.eTrueL += pTrueL * dt; S.rev.dt += dt;
+
+  if (S.acc.t >= 1 / P.fs - 1e-9) adcSample(UA, w, Lc);
+
+  // Umdrehung am oberen Totpunkt
+  if (S.mode === 'fahren' && S.theta >= TAU) {
+    S.theta -= TAU;
+    S.revCount++;
+    S.lastEventT = t;
+    if (S.rev.n > 0) S.revs.push({ t, meas: S.rev.sumP / S.rev.n, tru: S.rev.eTrue / S.rev.dt, truL: S.rev.eTrueL / S.rev.dt });
+    S.rev = { sumP: 0, n: 0, eTrue: 0, eTrueL: 0, dt: 0 };
+    S.thetaEst = S.theta;
+  }
+  if (S.mode !== 'fahren') { S.rev = { sumP: 0, n: 0, eTrue: 0, eTrueL: 0, dt: 0 }; }
+
+  if (t >= S.nextTorqueT) {
+    S.nextTorqueT = t + 0.0025;
+    S.torque.push({ t, M: FL * Lc });
+  }
+  if (t >= S.nextPowerT) {
+    S.nextPowerT = t + 0.1;
+    const m = means3();
+    S.power.push({ t, ...m });
+  }
+  if (t >= S.ble.next) { S.ble.next += 1.0; blePacket(); }
+  if (S.task && t >= S.task.end) finishTask();
+}
+
+function adcSample(UA, w, Lc) {
+  const t = S.t;
+  const Ufs = P.us / P.gain;
+  let U = P.box ? S.acc.u / S.acc.t : UA;
+  S.acc.u = 0; S.acc.t = 0;
+  U += P.noise * 1e-6 * randn();
+  let code = Math.round(U / Ufs * FS24);
+  if (code > FS24 - 1 || code < -FS24) { code = clamp(code, -FS24, FS24 - 1); S.clipAdc = t; }
+  // Gyro
+  let gd = w * 180 / Math.PI + P.gBias + P.gNoise * randn();
+  if (Math.abs(gd) > P.gRange) { gd = clamp(gd, -P.gRange, P.gRange); S.clipGyro = t; }
+  const wm = gd * Math.PI / 180;
+  S.thetaEst += wm * (t - S.lastSampleT);
+  S.lastSampleT = t;
+  // Firmware
+  const cN = code / P.gain;
+  const M = (cN - FW.offsetN) / FW.slopeN;
+  const pL = M * wm;
+  const pTot = 2 * pL;
+  S.last = { code, gd, M };
+  if (S.mode === 'fahren') { S.rev.sumP += pTot; S.rev.n++; }
+  S.win.push({ t, p: pTot, w: wm });
+  S.samples.push({ t, M, th: S.thetaEst, F: M / Lc });
+  if (S.task) { S.task.sum += cN; S.task.n++; S.task.wsum += Math.abs(gd); }
+}
+
+// 3-s-Mittel aus den ganzen Umdrehungen der letzten 3 s. Ein reines Zeitfenster
+// enthielte meist eine halbe Umdrehung extra und damit einen Tritt links oder rechts zu viel.
+function means3() {
+  let tru = 0, truL = 0, meas = 0, n = 0;
+  for (let i = S.revs.length - 1; i >= 0 && S.revs[i].t > S.t - 3; i--) {
+    const r = S.revs[i]; tru += r.tru; truL += r.truL; meas += r.meas; n++;
+  }
+  if (n) { tru /= n; truL /= n; meas /= n; }
+  const measL = meas / 2;
+  const ok = tru > 5;
+  return {
+    tru, meas, truL, measL,
+    err: ok ? (meas / tru - 1) * 100 : NaN,
+    errA: ok ? (2 * truL / tru - 1) * 100 : NaN,
+    errC: ok && truL > 1 ? (measL / truL - 1) * 100 : NaN,
+  };
+}
+
+function prune() {
+  const t = S.t;
+  const cut = (arr, age) => { let i = 0; while (i < arr.length && arr[i].t < t - age) i++; if (i) arr.splice(0, i); };
+  cut(S.torque, 4.2); cut(S.samples, 4.2); cut(S.power, 30.5); cut(S.revs, 30.5); cut(S.win, 1.0);
+}
+
+/* ---------- Nullabgleich und Kalibrierung ---------- */
+function startTask(kind) {
+  if (S.task) return;
+  const moving = Math.abs(S.last.gd) > 30;
+  if (moving) {
+    logMsg('<b>Abgelehnt:</b> Das Gyro meldet Drehung (' + fmt(S.last.gd) + ' °/s). Nullabgleich und Messpunkte nur bei stehender Kurbel. Erst "Stillstand" bzw. "Gewicht anhängen" wählen.');
+    return;
+  }
+  if (kind === 'cal' && S.mode === 'still' && !FW.zeroed) {
+    // Nullpunkt als Messpunkt m = 0 ist erlaubt
+  }
+  S.task = { kind, end: S.t + 1.0, sum: 0, n: 0, wsum: 0, mode: S.mode, mass: S.mode === 'gewicht' ? S.mass : 0, temp: P.temp };
+  logMsg(kind === 'zero' ? 'Nullabgleich läuft: 1 s ADC-Werte mitteln ...' : 'Messpunkt läuft: 1 s ADC-Werte mitteln ...');
+  updateButtons();
+}
+function finishTask() {
+  const k = S.task; S.task = null;
+  const mean = k.n ? k.sum / k.n : 0;
+  if (k.kind === 'zero') {
+    FW.offsetN = mean; FW.zeroed = true; FW.zeroTemp = k.temp;
+    let msg = `Nullabgleich fertig bei ${fmt(k.temp)} °C: Offset = ${fmt(mean, 0)} (Code / G, ${k.n} Werte gemittelt).`;
+    if (k.mode === 'gewicht') msg += ` <b>Achtung:</b> Am Pedal hing ${fmt(k.mass, 1)} kg. Die Firmware merkt das nicht, der Offset enthält jetzt die Last und alle Werte sind verschoben. Gewicht abnehmen ("Stillstand") und wiederholen.`;
+    else msg += ' Weiter mit Schritt 2: Gewicht anhängen.';
+    logMsg(msg);
+  } else {
+    const M = k.mass * G * P.lc / 1000;
+    FW.pts.push({ m: k.mass, M, cN: mean, gain: P.gain });
+    computeFit();
+    logMsg(`Messpunkt ${fmt(k.mass, 1)} kg aufgenommen: M = ${fmt(M, 2)} Nm, Code / G = ${fmt(mean, 0)}. Mindestens zwei Stufen, dann "Gerade übernehmen".`);
+  }
+  updateButtons();
+}
+function computeFit() {
+  const pts = FW.pts;
+  FW.fit = null;
+  if (pts.length >= 2) {
+    const n = pts.length;
+    const mx = pts.reduce((s, p) => s + p.M, 0) / n, my = pts.reduce((s, p) => s + p.cN, 0) / n;
+    let sxx = 0, sxy = 0;
+    for (const p of pts) { sxx += (p.M - mx) ** 2; sxy += (p.M - mx) * (p.cN - my); }
+    if (sxx > 1e-9) {
+      const s = sxy / sxx, c0 = my - s * mx;
+      FW.fit = { s, c0, kind: 'Ausgleichsgerade' };
+    }
+  } else if (pts.length === 1 && FW.zeroed && pts[0].M > 0) {
+    FW.fit = { s: (pts[0].cN - FW.offsetN) / pts[0].M, c0: FW.offsetN, kind: 'ein Punkt + Nullabgleich' };
+  }
+  renderCal();
+}
+function renderCal() {
+  const tb = $('#calTable tbody');
+  const f = FW.fit;
+  const maxM = Math.max(1e-6, ...FW.pts.map(p => p.M));
+  tb.innerHTML = FW.pts.map(p => {
+    const res = f ? (p.cN - f.c0) / f.s - p.M : NaN;
+    return `<tr><td class="num">${fmt(p.m, 1)} kg</td><td class="num">${fmt(p.M, 2)} Nm</td><td class="num">${fmt(p.cN, 0)}</td><td class="num">${f ? fmt(res, 3) + ' Nm' : '-'}</td></tr>`;
+  }).join('');
+  if (!FW.pts.length) { $('#fitInfo').textContent = 'Noch keine Messpunkte.'; return; }
+  if (!f) { $('#fitInfo').textContent = FW.pts.length === 1 ? 'Ein Punkt reicht nur zusammen mit einem Nullabgleich. Besser zweite Stufe aufnehmen.' : 'Punkte haben gleiche Masse, keine Gerade möglich.'; return; }
+  let maxRes = 0;
+  for (const p of FW.pts) maxRes = Math.max(maxRes, Math.abs((p.cN - f.c0) / f.s - p.M));
+  const vsNom = (f.s / nominalSlopeN() - 1) * 100;
+  $('#fitInfo').innerHTML = `${f.kind}: Steigung s = ${fmt(f.s, 1)} Code/G je Nm (${fmtS(vsNom, 1)} % gegen Nennwert), Achsabschnitt ${fmt(f.c0, 0)}. Größter Rest ${fmt(maxRes, 3)} Nm = ${fmt(maxRes / maxM * 100, 2)} % vom größten Punkt. Das Modell ist ideal linear, Reste sind hier nur Rauschen.`;
+}
+function applyFit() {
+  if (!FW.fit) return;
+  FW.slopeN = FW.fit.s; FW.cal = true; FW.calTemp = P.temp;
+  logMsg(`Kalibrierung übernommen bei ${fmt(P.temp)} °C: s = ${fmt(FW.fit.s, 1)} Code/G je Nm. Der Offset bleibt aus dem Nullabgleich. Jetzt "Fahren".`);
+  updateButtons();
+}
+function updateButtons() {
+  const busy = !!S.task;
+  $('#btnZero').disabled = busy;
+  $('#btnPoint').disabled = busy;
+  $('#btnFit').disabled = busy || !FW.fit;
+}
+
+/* ---------- BLE ---------- */
+function blePacket() {
+  const s = S.ble;
+  s.seq++;
+  const lastRev = S.revs[S.revs.length - 1];
+  const pInst = lastRev && S.t - lastRev.t < 2.5 ? lastRev.meas : 0;
+  const pkt = { seq: s.seq, t: S.t, p: Math.round(pInst), revs: S.revCount, evt: S.lastEventT, cad: null, note: '' };
+  if (s.prev) {
+    const dN = pkt.revs - s.prev.revs, dT = pkt.evt - s.prev.evt;
+    if (dN > 0 && dT > 0) pkt.cad = dN / dT * 60;
+    else pkt.note = 'keine neue Umdrehung seit dem letzten Paket';
+  } else pkt.note = 'erstes Paket, Kadenz erst ab dem zweiten';
+  s.prev = pkt;
+  s.pkts.unshift(pkt);
+  if (s.pkts.length > 3) s.pkts.pop();
+  s.flash = performance.now();
+  renderBle();
+}
+function renderBle() {
+  const ul = $('#pkts');
+  ul.innerHTML = S.ble.pkts.map((k, i) => `<li class="${i === 0 ? 'new' : ''}">
+    <div class="h"><span>Notification Nr. ${k.seq}</span><span>t = ${fmt(k.t, 1)} s</span></div>
+    <dl>
+      <dt>Momentanleistung</dt><dd>${fmt(k.p)} W</dd>
+      <dt>Kum. Kurbelumdrehungen</dt><dd>${fmt(k.revs)}</dd>
+      <dt>Letztes Kurbelereignis</dt><dd>${fmt(k.evt, 3)} s</dd>
+      <dt>Empfänger: Kadenz</dt><dd>${k.cad !== null ? fmt(k.cad, 1) + ' U/min' : k.note}</dd>
+    </dl></li>`).join('');
+}
+
+/* ---------- Akku ---------- */
+function renderAkku() {
+  const iBridge = P.us / Math.max(1, A.rb) * 1000 * A.duty / 100;   // mA
+  const iRide = iBridge + A.iAdc + A.iImu + A.iMcu;                  // mA
+  const iSleep = A.iSleep / 1000;                                     // mA
+  const h = clamp(A.hours, 0, 168);
+  const week = iRide * h + iSleep * (168 - h);                        // mAh/Woche
+  const usable = A.cap * A.use / 100;
+  const weeks = week > 0 ? usable / week : Infinity;
+  const rideH = iRide > 0 ? usable / iRide : Infinity;
+  const share = iRide > 0 ? iBridge / iRide * 100 : 0;
+  $('#akkuOut').innerHTML = `
+    <div class="tablewrap"><table>
+      <tr><td>Brückenstrom U<sub>S</sub> / R · Einschaltdauer</td><td class="num">${fmt(iBridge, 2)} mA</td></tr>
+      <tr><td>Strom beim Fahren gesamt</td><td class="num">${fmt(iRide, 2)} mA</td></tr>
+      <tr><td>Anteil Brücke daran</td><td class="num">${fmt(share, 0)} %</td></tr>
+      <tr><td>Verbrauch pro Woche</td><td class="num">${fmt(week, 1)} mAh</td></tr>
+      <tr><td>Fahrstunden pro Ladung, ohne Schlaf</td><td class="num">${fmt(rideH, 0)} h</td></tr>
+    </table></div>
+    <p class="result">Laufzeit ca. ${Number.isFinite(weeks) ? fmt(weeks, 1) : '-'} Wochen <span class="tag">Schätzung</span></p>
+    <p class="small">Bei voller Einschaltdauer frisst die Brücke den Großteil. Hebel: Brücke nur während der Wandlung einschalten, höheren Brückenwiderstand wählen, niedrigere Speisung (kostet Signal). Knopfzellen vertragen hohe Pulsströme schlecht, nutzbare Kapazität hängt davon ab: Datenblatt prüfen.</p>`;
+}
+
+/* ---------- Zeichnen ---------- */
+let C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = (n) => cs.getPropertyValue(n).trim();
+  C = { ink: g('--ink'), ink2: g('--ink2'), muted: g('--muted'), grid: g('--grid'), axis: g('--axis'),
+        s1: g('--s1'), s2: g('--s2'), s3: g('--s3'), surface: g('--surface'), surface2: g('--surface2'), crit: g('--crit'), warn: g('--warn') };
+}
+function fit(cv) {
+  const r = cv.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, r.width, r.height);
+  return { ctx, w: r.width, h: r.height };
+}
+function niceStep(range, n) {
+  const raw = range / Math.max(1, n);
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / p;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+}
+const hover = {};
+function attachHover(cv) {
+  cv.addEventListener('pointermove', (e) => { const r = cv.getBoundingClientRect(); hover[cv.id] = e.clientX - r.left; });
+  cv.addEventListener('pointerleave', () => { hover[cv.id] = null; });
+}
+
+/*
+ opts: { xMin, xMax, yMin?, yMax?, minSpan, yUnit, xUnit, xFmt, series: [{ pts:[[x,y]], color, dash, width, dots, name, d }] }
+*/
+function drawChart(cv, o) {
+  const { ctx, w, h } = fit(cv);
+  const padL = 46, padR = 10, padT = 10, padB = 26;
+  const pw = w - padL - padR, ph = h - padT - padB;
+  let yMin = Infinity, yMax = -Infinity;
+  for (const s of o.series) for (const p of s.pts) {
+    if (p[0] < o.xMin || p[0] > o.xMax || !Number.isFinite(p[1])) continue;
+    if (p[1] < yMin) yMin = p[1];
+    if (p[1] > yMax) yMax = p[1];
+  }
+  if (o.yMin !== undefined) yMin = Math.min(yMin, o.yMin);
+  if (o.yMax !== undefined) yMax = Math.max(yMax, o.yMax);
+  if (!Number.isFinite(yMin)) { yMin = 0; yMax = 1; }
+  if (yMax - yMin < (o.minSpan || 1)) { const c = (yMax + yMin) / 2; yMin = c - (o.minSpan || 1) / 2; yMax = c + (o.minSpan || 1) / 2; }
+  const st = niceStep(yMax - yMin, 4);
+  yMin = Math.floor(yMin / st) * st; yMax = Math.ceil(yMax / st) * st;
+  if (o.clampY) { yMin = Math.max(yMin, o.clampY[0]); yMax = Math.min(yMax, o.clampY[1]); }
+  const X = (x) => padL + (x - o.xMin) / (o.xMax - o.xMin) * pw;
+  const Y = (y) => padT + (1 - (y - yMin) / (yMax - yMin)) * ph;
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  // Gitter und Achsen
+  ctx.lineWidth = 1;
+  const yd = st < 1 ? (st < 0.1 ? 2 : 1) : 0;
+  for (let y = yMin; y <= yMax + st * 0.01; y += st) {
+    ctx.strokeStyle = Math.abs(y) < st * 1e-6 ? C.axis : C.grid;
+    ctx.beginPath(); ctx.moveTo(padL, Math.round(Y(y)) + 0.5); ctx.lineTo(w - padR, Math.round(Y(y)) + 0.5); ctx.stroke();
+    ctx.fillStyle = C.muted; ctx.textAlign = 'right';
+    ctx.fillText(fmt(y, yd), padL - 6, Y(y));
+  }
+  const xs = niceStep(o.xMax - o.xMin, Math.max(2, Math.floor(pw / 70)));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let x = Math.ceil(o.xMin / xs) * xs; x <= o.xMax + 1e-9; x += xs) {
+    ctx.fillStyle = C.muted;
+    ctx.fillText(o.xFmt ? o.xFmt(x) : fmt(x), X(x), h - padB + 6);
+  }
+  ctx.strokeStyle = C.axis;
+  ctx.beginPath(); ctx.moveTo(padL, h - padB + 0.5); ctx.lineTo(w - padR, h - padB + 0.5); ctx.stroke();
+  // Einheit
+  ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(o.yUnit || '', 4, 0);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText(o.xUnit || '', w - padR, h - padB - 2);
+  // Daten
+  ctx.save();
+  ctx.beginPath(); ctx.rect(padL, padT - 2, pw, ph + 4); ctx.clip();
+  for (const s of o.series) {
+    ctx.strokeStyle = s.color; ctx.fillStyle = s.color;
+    ctx.lineWidth = s.width || 2;
+    ctx.setLineDash(s.dash ? [5, 4] : []);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (s.dots) {
+      const r = s.r || 2.5;
+      for (const p of s.pts) {
+        if (p[0] < o.xMin || !Number.isFinite(p[1])) continue;
+        ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), r, 0, TAU); ctx.fill();
+      }
+    } else {
+      ctx.beginPath();
+      let pen = false;
+      for (const p of s.pts) {
+        if (!Number.isFinite(p[1])) { pen = false; continue; }
+        if (!pen) { ctx.moveTo(X(p[0]), Y(p[1])); pen = true; } else ctx.lineTo(X(p[0]), Y(p[1]));
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.setLineDash([]);
+  if (o.marker) {
+    const [mx, my] = o.marker;
+    ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(X(mx), Y(my), 7, 0, TAU); ctx.fill();
+    ctx.fillStyle = C.s3; ctx.beginPath(); ctx.arc(X(mx), Y(my), 5, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+  // Hover-Fadenkreuz
+  const hx = hover[cv.id];
+  if (hx != null && hx >= padL && hx <= w - padR) {
+    const xv = o.xMin + (hx - padL) / pw * (o.xMax - o.xMin);
+    ctx.strokeStyle = C.axis; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Math.round(hx) + 0.5, padT); ctx.lineTo(Math.round(hx) + 0.5, h - padB); ctx.stroke();
+    const lines = [(o.xFmt ? o.xFmt(xv) : fmt(xv, 1)) + ' ' + (o.xUnit || '')];
+    for (const s of o.series) {
+      if (!s.name) continue;
+      let best = null, bd = Infinity;
+      for (const p of s.pts) { const d = Math.abs(p[0] - xv); if (d < bd) { bd = d; best = p; } }
+      if (best && bd < (o.xMax - o.xMin) * 0.03) lines.push({ c: s.color, t: s.name + ': ' + fmt(best[1], s.d ?? 1) });
+    }
+    ctx.font = '12px system-ui, sans-serif';
+    const tw = Math.max(...lines.map(l => ctx.measureText(typeof l === 'string' ? l : l.t).width)) + 26;
+    const th = lines.length * 16 + 8;
+    let bx = hx + 10; if (bx + tw > w - 4) bx = hx - 10 - tw;
+    const by = padT + 4;
+    ctx.fillStyle = C.surface; ctx.strokeStyle = C.axis;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, tw, th, 6) : ctx.rect(bx, by, tw, th); ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    lines.forEach((l, i) => {
+      const yy = by + 12 + i * 16;
+      if (typeof l === 'string') { ctx.fillStyle = C.ink2; ctx.fillText(l, bx + 8, yy); }
+      else { ctx.fillStyle = l.c; ctx.fillRect(bx + 8, yy - 4, 8, 8); ctx.fillStyle = C.ink; ctx.fillText(l.t, bx + 20, yy); }
+    });
+  }
+}
+
+function drawPolar() {
+  const cv = $('#cvPolar');
+  const { ctx, w, h } = fit(cv);
+  const cx = w / 2, cy = h / 2;
+  const R = Math.min(w, h) / 2 - 26;
+  const r0 = R * 0.28;
+  const pf = S.mode === 'fahren' ? peakForces(S.t) : { FpL: 0, FpR: 0 };
+  let maxF = Math.max(pf.FpL, pf.FpR, S.mode === 'gewicht' ? S.mass * G : 0, 50);
+  const st = niceStep(maxF, 3);
+  maxF = Math.ceil(maxF * 1.05 / st) * st;
+  const rad = (F) => clamp(r0 + F / maxF * (R - r0), 0, R + 6);
+  const pt = (th, rr) => [cx + rr * Math.sin(th), cy - rr * Math.cos(th)];
+  ctx.font = '11px system-ui, sans-serif';
+  // Ringe
+  ctx.lineWidth = 1;
+  for (let F = -st; F <= maxF + 1e-9; F += st) {
+    const rr = rad(F);
+    if (rr <= 1) continue;
+    ctx.strokeStyle = Math.abs(F) < 1e-9 ? C.axis : C.grid;
+    ctx.lineWidth = Math.abs(F) < 1e-9 ? 1.5 : 1;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.stroke();
+    const [lx, ly] = pt(Math.PI / 8, rr);
+    ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText(fmt(F) + ' N', lx + 2, ly - 1);
+  }
+  // Speichen
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+  for (let a = 0; a < 360; a += 45) {
+    const th = a * Math.PI / 180;
+    const [x1, y1] = pt(th, 0), [x2, y2] = pt(th, R);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  ctx.fillStyle = C.ink2; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lbl = [[0, '0° OT'], [90, '90°'], [180, '180° UT'], [270, '270°']];
+  for (const [a, s] of lbl) {
+    const [x, y] = pt(a * Math.PI / 180, R + 14);
+    ctx.fillText(s, clamp(x, 24, w - 24), clamp(y, 8, h - 8));
+  }
+  // Kurven
+  const curve = (Fp, color, dash) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash ? [5, 4] : []);
+    ctx.beginPath();
+    for (let i = 0; i <= 360; i++) {
+      const th = i * Math.PI / 180;
+      const [x, y] = pt(th, rad(Fp * prof(th)));
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+  };
+  if (S.mode === 'fahren') { curve(pf.FpR, C.s3, true); curve(pf.FpL, C.s1, false); }
+  // Messpunkte
+  const revT = S.mode === 'fahren' ? 2 * 60 / P.rpm : 0.5;
+  ctx.fillStyle = C.s2;
+  for (const s of S.samples) {
+    if (s.t < S.t - revT) continue;
+    const [x, y] = pt(s.th, rad(s.F));
+    ctx.beginPath(); ctx.arc(x, y, 2.6, 0, TAU); ctx.fill();
+  }
+  // Kurbelarme
+  const thL = S.theta;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.globalAlpha = 0.35;
+  let [x2, y2] = pt(thL + Math.PI, r0 * 0.9);
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 4;
+  [x2, y2] = pt(thL, r0 * 0.9);
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, TAU); ctx.fill();
+  ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.font = '600 11px system-ui, sans-serif';
+  ctx.fillText('L', cx + (x2 - cx) * 1.35, cy + (y2 - cy) * 1.35);
+  ctx.font = '11px system-ui, sans-serif';
+  if (S.mode === 'gewicht') {
+    // Gewicht als Pfeil nach unten am Pedal
+    const [px, py] = pt(thL, r0 * 0.9);
+    ctx.strokeStyle = C.s1; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + 30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px - 5, py + 24); ctx.lineTo(px, py + 30); ctx.lineTo(px + 5, py + 24); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.textAlign = 'left';
+    ctx.fillText(fmt(S.mass, 1) + ' kg', px + 8, py + 22);
+  }
+}
+
+function drawAll() {
+  const t = S.t;
+  drawPolar();
+  drawChart($('#cvTorque'), {
+    xMin: t - 4, xMax: t, yUnit: 'Nm', xUnit: 's', xFmt: (x) => fmt(x - t, 0), minSpan: 2,
+    series: [
+      { pts: S.torque.map(p => [p.t, p.M]), color: C.s1, name: 'wahr', d: 1 },
+      { pts: S.samples.map(p => [p.t, p.M]), color: C.s2, dots: true, r: P.fs >= 320 ? 1.8 : 3, name: 'gemessen', d: 1 },
+    ],
+  });
+  drawChart($('#cvPower'), {
+    xMin: t - 30, xMax: t, yUnit: 'W', xUnit: 's', xFmt: (x) => fmt(x - t, 0), minSpan: 20, yMin: 0,
+    series: [
+      { pts: S.revs.map(p => [p.t, p.meas]), color: C.s2, dots: true, r: 2.5, name: 'je Umdr.', d: 0 },
+      { pts: S.power.map(p => [p.t, p.tru]), color: C.s1, name: 'wahr 3 s', d: 0 },
+      { pts: S.power.map(p => [p.t, p.meas]), color: C.s2, name: 'gemessen 3 s', d: 0 },
+    ],
+  });
+  drawChart($('#cvErr'), {
+    xMin: t - 30, xMax: t, yUnit: '%', xUnit: 's', xFmt: (x) => fmt(x - t, 0), minSpan: 4, yMin: 0, yMax: 0, clampY: [-100, 100],
+    series: [
+      { pts: S.power.map(p => [p.t, p.errA]), color: C.s3, dash: true, name: 'Asymmetrie', d: 1 },
+      { pts: S.power.map(p => [p.t, p.errC]), color: C.s2, name: 'Messkette', d: 1 },
+      { pts: S.power.map(p => [p.t, p.err]), color: C.ink, name: 'gesamt', d: 1 },
+    ],
+  });
+  const b = balanceNow(t) * 100;
+  drawChart($('#cvBal'), {
+    xMin: 40, xMax: 60, yUnit: '% Fehler', xUnit: '% links', xFmt: (x) => fmt(x), yMin: -20, yMax: 20,
+    series: [{ pts: [[40, -20], [60, 20]], color: C.ink2, name: 'Fehler', d: 1 }],
+    marker: [b, 2 * b - 100],
+  });
+}
+
+/* ---------- Text-Ausgaben ---------- */
+function updateUi() {
+  const m = means3();
+  const t = S.t;
+  $('#kTrue').innerHTML = fmt(m.tru) + '<small>W</small>';
+  $('#kTrueSub').textContent = `links ${fmt(m.truL)} W, rechts ${fmt(m.tru - m.truL)} W`;
+  $('#kMeas').innerHTML = fmt(m.meas) + '<small>W</small>';
+  $('#kMeasSub').textContent = `links gemessen ${fmt(m.measL)} W`;
+  if (Number.isFinite(m.err)) {
+    $('#kErr').innerHTML = fmtS(m.err, 1) + '<small>%</small>';
+    $('#kErrSub').textContent = `Asymmetrie ${fmtS(m.errA, 1)} %, Messkette ${fmtS(m.errC, 1)} %`;
+  } else {
+    $('#kErr').innerHTML = '-';
+    $('#kErrSub').textContent = S.mode === 'fahren' ? 'wahre Leistung zu klein' : 'nur beim Fahren';
+  }
+  let cad = 0;
+  if (S.win.length) cad = S.win.reduce((a, b) => a + b.w, 0) / S.win.length * 60 / TAU;
+  const tRpm = S.mode === 'fahren' ? P.rpm : 0;
+  $('#kCad').innerHTML = fmt(cad, 1) + '<small>U/min</small>';
+  $('#kCadSub').textContent = `wahr ${fmt(tRpm)} U/min, Gyro ${fmt(S.last.gd, 0)} °/s` + (tRpm > 0 ? `, Fehler ${fmtS((cad / tRpm - 1) * 100, 1)} %` : '');
+
+  // Status
+  const chips = [];
+  chips.push(FW.zeroed ? `<span class="chip ok"><i>✓</i>Nullabgleich bei ${fmt(FW.zeroTemp)} °C</span>` : '<span class="chip no"><i>✗</i>kein Nullabgleich</span>');
+  chips.push(FW.cal ? `<span class="chip ok"><i>✓</i>kalibriert bei ${fmt(FW.calTemp)} °C</span>` : '<span class="chip no"><i>✗</i>nicht kalibriert (Nennwerte)</span>');
+  if (FW.zeroed && Math.abs(P.temp - FW.zeroTemp) >= 3) chips.push(`<span class="chip warn"><i>!</i>Temperatur ${fmtS(P.temp - FW.zeroTemp, 0)} K seit Nullabgleich</span>`);
+  if (t - S.clipAdc < 1) chips.push('<span class="chip warn"><i>!</i>ADC übersteuert: Verstärkung senken</span>');
+  if (t - S.clipGyro < 1) chips.push('<span class="chip warn"><i>!</i>Gyro am Messbereich begrenzt: Kadenz und Leistung zu klein</span>');
+  if (S.task) chips.push('<span class="chip"><i>…</i>misst</span>');
+  const mode = { fahren: 'Fahren', still: 'Stillstand, Kurbel waagerecht', gewicht: `Gewicht ${fmt(S.mass, 1)} kg hängt` }[S.mode];
+  chips.push(`<span class="chip"><i>▶</i>${mode}${S.paused ? ' (Pause)' : ''}</span>`);
+  $('#status').innerHTML = chips.join('');
+
+  // Balance-Text
+  const b = balanceNow(t) * 100;
+  const e = 2 * b - 100;
+  $('#balText').innerHTML = `Aktuell ${fmt(b, 1)} % links: 2 × links zeigt ${e === 0 ? 'genau richtig' : fmt(Math.abs(e), 1) + ' % zu ' + (e < 0 ? 'wenig' : 'viel')}. Faustregel: jeder Prozentpunkt Abweichung von 50 % ergibt 2 % Fehler.`;
+
+  renderFormulas();
+  const on = performance.now() - S.ble.flash < 250;
+  $('#bleBlink').classList.toggle('on', on);
+  $('#bleState').textContent = S.ble.seq ? `${S.ble.seq} Notifications gesendet, Takt 1 s` : 'wartet auf erstes Paket';
+}
+
+function renderFormulas() {
+  const Lc = P.lc / 1000, x = P.x / 1000;
+  const w = TAU * P.rpm / 60;
+  const pf = peakForces(S.t);
+  const weight = S.mode === 'gewicht';
+  const F = weight ? S.mass * G : pf.FpL;
+  $('#formulaHead').textContent = weight
+    ? `Werte für das Gewicht: F = m · g = ${fmt(S.mass, 1)} kg · 9,81 m/s² = ${fmt(F, 1)} N, Kurbel waagerecht, ganz tangential.`
+    : 'Werte für die Spitzenkraft des linken Beins (bei 90°). Nennwerte ohne Abweichung, Drift und Offset.';
+  const Mb = F * (Lc - x);
+  const Wm = sectionW();
+  const sigma = Mb / Wm;
+  const eps = sigma / (P.E * 1e9);
+  const ratio = P.k * eps;               // V/V
+  const UA = ratio * P.us;
+  const Ufs = P.us / P.gain;
+  const code = UA / Ufs * FS24;
+  const sN = nominalSlopeN();
+  const noiseNm = (P.noise * 1e-6 / Ufs * FS24 / P.gain) / sN;
+  const rows = [
+    ['ω = 2π · n / 60', fmt(w, 2) + ' rad/s', `Winkelgeschwindigkeit bei ${fmt(P.rpm)} U/min`],
+    ['P_L = b · P,  P_R = (1 - b) · P', `${fmt(P.power * pf.b, 0)} W / ${fmt(P.power * (1 - pf.b), 0)} W`, `Balance b = ${fmt(pf.b * 100, 1)} % links`],
+    ['F_max = P_L · π / (ω · L · (1 - r))', fmt(pf.FpL, 0) + ' N', 'Spitze des Halbsinus, Mittel des Profils = (1 - r) / π'],
+    ['M = F · L', fmt(F * Lc, 1) + ' Nm', `Drehmoment an der Achse, L = ${fmt(P.lc, 1)} mm`],
+    ['M_b = F · (L - x)', fmt(Mb, 1) + ' Nm', `Biegemoment an der DMS-Mitte, x = ${fmt(P.x)} mm`],
+    ['W = b · h² / 6', fmt(Wm * 1e9, 0) + ' mm³', 'Widerstandsmoment, Rechteck vereinfacht (P)'],
+    ['σ = M_b / W', fmt(sigma / 1e6, 1) + ' MPa', 'Biegespannung an der Oberfläche'],
+    ['ε = σ / E', fmt(eps * 1e6, 0) + ' µm/m', `Dehnung, E = ${fmt(P.E)} GPa`],
+    ['U_A / U_S = k · ε', fmt(ratio * 1e3, 3) + ' mV/V', `Vollbrücke, 4 aktive DMS, k = ${fmt(P.k, 2)}`],
+    ['U_A = k · ε · U_S', fmt(UA * 1e3, 3) + ' mV', `bei U_S = ${fmt(P.us, 1)} V`],
+    ['± U_S / G', '± ' + fmt(Ufs * 1e3, 2) + ' mV', `Eingangsbereich bei G = ${P.gain}, ausgenutzt ${fmt(Math.abs(UA) / Ufs * 100, 0)} %`],
+    ['Code = U_A / (U_S / G) · 2²³', fmt(code, 0), '24-Bit-Wert, ratiometrisch: U_S kürzt sich heraus'],
+    ['M = (Code / G - Offset) / s', fmt((code / P.gain) / sN, 1) + ' Nm', `Firmware, Nenn-Steigung s = ${fmt(sN, 1)} Code/G je Nm`],
+    ['σ_M = σ_U / (U_S / G) · 2²³ / G / s', fmt(noiseNm * 1000, 2) + ' mNm', `Rauschen ${fmt(P.noise, 1)} µV als Drehmoment je Abtastwert`],
+    ['P_mess = 2 · Mittel(M · ω_Gyro)', fmt(means3().meas, 0) + ' W', 'angezeigt, 3-s-Mittel'],
+  ];
+  $('#formulaBody').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td class="num">${r[1]}</td><td class="muted">${r[2]}</td></tr>`).join('');
+}
+
+/* ---------- Ereignisse ---------- */
+function wire() {
+  document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  $('#btnPause').addEventListener('click', () => {
+    S.paused = !S.paused;
+    $('#btnPause').textContent = S.paused ? 'Weiter' : 'Pause';
+  });
+  const mass = $('#mass');
+  mass.addEventListener('input', () => { S.mass = parseFloat(mass.value); $('#massOut').textContent = fmt(S.mass, 1) + ' kg'; });
+  $('#btnHang').addEventListener('click', () => { setMode('gewicht'); logMsg(`Kurbel links waagerecht nach vorn, Rad blockiert, ${fmt(S.mass, 1)} kg am Pedal. Jetzt "Messpunkt aufnehmen". Danach andere Masse wählen und wiederholen.`); });
+  $('#btnZero').addEventListener('click', () => startTask('zero'));
+  $('#btnPoint').addEventListener('click', () => {
+    if (S.mode === 'fahren') { startTask('cal'); return; }
+    startTask('cal');
+  });
+  $('#btnFit').addEventListener('click', applyFit);
+  $('#btnClearPts').addEventListener('click', () => { FW.pts = []; computeFit(); });
+  $('#btnFactory').addEventListener('click', () => { setFactory(); FW.pts = []; computeFit(); });
+  $('#btnIdeal').addEventListener('click', setIdeal);
+  ['cvTorque', 'cvPower', 'cvErr', 'cvBal'].forEach(id => attachHover($('#' + id)));
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', readColors);
+}
+
+/* ---------- Start ---------- */
+buildParams();
+wire();
+readColors();
+setIdeal();
+renderCal();
+renderAkku();
+updateButtons();
+
+let lastFrame = performance.now(), lastUi = 0;
+function frame(now) {
+  const dtReal = Math.min(0.05, Math.max(0, (now - lastFrame) / 1000));
+  lastFrame = now;
+  if (!S.paused) {
+    const n = Math.round(dtReal / DT);
+    for (let i = 0; i < n; i++) step(DT);
+    prune();
+  }
+  if (now - lastUi > 150) { lastUi = now; updateUi(); }
+  drawAll();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

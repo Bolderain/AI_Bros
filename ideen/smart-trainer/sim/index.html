@@ -1,0 +1,1276 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart-Trainer Simulation</title>
+<meta name="description" content="Interaktive Simulation: dummer Magnet-Rollentrainer mit ESP32, Servo und Wirbelstrombremse als Smart-Trainer (ERG, SIM, Spindown, Failsafe). Alle Werte Platzhalter (P) oder Schätzung.">
+<style>
+/* Farben als Tokens, hell und dunkel. Palette nach dem Referenzschema (blau, orange, aqua). */
+:root {
+  color-scheme: light;
+  --bg: #f4f3ef;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.12);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --fam: #b9b7ae;
+  --warn: #fab219;
+  --crit: #d03b3b;
+  --good: #0ca30c;
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --chip: #ecebe6;
+  --band: rgba(42,120,214,0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.12);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --fam: #55544f;
+    --accent: #3987e5;
+    --accent-ink: #ffffff;
+    --chip: #262624;
+    --band: rgba(57,135,229,0.12);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.12);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --fam: #55544f;
+  --accent: #3987e5;
+  --accent-ink: #ffffff;
+  --chip: #262624;
+  --band: rgba(57,135,229,0.12);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.wrap { max-width: 1320px; margin: 0 auto; padding: 16px; }
+header { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 8px; }
+h3 { font-size: 13px; margin: 0; font-weight: 600; }
+.sub { margin: 0; color: var(--ink2); max-width: 70ch; }
+.note {
+  margin: 10px 0 12px; padding: 8px 12px; border-radius: 8px;
+  background: var(--chip); color: var(--ink2); font-size: 13px;
+}
+button, select, input, textarea { font: inherit; color: inherit; }
+button {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer; min-height: 34px;
+}
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.danger { border-color: var(--crit); color: var(--crit); }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+select, input[type=number], textarea {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; min-height: 30px;
+}
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.bar label { display: inline-flex; gap: 6px; align-items: center; color: var(--ink2); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: var(--surface); }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.tile .k { font-size: 12px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .v { font-size: 20px; font-weight: 600; white-space: nowrap; }
+.tile .v small { font-size: 12px; font-weight: 400; color: var(--ink2); margin-left: 2px; }
+.tile .x { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.warn { border-color: var(--warn); box-shadow: inset 4px 0 0 var(--warn); }
+.tile.crit { border-color: var(--crit); box-shadow: inset 4px 0 0 var(--crit); }
+.tile.good { box-shadow: inset 4px 0 0 var(--good); }
+.ico { display: inline-block; width: 16px; height: 16px; border-radius: 50%; text-align: center; line-height: 16px; font-size: 11px; font-weight: 700; color: #0b0b0b; margin-right: 4px; vertical-align: 1px; }
+.ico.warn { background: var(--warn); }
+.ico.crit { background: var(--crit); color: #fff; }
+.ico.good { background: var(--good); color: #fff; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; align-items: start; }
+.col { display: grid; gap: 12px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-width: 0; }
+.card.active { box-shadow: inset 0 3px 0 var(--accent); }
+.plot { position: relative; padding: 10px 10px 6px; }
+.ph { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; margin-bottom: 4px; }
+.ph .u { color: var(--muted); font-weight: 400; }
+.lg { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--ink2); }
+.lg span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.lg i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; }
+.lg i.dash { border-top-style: dashed; }
+.lg b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+canvas { display: block; width: 100%; touch-action: pan-y; }
+.tip {
+  position: absolute; pointer-events: none; display: none; z-index: 5;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); white-space: nowrap;
+}
+.tip .r { display: flex; gap: 8px; justify-content: space-between; }
+.tip .r em { font-style: normal; color: var(--ink2); }
+.two { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; }
+.prm { margin: 8px 0 10px; }
+.prm .lab { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.prm .lab span:first-child { color: var(--ink); }
+.prm .ctl { display: flex; gap: 8px; align-items: center; margin-top: 2px; }
+.prm input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.prm input[type=number] { width: 84px; text-align: right; }
+.prm .unit { color: var(--muted); font-size: 12px; min-width: 52px; }
+.prm small { display: block; color: var(--muted); font-size: 11.5px; }
+.prm.inactive { opacity: 0.45; }
+.badge { display: inline-block; font-size: 10.5px; color: var(--ink2); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
+.chk { display: flex; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
+.chk input { width: 18px; height: 18px; accent-color: var(--accent); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.row label { color: var(--ink2); font-size: 13px; }
+details { border-top: 1px solid var(--border); padding: 6px 0; }
+details:first-of-type { border-top: 0; }
+summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 4px 0; }
+textarea { width: 100%; min-height: 130px; font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: vertical; }
+.info { font-size: 12.5px; color: var(--ink2); margin: 6px 0 0; }
+.err { color: var(--crit); }
+#log { list-style: none; margin: 0; padding: 0; font-size: 12.5px; max-height: 210px; overflow: auto; }
+#log li { padding: 3px 0; border-top: 1px solid var(--border); color: var(--ink2); }
+#log li:first-child { border-top: 0; }
+#log li b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; margin-right: 6px; }
+footer { margin-top: 16px; color: var(--ink2); font-size: 13px; }
+footer code { background: var(--chip); border-radius: 4px; padding: 1px 4px; font-size: 12px; }
+footer ul { padding-left: 18px; }
+.status { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.pill { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: var(--chip); color: var(--ink2); border: 1px solid var(--border); }
+.pill.warn { border-color: var(--warn); color: var(--ink); }
+.pill.crit { border-color: var(--crit); color: var(--ink); }
+.pill.good { border-color: var(--good); color: var(--ink); }
+@media (max-width: 980px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .two { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .wrap { padding: 12px 16px; }
+  h1 { font-size: 19px; }
+  .tile .v { font-size: 18px; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Smart-Trainer Simulation</h1>
+      <p class="sub">Dummer Magnet-Rollentrainer, ESP32 misst die Geschwindigkeit, schätzt daraus die Leistung und stellt per Servo den Magnetspalt der Wirbelstrombremse. ERG, SIM, Spindown und Failsafe zum Ausprobieren.</p>
+    </div>
+    <button id="theme" type="button" title="Hell, dunkel oder wie das System">Darstellung: Auto</button>
+  </header>
+  <p class="note"><b>Alle Konstanten sind Platzhalter (P) oder Schätzungen</b>, nichts davon ist an einem echten Trainer gemessen. Die Simulation zeigt das Verhalten qualitativ (Überschwingen, Temperaturdrift, Failsafe), nicht die Zahlen eines bestimmten Geräts. Jede Konstante lässt sich unten unter "Modellkonstanten" ändern.</p>
+
+  <div class="bar">
+    <button id="run" class="primary" type="button">Pause</button>
+    <button id="reset" type="button">Zurücksetzen</button>
+    <label>Zeitraffer
+      <select id="speed">
+        <option value="1">1×</option><option value="2">2×</option><option value="5">5×</option>
+        <option value="10">10×</option><option value="30">30×</option>
+      </select>
+    </label>
+    <div class="seg" id="modeSeg" role="group" aria-label="Modus der App">
+      <button type="button" data-m="ERG">ERG</button>
+      <button type="button" data-m="SIM">SIM</button>
+      <button type="button" data-m="FEST">Fest</button>
+    </div>
+    <button id="ble" type="button">BLE trennen</button>
+    <button id="spin" type="button">Spindown starten</button>
+    <label>Fenster
+      <select id="win">
+        <option value="60">1 min</option><option value="120" selected>2 min</option>
+        <option value="300">5 min</option><option value="600">10 min</option>
+      </select>
+    </label>
+    <button id="csv" type="button">CSV laden</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="tiles">
+    <div class="tile"><div class="k">Soll (Firmware)</div><div class="v" id="tSoll">0<small>W</small></div><div class="x" id="tSollX"></div></div>
+    <div class="tile"><div class="k">Wahre Leistung</div><div class="v" id="tTrue">0<small>W</small></div><div class="x">an der Kurbel, 1 s geglättet</div></div>
+    <div class="tile"><div class="k">Geschätzt</div><div class="v" id="tEst">0<small>W</small></div><div class="x">aus v und Kennlinie</div></div>
+    <div class="tile" id="tileErr"><div class="k">Schätzfehler</div><div class="v" id="tErr">0<small>%</small></div><div class="x">geschätzt gegen wahr</div></div>
+    <div class="tile"><div class="k">Kadenz</div><div class="v" id="tCad">0<small>U/min</small></div><div class="x" id="tGear"></div></div>
+    <div class="tile"><div class="k">Geschwindigkeit</div><div class="v" id="tV">0<small>km/h</small></div><div class="x">Rad auf der Rolle</div></div>
+    <div class="tile"><div class="k">Magnetspalt</div><div class="v" id="tGap">0<small>mm</small></div><div class="x" id="tGapX"></div></div>
+    <div class="tile" id="tileTemp"><div class="k">Bremsscheibe</div><div class="v" id="tTemp">20<small>°C</small></div><div class="x" id="tTempX">Schätzung</div></div>
+  </div>
+
+  <div class="main">
+    <div class="col">
+      <div class="card plot" data-plot="power">
+        <div class="ph"><h3>Leistung <span class="u">W</span></h3><div class="lg" id="lg-power"></div></div>
+        <canvas id="cv-power" height="200"></canvas><div class="tip"></div>
+      </div>
+      <div class="card plot" data-plot="cad">
+        <div class="ph"><h3>Kadenz <span class="u">U/min</span></h3><div class="lg" id="lg-cad"></div></div>
+        <canvas id="cv-cad" height="120"></canvas><div class="tip"></div>
+      </div>
+      <div class="card plot" data-plot="gap">
+        <div class="ph"><h3>Magnetspalt <span class="u">mm, kleiner Spalt = mehr Bremse</span></h3><div class="lg" id="lg-gap"></div></div>
+        <canvas id="cv-gap" height="120"></canvas><div class="tip"></div>
+      </div>
+      <div class="card plot" data-plot="temp">
+        <div class="ph"><h3>Scheibentemperatur <span class="u">°C, Schätzmodell</span></h3><div class="lg" id="lg-temp"></div></div>
+        <canvas id="cv-temp" height="120"></canvas><div class="tip"></div>
+      </div>
+      <div class="card plot" data-plot="err">
+        <div class="ph"><h3>Schätzfehler <span class="u">% (geschätzt minus wahr, bezogen auf wahr)</span></h3><div class="lg" id="lg-err"></div></div>
+        <canvas id="cv-err" height="110"></canvas><div class="tip"></div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <h2>Kennlinienfamilie P(v) je Spalt</h2>
+          <div class="lg" id="lg-kl"></div>
+          <canvas id="cv-kl" height="240"></canvas>
+          <p class="info">Graue Linien: kalibrierte Kennlinie (Bremse plus Rollreibung) bei Kalibriertemperatur. Blau: wahre Kurve beim aktuellen Spalt und der aktuellen Scheibentemperatur. Orange gestrichelt: was die Firmware glaubt.</p>
+        </div>
+        <div class="card">
+          <h2>Bremse</h2>
+          <canvas id="cv-mech" height="240"></canvas>
+          <p class="info">Scheibe färbt sich mit der Temperatur. Der Magnet sitzt am Servoarm; das Spiel im Zug wirkt als Totband.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Ereignisse</h2>
+        <ol id="log"></ol>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>Fahrer</h2>
+        <div class="row"><label for="riderMode">Fahrer gibt vor</label>
+          <select id="riderMode">
+            <option value="kadenz">Kadenz halten (realistisch)</option>
+            <option value="leistung">Leistung konstant</option>
+            <option value="kraft">Trittkraft konstant</option>
+          </select>
+        </div>
+        <div id="g-live"></div>
+        <label class="chk"><input type="checkbox" id="followCad" checked> Fahrer folgt der Kadenz aus dem Workout</label>
+      </div>
+
+      <div class="card" id="card-ERG">
+        <h2>ERG: Zielleistung halten</h2>
+        <div id="g-erg"></div>
+        <label class="chk"><input type="checkbox" id="ff" checked> Vorsteuerung über die Kennlinie</label>
+        <label class="chk"><input type="checkbox" id="aw" checked> Anti-Windup (Integrator stoppt am Anschlag)</label>
+        <p class="info">Regler: Spalt = Vorsteuerung minus (Kp·e + Ki·∫e), e = Soll minus Schätzung. Zum Aufziehen des Integrators: Anti-Windup aus, ERG 500 W, Kadenz 55, danach Kadenz 95.</p>
+      </div>
+
+      <div class="card" id="card-SIM">
+        <h2>SIM: Straße nachbilden</h2>
+        <div id="g-sim"></div>
+        <label class="chk"><input type="checkbox" id="inertiaComp"> Trägheitskompensation (Bremse ergänzt fehlende Masse, nur beim Beschleunigen möglich)</label>
+        <p class="info" id="simInfo"></p>
+      </div>
+
+      <div class="card" id="card-FEST">
+        <h2>Fest: Spalt von Hand</h2>
+        <div id="g-fest"></div>
+        <p class="info">Wie der originale Lenkerhebel. Leistung wird nur geschätzt (Variante 1 der Idee).</p>
+      </div>
+
+      <div class="card">
+        <h2>Workout</h2>
+        <div class="row">
+          <select id="preset" aria-label="Vorlage">
+            <option value="kadenz">Kadenzwechsel im ERG (Überschwingen)</option>
+            <option value="intervalle">Intervalle 4 × 1 min</option>
+            <option value="rampe">Rampe 100 bis 400 W</option>
+            <option value="huegel">Hügel im SIM-Modus</option>
+            <option value="hitze">Dauerlast 20 min (Zeitraffer 10× oder 30×)</option>
+          </select>
+          <button id="woLoad" type="button">Laden</button>
+          <button id="woRun" type="button" class="primary">Workout starten</button>
+        </div>
+        <textarea id="woText" spellcheck="false" aria-label="Workout-Profil"></textarea>
+        <p class="info">Je Zeile: Dauer in s, Modus (ERG, SIM, FEST), Wert (W, % oder mm), optional Kadenz. Mit # beginnt ein Kommentar.</p>
+        <canvas id="cv-wo" height="56"></canvas>
+        <p class="info" id="woInfo"></p>
+      </div>
+
+      <div class="card">
+        <h2>Modellkonstanten</h2>
+        <p class="info" style="margin-top:0">Alle Werte (P) bzw. Schätzung. Änderungen wirken sofort, auch während der Fahrt.</p>
+        <div id="g-konst"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <h2>So rechnet die Simulation</h2>
+    <ul>
+      <li><b>Rad und Schwungmasse:</b> <code>m_eff · dv/dt = F_Fahrer - F_Bremse - F_Rolle</code>, mit <code>m_eff = J/r_Rolle² + m_Rad (+ m_Beine, solange getreten wird)</code>. Freilauf: der Fahrer kann nicht bremsen.</li>
+      <li><b>Wirbelstrombremse:</b> <code>P = k(s) · f(T) · v² / (1 + (v/v_krit)²)</code>, <code>k(s) = k_ref · exp(-(s - 1 mm)/s0)</code>, <code>f(T) = 1/(1 + α·(T - 20 °C))</code> (Leitwert des Aluminiums sinkt warm).</li>
+      <li><b>Servo:</b> Totzeit, begrenzte Stellgeschwindigkeit, Spiel im Zug als Totband.</li>
+      <li><b>Firmware (10 Hz):</b> misst v (mit Rauschen), glaubt an die kalibrierte Kennlinie bei Kalibriertemperatur, rechnet <code>P_schätz = (F_Kennlinie + F_Rolle,FW + m_FW·a)·v</code>. Die Rollreibung F_Rolle,FW kommt aus Kalibrierung oder Spindown.</li>
+      <li><b>Spindown:</b> auf über 36 km/h treten, Spalt ganz auf, auslaufen lassen. Aus <code>m·(v1 - v2) = F_Rolle·Δt + ∫F_Bremse dt</code> folgt die Rollreibung.</li>
+      <li><b>SIM:</b> <code>F = m·g·(sin φ + Crr·cos φ) + ½·ρ·CwA·(v + v_Wind)²</code>, Ziel = F·v, dann wie ERG.</li>
+      <li><b>Temperatur:</b> <code>C · dT/dt = P_Bremse - (G0 + G1·v)·(T - T_Umgebung)</code>. Ohne NTC kennt die Firmware T nicht; mit "Thermomodell" schätzt sie T aus ihrer eigenen Leistungsschätzung.</li>
+      <li><b>Failsafe:</b> Nach Verbindungsabbruch erkennt die Firmware den Verlust erst nach dem Supervision-Timeout, dann fährt der Spalt langsam auf niedrigen Widerstand.</li>
+    </ul>
+    <p>Ausprobieren: Workout "Kadenzwechsel" starten und auf die Leistungsspitzen achten; Kp und Ki hochdrehen bis es pumpt; Rollreibung der Firmware (3,5 N) gegen die wahre (5 N) per Spindown abgleichen; "Dauerlast" mit 30× laufen lassen und Temperaturkompensation umschalten; im SIM-Modus 8 % Steigung fahren und sehen, wann die Bremse am Anschlag ist.</p>
+  </footer>
+</div>
+
+<script>
+'use strict';
+/* ===================== Hilfsfunktionen ===================== */
+const $ = id => document.getElementById(id);
+const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+function randn() { let u = 0; while (!u) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); }
+function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d).replace('.', ',').replace(/^-(0(,0+)?)$/, '$1') : 'k. A.'; }
+function fmtT(t) { t = Math.max(0, Math.round(t)); const m = Math.floor(t / 60), s = t % 60; return m + ':' + String(s).padStart(2, '0'); }
+function decimals(step) { const s = String(step); return s.includes('.') ? s.split('.')[1].length : 0; }
+
+/* ===================== Parameter (alle P / Schätzung) ===================== */
+/* g = Gruppe; n = Hinweis. Alle Zahlen sind Platzhalter (P), nicht gemessen. */
+const DEF = [
+  // Laufzeit: Fahrer
+  { k: 'cadTarget', g: 'live', l: 'Zielkadenz', u: 'U/min', v: 90, min: 30, max: 130, st: 1, rm: 'kadenz' },
+  { k: 'pRider', g: 'live', l: 'Fahrerleistung', u: 'W', v: 200, min: 0, max: 800, st: 5, rm: 'leistung' },
+  { k: 'fPedal', g: 'live', l: 'Trittkraft, Mittel tangential', u: 'N', v: 120, min: 0, max: 400, st: 5, rm: 'kraft' },
+  { k: 'zKb', g: 'live', l: 'Kettenblatt', u: 'Zähne', v: 50, min: 28, max: 56, st: 1 },
+  { k: 'zRz', g: 'live', l: 'Ritzel', u: 'Zähne', v: 17, min: 10, max: 36, st: 1 },
+  // ERG
+  { k: 'erg', g: 'erg', l: 'Zielleistung', u: 'W', v: 200, min: 50, max: 600, st: 5 },
+  { k: 'Kp', g: 'erg', l: 'Kp', u: 'mm/W', v: 0.004, min: 0, max: 0.04, st: 0.0005 },
+  { k: 'Ki', g: 'erg', l: 'Ki', u: 'mm/(W·s)', v: 0.008, min: 0, max: 0.08, st: 0.0005 },
+  // SIM
+  { k: 'grade', g: 'sim', l: 'Steigung', u: '%', v: 2, min: -10, max: 20, st: 0.5 },
+  { k: 'mRider', g: 'sim', l: 'Fahrergewicht', u: 'kg', v: 75, min: 40, max: 130, st: 1 },
+  { k: 'mBike', g: 'sim', l: 'Radgewicht', u: 'kg', v: 9, min: 5, max: 20, st: 0.5 },
+  { k: 'CwA', g: 'sim', l: 'Cw·A', u: 'm²', v: 0.32, min: 0.15, max: 0.7, st: 0.01 },
+  { k: 'Crr', g: 'sim', l: 'Crr Straße', u: '', v: 0.005, min: 0.002, max: 0.02, st: 0.0005 },
+  { k: 'wind', g: 'sim', l: 'Gegenwind', u: 'm/s', v: 0, min: -10, max: 10, st: 0.5 },
+  // FEST
+  { k: 'gapMan', g: 'fest', l: 'Spalt', u: 'mm', v: 5, min: 1, max: 15, st: 0.1 },
+
+  // Konstanten: Rad und Fahrer
+  { k: 'U', g: 'k_rad', l: 'Radumfang', u: 'm', v: 2.105, min: 1.8, max: 2.4, st: 0.005, n: 'Schätzung für 700×28c' },
+  { k: 'lCrank', g: 'k_rad', l: 'Kurbellänge', u: 'm', v: 0.1725, min: 0.15, max: 0.18, st: 0.0025 },
+  { k: 'fMax', g: 'k_rad', l: 'Max. Kraft am Rad', u: 'N', v: 250, min: 50, max: 600, st: 5 },
+  { k: 'pMax', g: 'k_rad', l: 'Max. Fahrerleistung', u: 'W', v: 1000, min: 200, max: 2000, st: 10 },
+  { k: 'ripple', g: 'k_rad', l: 'Pulsation des Tritts', u: '', v: 0.25, min: 0, max: 0.8, st: 0.05, n: 'Anteil, 2 Spitzen je Kurbelumdrehung' },
+  { k: 'rKp', g: 'k_rad', l: 'Fahrer hält Kadenz: Kp', u: 'N/(m/s)', v: 25, min: 2, max: 150, st: 1, n: 'wie schnell der Fahrer auf Kadenzabweichung reagiert' },
+  { k: 'rKi', g: 'k_rad', l: 'Fahrer hält Kadenz: Ki', u: 'N/(m·s)', v: 15, min: 0, max: 100, st: 1 },
+  // Trägheit
+  { k: 'J', g: 'k_mass', l: 'Trägheit Schwungrad', u: 'kg·m²', v: 0.005, min: 0.001, max: 0.03, st: 0.0005, n: 'auf der Rollenwelle' },
+  { k: 'rRoll', g: 'k_mass', l: 'Rollenradius', u: 'm', v: 0.0285, min: 0.015, max: 0.05, st: 0.0005 },
+  { k: 'mRad', g: 'k_mass', l: 'Hinterrad, äquivalente Masse', u: 'kg', v: 1.0, min: 0, max: 3, st: 0.1 },
+  { k: 'mBein', g: 'k_mass', l: 'Effektive Fahrermasse (Beine)', u: 'kg', v: 3, min: 0, max: 10, st: 0.5, n: 'nur gekoppelt, solange getreten wird' },
+  // Bremse
+  { k: 'kRef', g: 'k_brake', l: 'k bei 1 mm, 20 °C', u: 'W/(m/s)²', v: 6.0, min: 1, max: 15, st: 0.1 },
+  { k: 's0', g: 'k_brake', l: 'Abfalllänge s0', u: 'mm', v: 3.0, min: 1, max: 8, st: 0.1, n: 'k fällt je s0 auf 37 %' },
+  { k: 'vk', g: 'k_brake', l: 'Sättigung v_krit', u: 'm/s', v: 30, min: 8, max: 100, st: 1, n: 'oberhalb wächst P langsamer als v²' },
+  { k: 'sMinMech', g: 'k_brake', l: 'Kleinster Spalt mechanisch', u: 'mm', v: 1.0, min: 0.5, max: 3, st: 0.1 },
+  { k: 'sMaxMech', g: 'k_brake', l: 'Größter Spalt mechanisch', u: 'mm', v: 15, min: 6, max: 25, st: 0.5 },
+  { k: 'Froll', g: 'k_brake', l: 'Rollreibung Reifen/Rolle, wahr', u: 'N', v: 5.0, min: 0, max: 20, st: 0.1, n: 'hängt von Reifendruck und Anpressung ab' },
+  // Servo
+  { k: 'tDead', g: 'k_servo', l: 'Totzeit', u: 's', v: 0.15, min: 0, max: 1, st: 0.01 },
+  { k: 'servoRate', g: 'k_servo', l: 'Stellgeschwindigkeit', u: 'mm/s', v: 6, min: 0.5, max: 40, st: 0.5 },
+  { k: 'backlash', g: 'k_servo', l: 'Spiel im Zug', u: 'mm', v: 0.3, min: 0, max: 2, st: 0.05 },
+  // Temperatur
+  { k: 'Cth', g: 'k_temp', l: 'Wärmekapazität Scheibe', u: 'J/K', v: 700, min: 100, max: 3000, st: 10, n: 'etwa 0,8 kg Aluminium' },
+  { k: 'G0', g: 'k_temp', l: 'Wärmeabgabe im Stand', u: 'W/K', v: 1.0, min: 0.1, max: 10, st: 0.1 },
+  { k: 'G1', g: 'k_temp', l: 'Wärmeabgabe je m/s', u: 'W/(K·m/s)', v: 0.35, min: 0, max: 2, st: 0.01, n: 'Scheibe kühlt sich beim Drehen selbst' },
+  { k: 'alpha', g: 'k_temp', l: 'Temperaturkoeffizient α', u: '1/K', v: 0.0039, min: 0, max: 0.008, st: 0.0001, n: 'Literaturwert Aluminium, Legierung unbekannt' },
+  { k: 'Tamb', g: 'k_temp', l: 'Raumtemperatur', u: '°C', v: 20, min: 0, max: 35, st: 1 },
+  { k: 'Twarn', g: 'k_temp', l: 'Warnschwelle', u: '°C', v: 70, min: 30, max: 150, st: 1, n: 'PLA wird ab etwa 55 °C weich' },
+  { k: 'Tkrit', g: 'k_temp', l: 'Abregelschwelle Firmware', u: '°C', v: 90, min: 40, max: 180, st: 1, n: 'nur wirksam, wenn die Firmware T kennt' },
+  // Schätzung in der Firmware
+  { k: 'dtFw', g: 'k_fw', l: 'Regeltakt', u: 's', v: 0.1, min: 0.02, max: 0.5, st: 0.01 },
+  { k: 'vNoise', g: 'k_fw', l: 'Messrauschen v', u: '%', v: 0.5, min: 0, max: 5, st: 0.1 },
+  { k: 'vTau', g: 'k_fw', l: 'Filter v', u: 's', v: 0.3, min: 0.02, max: 2, st: 0.01 },
+  { k: 'aTau', g: 'k_fw', l: 'Filter Beschleunigung', u: 's', v: 0.5, min: 0.05, max: 3, st: 0.05 },
+  { k: 'tauDisp', g: 'k_fw', l: 'Glättung Anzeige', u: 's', v: 1.0, min: 0.1, max: 5, st: 0.1 },
+  { k: 'calErr', g: 'k_fw', l: 'Fehler der Kalibrierung', u: '%', v: 0, min: -20, max: 20, st: 0.5, n: 'Kennlinie systematisch zu hoch (+) oder zu tief (-)' },
+  { k: 'Tcal', g: 'k_fw', l: 'Temperatur bei Kalibrierung', u: '°C', v: 20, min: 0, max: 80, st: 1 },
+  { k: 'FrollFw', g: 'k_fw', l: 'Rollreibung, Annahme Firmware', u: 'N', v: 3.5, min: 0, max: 20, st: 0.05, n: 'wird vom Spindown überschrieben' },
+  { k: 'mErr', g: 'k_fw', l: 'Fehler Trägheitsannahme', u: '%', v: 0, min: -50, max: 50, st: 1 },
+  { k: 'alphaFw', g: 'k_fw', l: 'α, Annahme Firmware', u: '1/K', v: 0.0039, min: 0, max: 0.008, st: 0.0001 },
+  { k: 'thErr', g: 'k_fw', l: 'Fehler Wärmeabgabe im Thermomodell', u: '%', v: 0, min: -50, max: 100, st: 1 },
+  { k: 'tauNtc', g: 'k_fw', l: 'Zeitkonstante NTC', u: 's', v: 20, min: 1, max: 120, st: 1 },
+  { k: 'sMinFw', g: 'k_fw', l: 'Kleinster Spalt, Firmware-Grenze', u: 'mm', v: 1.5, min: 0.5, max: 5, st: 0.1, n: 'absolute Grenze, gegen Maximalwiderstand im Sprint' },
+  { k: 'fwRate', g: 'k_fw', l: 'Max. Verstellrate, Firmware-Grenze', u: 'mm/s', v: 10, min: 0.5, max: 40, st: 0.5 },
+  // Failsafe und Spindown
+  { k: 'tSup', g: 'k_fs', l: 'Erkennung BLE-Abbruch', u: 's', v: 2.0, min: 0.1, max: 10, st: 0.1, n: 'Supervision-Timeout, (P)' },
+  { k: 'sFs', g: 'k_fs', l: 'Failsafe-Spalt', u: 'mm', v: 15, min: 3, max: 25, st: 0.5, n: 'niedriger Widerstand' },
+  { k: 'fsRate', g: 'k_fs', l: 'Failsafe-Rampe', u: 'mm/s', v: 3, min: 0.2, max: 20, st: 0.1 },
+  { k: 'vHi', g: 'k_fs', l: 'Spindown von', u: 'm/s', v: 9, min: 5, max: 15, st: 0.5 },
+  { k: 'vLo', g: 'k_fs', l: 'Spindown bis', u: 'm/s', v: 4, min: 1, max: 8, st: 0.5 },
+  // Physik
+  { k: 'g', g: 'k_phys', l: 'Erdbeschleunigung', u: 'm/s²', v: 9.81, min: 9.7, max: 9.9, st: 0.01 },
+  { k: 'rho', g: 'k_phys', l: 'Luftdichte', u: 'kg/m³', v: 1.2, min: 0.9, max: 1.35, st: 0.01 },
+  { k: 'dtPhys', g: 'k_phys', l: 'Schrittweite Physik', u: 's', v: 0.005, min: 0.001, max: 0.02, st: 0.001 },
+];
+const GROUPS = {
+  k_rad: 'Rad und Fahrer', k_mass: 'Trägheit', k_brake: 'Wirbelstrombremse', k_servo: 'Servo',
+  k_temp: 'Temperatur (Schätzmodell)', k_fw: 'Leistungsschätzung und Firmware', k_fs: 'Failsafe und Spindown', k_phys: 'Physik',
+};
+const cfg = {};
+const ui = {};
+DEF.forEach(d => { cfg[d.k] = d.v; });
+Object.assign(cfg, { riderMode: 'kadenz', tempComp: 'aus', ff: true, aw: true, accTerm: true, inertiaComp: false, followCad: true });
+
+function buildParam(d, host) {
+  const box = document.createElement('div');
+  box.className = 'prm';
+  const id = 'p-' + d.k;
+  const dec = decimals(d.st);
+  box.innerHTML =
+    `<div class="lab"><span><label for="${id}">${d.l}</label><span class="badge" title="Platzhalter, nicht gemessen">P</span></span></div>` +
+    `<div class="ctl"><input type="range" id="${id}-r" min="${d.min}" max="${d.max}" step="${d.st}" value="${d.v}" aria-label="${d.l}">` +
+    `<input type="number" id="${id}" min="${d.min}" max="${d.max}" step="${d.st}" value="${d.v.toFixed(dec)}"><span class="unit">${d.u}</span></div>` +
+    (d.n ? `<small>${d.n}</small>` : '');
+  host.appendChild(box);
+  const r = box.querySelector('input[type=range]');
+  const nb = box.querySelector('input[type=number]');
+  r.addEventListener('input', () => { setParam(d.k, parseFloat(r.value), 'r'); });
+  nb.addEventListener('change', () => {
+    const x = parseFloat(nb.value);
+    if (Number.isFinite(x)) setParam(d.k, clamp(x, d.min, d.max), 'n'); else nb.value = cfg[d.k];
+  });
+  ui[d.k] = { r, nb, box, d, dec };
+}
+function setParam(k, x, src) {
+  const u = ui[k];
+  cfg[k] = x;
+  if (u) {
+    if (src !== 'r') u.r.value = x;
+    if (src !== 'n') u.nb.value = Number(x).toFixed(u.dec);
+  }
+  if (k === 'zKb' || k === 'zRz') S.rI = S.rI; // Gangwechsel wirkt sofort über die Kinematik
+}
+const grpHost = { live: $('g-live'), erg: $('g-erg'), sim: $('g-sim'), fest: $('g-fest') };
+const konst = $('g-konst');
+const detHosts = {};
+Object.keys(GROUPS).forEach(g => {
+  const det = document.createElement('details');
+  det.innerHTML = `<summary>${GROUPS[g]}</summary>`;
+  if (g === 'k_fw') {
+    const wrap = document.createElement('div');
+    wrap.innerHTML =
+      `<div class="row"><label for="tempComp">Temperaturkompensation</label><select id="tempComp">` +
+      `<option value="aus">aus (Firmware kennt T nicht)</option><option value="modell">Thermomodell in der Firmware (Schätzung)</option>` +
+      `<option value="ntc">NTC an der Scheibe (Annahme)</option></select></div>` +
+      `<label class="chk"><input type="checkbox" id="accTerm" checked> Beschleunigungsterm m·a·v in der Schätzung</label>`;
+    det.appendChild(wrap);
+  }
+  konst.appendChild(det);
+  detHosts[g] = det;
+});
+DEF.forEach(d => buildParam(d, grpHost[d.g] || detHosts[d.g]));
+detHosts.k_fw.open = true;
+
+/* ===================== Zustand ===================== */
+let S, fw;
+const app = { mode: 'ERG' };
+const D = {};
+const KEYS = ['t', 'pSoll', 'pTrue', 'pEst', 'cad', 'cadZ', 'sCmd', 'sMag', 'sFw', 'T', 'Tfw', 'err', 'v'];
+function clearData() { KEYS.forEach(k => { D[k] = []; }); }
+
+const mFwEq = () => cfg.J / (cfg.rRoll * cfg.rRoll) + cfg.mRad;
+const mFwAssumed = () => mFwEq() * (1 + cfg.mErr / 100);
+const kOf = s => cfg.kRef * Math.exp(-(s - 1) / cfg.s0);
+const fTemp = (T, a) => 1 / (1 + a * (T - 20));
+const sat = v => 1 / (1 + (v / cfg.vk) * (v / cfg.vk));
+/* wahre Bremskraft */
+const FbTrue = (s, v, T) => kOf(s) * fTemp(T, cfg.alpha) * v * sat(v);
+/* Kennlinie, wie sie bei der Kalibrierung aufgenommen wurde (bei Tcal, mit Kalibrierfehler) */
+const FbCal = (s, v) => (1 + cfg.calErr / 100) * kOf(s) * fTemp(cfg.Tcal, cfg.alpha) * v * sat(v);
+function fTcomp() {
+  if (cfg.tempComp === 'aus') return 1;
+  return fTemp(fw.Tfw, cfg.alphaFw) / fTemp(cfg.Tcal, cfg.alphaFw);
+}
+/* Inverse der Firmware-Kennlinie: welcher Spalt liefert Bremskraft F bei v */
+function gapForForce(F, v) {
+  if (v < 0.3) return Infinity;
+  const k = F / ((1 + cfg.calErr / 100) * fTemp(cfg.Tcal, cfg.alpha) * fTcomp() * v * sat(v));
+  if (!(k > 0)) return Infinity;
+  return 1 - cfg.s0 * Math.log(k / cfg.kRef);
+}
+const sLimLo = () => Math.max(cfg.sMinMech, cfg.sMinFw);
+const sLimHi = () => cfg.sMaxMech;
+const vPerRpm = () => (cfg.zKb / cfg.zRz) * cfg.U / 60;
+
+function reset() {
+  const v0 = cfg.riderMode === 'kadenz' ? cfg.cadTarget * vPerRpm() : 8;
+  S = {
+    t: 0, v: v0, theta: 0, rI: 0, T: cfg.Tamb, Ptrue: 0, PtrueF: 0, Pb: 0, cad: 0,
+    servoQ: [], servoTgt: 0, sServo: 0, sMag: 0, rollAng: 0,
+    ble: true, bleLostAt: 0, riderOff: false, spinV: null, coupled: true, acc: 0,
+  };
+  fw = {
+    mode: app.mode, erg: cfg.erg, grade: cfg.grade, gapMan: cfg.gapMan,
+    sim: { m: cfg.mRider + cfg.mBike, CwA: cfg.CwA, Crr: cfg.Crr, wind: cfg.wind },
+    vf: v0, af: 0, sCmd: 0, sFw: 0, Tfw: cfg.Tcal, PbEst: 0, Pctrl: 0, PestDisp: 0,
+    I: 0, target: NaN, bleFail: false, tempFail: false, spin: null, sat: false, lastSatLog: -99,
+    nextTick: 0, warned: false,
+  };
+  // Start-Spalt aus der Vorsteuerung, damit es nicht mit einem Sprung beginnt
+  let s0 = clamp(gapForForce(cfg.erg / v0 - cfg.FrollFw, v0), sLimLo(), sLimHi());
+  if (app.mode === 'FEST') s0 = clamp(cfg.gapMan, sLimLo(), sLimHi());
+  if (!Number.isFinite(s0)) s0 = sLimHi();
+  S.servoTgt = S.sServo = S.sMag = fw.sCmd = fw.sFw = s0;
+  // Fahrer im Gleichgewicht starten
+  S.rI = FbTrue(s0, v0, S.T) + cfg.Froll;
+  const p0 = (S.rI) * v0;
+  S.PtrueF = p0; fw.PestDisp = p0; fw.Pctrl = p0;
+  clearData();
+  $('log').innerHTML = '';
+  WO.run = false; WO.t = 0; WO.idx = -1; updateWoBtn();
+  updateBleBtn(); updateSpinBtn();
+  log('Simulation gestartet. Alle Werte (P) bzw. Schätzung.');
+}
+
+/* ===================== Physik ===================== */
+function physStep(dt) {
+  const i = cfg.zKb / cfg.zRz, rw = cfg.U / (2 * Math.PI), vpr = vPerRpm();
+  const cadWheel = S.v / vpr;
+  let mode = cfg.riderMode, cadT = cfg.cadTarget, Fm = 0, coupled = true;
+  if (S.spinV != null) { mode = 'kadenz'; cadT = Math.min(140, S.spinV / vpr); }
+  if (S.riderOff) { Fm = 0; coupled = false; }
+  else if (mode === 'leistung') Fm = Math.min(cfg.pRider / Math.max(S.v, 0.5), cfg.fMax);
+  else if (mode === 'kraft') Fm = Math.min(cfg.fPedal * cfg.lCrank / (i * rw), cfg.fMax);
+  else {
+    const vT = cadT * vpr, e = vT - S.v;
+    const Flim = Math.min(cfg.fMax, cfg.pMax / Math.max(S.v, 0.5));
+    S.rI = clamp(S.rI + cfg.rKi * e * dt, 0, Flim);
+    Fm = clamp(cfg.rKp * e + S.rI, 0, Flim);
+  }
+  if (Fm <= 0) { Fm = 0; coupled = false; }
+  if (coupled) Fm *= 1 + cfg.ripple * Math.cos(2 * S.theta);
+  const Fb = FbTrue(S.sMag, S.v, S.T);
+  const Fr = S.v > 0.05 ? cfg.Froll : Math.min(cfg.Froll, Fm);
+  const m = mFwEq() + (coupled ? cfg.mBein : 0);
+  let a = (Fm - Fb - Fr) / m;
+  let vn = S.v + a * dt;
+  if (vn < 0) { vn = 0; a = -S.v / dt; }
+  S.v = vn;
+  S.theta += 2 * Math.PI * (coupled ? cadWheel : 0) / 60 * dt;
+  S.rollAng += S.v / cfg.rRoll * dt;
+  // Leistung an der Kurbel: Muskelkraft minus der Anteil, der die eigenen Beine beschleunigt
+  const Fc = coupled ? Fm - cfg.mBein * a : 0;
+  S.Ptrue = Fc * S.v;
+  S.PtrueF += (S.Ptrue - S.PtrueF) * dt / (cfg.tauDisp + dt);
+  S.Pb = Fb * S.v;
+  S.T += (S.Pb - (cfg.G0 + cfg.G1 * S.v) * (S.T - cfg.Tamb)) / cfg.Cth * dt;
+  S.coupled = coupled;
+  S.cad = coupled ? cadWheel : (S.riderOff ? 0 : (mode === 'kadenz' ? Math.min(cadT, cadWheel) : 0));
+  // Servo: Totzeit, Stellgeschwindigkeit, Spiel
+  const q = S.servoQ, tDel = S.t - cfg.tDead;
+  while (q.length >= 2 && q[1].t <= tDel) q.shift();
+  if (q.length && q[0].t <= tDel) S.servoTgt = q[0].s;
+  const st = cfg.servoRate * dt;
+  S.sServo = clamp(S.sServo + clamp(S.servoTgt - S.sServo, -st, st), cfg.sMinMech, cfg.sMaxMech);
+  const hb = cfg.backlash / 2;
+  if (S.sServo - S.sMag > hb) S.sMag = S.sServo - hb;
+  else if (S.sServo - S.sMag < -hb) S.sMag = S.sServo + hb;
+  S.sMag = clamp(S.sMag, cfg.sMinMech, cfg.sMaxMech);
+  S.t += dt;
+}
+
+/* ===================== Firmware ===================== */
+function fwTick(dt) {
+  // 1. BLE: Werte der App kommen nur bei Verbindung an
+  if (S.ble) {
+    fw.mode = app.mode; fw.erg = cfg.erg; fw.grade = cfg.grade; fw.gapMan = cfg.gapMan;
+    fw.sim = { m: cfg.mRider + cfg.mBike, CwA: cfg.CwA, Crr: cfg.Crr, wind: cfg.wind };
+    if (fw.bleFail) { fw.bleFail = false; fw.I = 0; log('BLE wieder verbunden, Regelung läuft mit Rampe wieder an.'); }
+  } else if (!fw.bleFail && S.t - S.bleLostAt >= cfg.tSup) {
+    fw.bleFail = true; fw.I = 0;
+    log(`Abbruch nach ${fmt(cfg.tSup, 1)} s erkannt: Failsafe, Spalt fährt auf ${fmt(cfg.sFs, 1)} mm.`);
+  }
+  // 2. Messung
+  const vm = Math.max(0, S.v * (1 + cfg.vNoise / 100 * randn()));
+  const vPrev = fw.vf;
+  fw.vf += (vm - fw.vf) * dt / (cfg.vTau + dt);
+  fw.af += ((fw.vf - vPrev) / dt - fw.af) * dt / (cfg.aTau + dt);
+  // 3. Annahme über den Servo: kennt Stellrate, nicht Totzeit und Spiel
+  const sr = cfg.servoRate * dt;
+  fw.sFw += clamp(fw.sCmd - fw.sFw, -sr, sr);
+  // 4. Temperatur aus Sicht der Firmware
+  if (cfg.tempComp === 'ntc') fw.Tfw += (S.T - fw.Tfw) * dt / (cfg.tauNtc + dt);
+  else if (cfg.tempComp === 'modell') {
+    const G = (cfg.G0 + cfg.G1 * fw.vf) * (1 + cfg.thErr / 100);
+    fw.Tfw += (fw.PbEst - G * (fw.Tfw - cfg.Tamb)) / cfg.Cth * dt;
+  } else fw.Tfw = cfg.Tcal;
+  // 5. Leistungsschätzung
+  const FbE = FbCal(fw.sFw, fw.vf) * fTcomp();
+  fw.PbEst = FbE * fw.vf;
+  const mA = mFwAssumed();
+  fw.Pctrl = (FbE + cfg.FrollFw) * fw.vf + (cfg.accTerm ? mA * fw.af * fw.vf : 0);
+  fw.PestDisp += (fw.Pctrl - fw.PestDisp) * dt / (cfg.tauDisp + dt);
+  // 6. Übertemperatur (nur wenn die Firmware T kennt)
+  if (cfg.tempComp !== 'aus') {
+    if (!fw.tempFail && fw.Tfw >= cfg.Tkrit) { fw.tempFail = true; fw.I = 0; log(`Firmware: Scheibe ${fmt(fw.Tfw)} °C über Abregelschwelle, Widerstand runter.`); }
+    else if (fw.tempFail && fw.Tfw < cfg.Tkrit - 10) { fw.tempFail = false; log('Firmware: Scheibe abgekühlt, Regelung wieder aktiv.'); }
+  } else if (fw.tempFail) fw.tempFail = false;
+  // 7. Stellgröße
+  const sLo = sLimLo(), sHi = sLimHi();
+  let target = NaN, u = fw.sCmd, rate = cfg.fwRate, satState = false;
+  if (fw.spin) { u = spindownTick(dt); }
+  else if (fw.bleFail || fw.tempFail) { u = clamp(cfg.sFs, sLo, sHi); rate = cfg.fsRate; fw.I = 0; }
+  else if (fw.mode === 'FEST') { u = clamp(fw.gapMan, sLo, sHi); fw.I = 0; }
+  else {
+    if (fw.mode === 'ERG') target = fw.erg;
+    else {
+      const th = Math.atan(fw.grade / 100), sp = fw.sim, vr = fw.vf + sp.wind;
+      let F = sp.m * cfg.g * (Math.sin(th) + sp.Crr * Math.cos(th)) + 0.5 * cfg.rho * sp.CwA * vr * Math.abs(vr);
+      if (cfg.inertiaComp) F += (sp.m - mA) * Math.max(0, fw.af);
+      target = Math.max(0, F * fw.vf);
+    }
+    if (fw.vf < 1.0) { u = sHi; fw.I = 0; }
+    else {
+      let sff = (sLo + sHi) / 2;
+      if (cfg.ff) { sff = gapForForce(target / fw.vf - cfg.FrollFw, fw.vf); if (!Number.isFinite(sff)) sff = sHi; }
+      sff = clamp(sff, sLo, sHi);
+      const e = target - fw.Pctrl;
+      const Inew = fw.I + cfg.Ki * e * dt;
+      const uRaw = sff - (cfg.Kp * e + Inew);
+      u = clamp(uRaw, sLo, sHi);
+      const lo = uRaw < sLo, hi = uRaw > sHi;
+      satState = lo ? 'lo' : hi ? 'hi' : false;
+      if (cfg.aw) {
+        if (!((lo && e > 0) || (hi && e < 0))) fw.I = Inew;
+        fw.I = clamp(fw.I, -(sHi - sLo), sHi - sLo);
+      } else fw.I = Inew;
+    }
+  }
+  if (satState === 'lo' && fw.sat !== 'lo' && S.t - fw.lastSatLog > 8) {
+    fw.lastSatLog = S.t;
+    log('Bremse am Anschlag: Ziel bei dieser Geschwindigkeit nicht erreichbar (kleinerer Gang = noch weniger Bremskraft).');
+  }
+  fw.sat = satState;
+  fw.sCmd += clamp(u - fw.sCmd, -rate * dt, rate * dt);
+  S.servoQ.push({ t: S.t, s: fw.sCmd });
+  fw.target = target;
+  // Warnung (wahre Temperatur, nur in der Simulation sichtbar)
+  if (!fw.warned && S.T >= cfg.Twarn) { fw.warned = true; log(`Scheibe über Warnschwelle ${fmt(cfg.Twarn)} °C (Schätzmodell).`); }
+  else if (fw.warned && S.T < cfg.Twarn - 5) fw.warned = false;
+}
+
+/* Spindown: Rollreibung aus dem Auslaufen bestimmen */
+function startSpin() {
+  if (fw.spin) { endSpin('Spindown abgebrochen.'); return; }
+  fw.spin = { phase: 'anfahren', t: 0, hold: 0, started: false };
+  log(`Spindown: auf über ${fmt((cfg.vHi + 1) * 3.6)} km/h beschleunigen, Spalt fährt ganz auf.`);
+  updateSpinBtn();
+}
+function endSpin(msg) {
+  fw.spin = null; S.riderOff = false; S.spinV = null; fw.I = 0;
+  if (msg) log(msg);
+  updateSpinBtn();
+}
+function spindownTick(dt) {
+  const sp = fw.spin, sHi = sLimHi();
+  sp.t += dt;
+  if (sp.t > 120) { endSpin('Spindown abgebrochen: Zeitüberschreitung.'); return sHi; }
+  if (sp.phase === 'anfahren') {
+    S.spinV = cfg.vHi + 1.5;
+    if (fw.vf >= cfg.vHi + 1.0 && Math.abs(fw.sFw - sHi) < 0.05) {
+      sp.hold += dt;
+      if (sp.hold > 1.0) { sp.phase = 'auslaufen'; S.spinV = null; S.riderOff = true; log('Spindown: jetzt nicht mehr treten, Rad läuft aus.'); }
+    } else sp.hold = 0;
+  } else {
+    if (!sp.started) {
+      if (fw.vf <= cfg.vHi) { sp.started = true; sp.t1 = S.t; sp.v1 = fw.vf; sp.intF = 0; }
+    } else {
+      sp.intF += FbCal(fw.sFw, fw.vf) * fTcomp() * dt;
+      if (fw.vf <= cfg.vLo) {
+        const T = S.t - sp.t1;
+        const F = (mFwAssumed() * (sp.v1 - fw.vf) - sp.intF) / T;
+        if (F >= 0 && F < 40) {
+          const old = cfg.FrollFw;
+          setParam('FrollFw', Math.round(F * 100) / 100);
+          endSpin(`Spindown fertig: ${fmt(sp.v1 * 3.6)} auf ${fmt(fw.vf * 3.6)} km/h in ${fmt(T, 1)} s. Rollreibung ${fmt(F, 2)} N (vorher ${fmt(old, 2)} N, wahr ${fmt(cfg.Froll, 2)} N).`);
+        } else endSpin(`Spindown unplausibel (${fmt(F, 1)} N), alter Wert bleibt.`);
+      }
+    }
+  }
+  return sHi;
+}
+
+/* ===================== Workout ===================== */
+const PRESETS = {
+  kadenz: `# Kadenzwechsel bei gleicher Zielleistung
+# Dauer[s] Modus Wert [Kadenz]
+30 ERG 200 90
+25 ERG 200 110
+25 ERG 200 70
+25 ERG 200 90
+30 ERG 300 90
+30 ERG 150 90
+30 ERG 150 100`,
+  intervalle: `# 4 x 1 min hart, 1 min locker
+120 ERG 150 85
+60 ERG 320 95
+60 ERG 140 85
+60 ERG 320 95
+60 ERG 140 85
+60 ERG 320 95
+60 ERG 140 85
+60 ERG 320 95
+120 ERG 130 85`,
+  rampe: `# Rampe in 25-W-Stufen
+20 ERG 100 90
+20 ERG 125 90
+20 ERG 150 90
+20 ERG 175 90
+20 ERG 200 90
+20 ERG 225 90
+20 ERG 250 90
+20 ERG 275 90
+20 ERG 300 90
+20 ERG 325 90
+20 ERG 350 90
+20 ERG 375 90
+20 ERG 400 90`,
+  huegel: `# Hügel im SIM-Modus
+60 SIM 0 90
+60 SIM 3 85
+60 SIM 6 75
+40 SIM 8 70
+60 SIM -3 95
+60 SIM 1 90`,
+  hitze: `# Dauerlast: Scheibe wird warm, Schätzfehler wächst
+60 ERG 150 90
+1200 ERG 280 90
+300 ERG 120 85`,
+};
+const WO = { segs: [], run: false, t: 0, idx: -1 };
+function parseWorkout(txt) {
+  const segs = [], errs = [];
+  txt.split('\n').forEach((line, n) => {
+    const l = line.replace(/#.*/, '').trim();
+    if (!l) return;
+    const p = l.split(/[\s;,]+/);
+    const d = parseFloat(p[0]), m = (p[1] || '').toUpperCase(), val = parseFloat(p[2]), cad = p[3] != null ? parseFloat(p[3]) : NaN;
+    if (!(d > 0) || !['ERG', 'SIM', 'FEST'].includes(m) || !Number.isFinite(val)) { errs.push(n + 1); return; }
+    segs.push({ d, m, val, cad });
+  });
+  return { segs, errs };
+}
+function loadWorkout() {
+  const r = parseWorkout($('woText').value);
+  WO.segs = r.segs;
+  $('woInfo').innerHTML = r.errs.length ? `<span class="err">Zeile ${r.errs.join(', ')} nicht lesbar, übersprungen.</span>` : woSummary();
+  return r.segs.length > 0;
+}
+function woSummary() {
+  const tot = WO.segs.reduce((a, s) => a + s.d, 0);
+  return `${WO.segs.length} Abschnitte, ${fmtT(tot)} min.`;
+}
+function applySeg(sg) {
+  setMode(sg.m);
+  const key = sg.m === 'ERG' ? 'erg' : sg.m === 'SIM' ? 'grade' : 'gapMan';
+  const d = ui[key].d;
+  setParam(key, clamp(sg.val, d.min, d.max));
+  if (Number.isFinite(sg.cad) && cfg.followCad) setParam('cadTarget', clamp(sg.cad, 30, 130));
+}
+function woTick(dt) {
+  if (!WO.run) return;
+  WO.t += dt;
+  let acc = 0, idx = -1;
+  for (let i = 0; i < WO.segs.length; i++) { if (WO.t < acc + WO.segs[i].d) { idx = i; break; } acc += WO.segs[i].d; }
+  if (idx < 0) { WO.run = false; log('Workout fertig.'); updateWoBtn(); return; }
+  if (idx !== WO.idx) {
+    WO.idx = idx; applySeg(WO.segs[idx]);
+    const sg = WO.segs[idx];
+    log(`Workout Abschnitt ${idx + 1}: ${sg.m} ${fmt(sg.val, sg.m === 'ERG' ? 0 : 1)}${sg.m === 'ERG' ? ' W' : sg.m === 'SIM' ? ' %' : ' mm'}${Number.isFinite(sg.cad) ? ', ' + sg.cad + ' U/min' : ''}`);
+  }
+}
+function updateWoBtn() { const b = $('woRun'); if (b) b.textContent = WO.run ? 'Workout stoppen' : 'Workout starten'; }
+
+/* ===================== Aufzeichnung ===================== */
+function record() {
+  const err = S.PtrueF > 20 ? (fw.PestDisp - S.PtrueF) / S.PtrueF * 100 : NaN;
+  const kad = (cfg.riderMode === 'kadenz' && !S.riderOff) ? (S.spinV != null ? S.spinV / vPerRpm() : cfg.cadTarget) : NaN;
+  const row = {
+    t: S.t, pSoll: fw.target, pTrue: S.PtrueF, pEst: fw.PestDisp, cad: S.cad, cadZ: kad,
+    sCmd: fw.sCmd, sMag: S.sMag, sFw: fw.sFw, T: S.T, Tfw: cfg.tempComp === 'aus' ? NaN : fw.Tfw, err, v: S.v * 3.6,
+  };
+  KEYS.forEach(k => D[k].push(row[k]));
+  if (D.t.length > 50 && D.t[0] < S.t - 640) {
+    let n = 0; while (n < D.t.length && D.t[n] < S.t - 610) n++;
+    KEYS.forEach(k => D[k].splice(0, n));
+  }
+}
+
+/* ===================== Ereignisse ===================== */
+function log(msg) {
+  const li = document.createElement('li');
+  li.innerHTML = `<b>${fmtT(S ? S.t : 0)}</b>`;
+  li.appendChild(document.createTextNode(msg));
+  const ol = $('log');
+  ol.insertBefore(li, ol.firstChild);
+  while (ol.children.length > 40) ol.removeChild(ol.lastChild);
+}
+
+/* ===================== Farben ===================== */
+let COL = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  ['surface', 'ink', 'ink2', 'muted', 'grid', 'axis', 's1', 's2', 's3', 'fam', 'warn', 'crit', 'good', 'band', 'border'].forEach(k => { COL[k] = cs.getPropertyValue('--' + k).trim(); });
+}
+
+/* ===================== Plots ===================== */
+function niceStep(range, n) {
+  const raw = range / Math.max(1, n), p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+}
+function setupCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = parseInt(cv.getAttribute('height'), 10);
+  if (cv._w !== w || cv._dpr !== dpr) {
+    cv._w = w; cv._dpr = dpr;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    cv.style.height = h + 'px';
+  }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h };
+}
+const PLOTS = {
+  power: { series: [
+    { k: 'pSoll', c: 'muted', dash: true, l: 'Soll' },
+    { k: 'pTrue', c: 's1', l: 'Wahr' },
+    { k: 'pEst', c: 's2', l: 'Geschätzt' }], unit: 'W', y0: 0, minSpan: 100, dec: 0 },
+  cad: { series: [
+    { k: 'cadZ', c: 'muted', dash: true, l: 'Ziel' },
+    { k: 'cad', c: 's1', l: 'Kadenz' }], unit: 'U/min', y0: 0, minSpan: 40, dec: 0 },
+  gap: { series: [
+    { k: 'sCmd', c: 'muted', dash: true, l: 'Kommando' },
+    { k: 'sMag', c: 's1', l: 'Ist (Magnet)' },
+    { k: 'sFw', c: 's2', l: 'Annahme Firmware' }], unit: 'mm', y0: 0, minSpan: 4, dec: 2 },
+  temp: { series: [
+    { k: 'T', c: 's1', l: 'Scheibe, wahr' },
+    { k: 'Tfw', c: 's2', l: 'Firmware' }], unit: '°C', minSpan: 20, dec: 1,
+    hl: () => [{ y: cfg.Twarn, c: 'warn', l: 'Warnung ' + fmt(cfg.Twarn) + ' °C' }, { y: cfg.Tkrit, c: 'crit', l: 'Abregeln ' + fmt(cfg.Tkrit) + ' °C' }] },
+  err: { series: [{ k: 'err', c: 's1', l: 'Fehler' }], unit: '%', sym: true, minSpan: 20, dec: 1, band: 5 },
+};
+let hover = null; // {plot, t}
+Object.keys(PLOTS).forEach(name => {
+  const P = PLOTS[name];
+  P.cv = $('cv-' + name);
+  P.tip = P.cv.parentElement.querySelector('.tip');
+  const lg = $('lg-' + name);
+  P.vals = P.series.map(s => {
+    const sp = document.createElement('span');
+    sp.innerHTML = `<i class="${s.dash ? 'dash' : ''}" style="border-color:var(--${s.c})"></i>${s.l} <b>0</b>`;
+    lg.appendChild(sp);
+    return sp.querySelector('b');
+  });
+  const mv = ev => {
+    const r = P.cv.getBoundingClientRect();
+    const x = ev.clientX - r.left;
+    if (!P.geo) return;
+    const g = P.geo;
+    if (x < g.l || x > g.l + g.pw) { hover = null; return; }
+    hover = { plot: name, t: g.t0 + (x - g.l) / g.pw * (g.t1 - g.t0), x, y: ev.clientY - r.top };
+  };
+  P.cv.addEventListener('pointermove', mv);
+  P.cv.addEventListener('pointerdown', mv);
+  P.cv.addEventListener('pointerleave', () => { hover = null; });
+});
+function lowerBound(arr, x) { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < x) lo = m + 1; else hi = m; } return lo; }
+
+function drawPlot(name, t0, t1) {
+  const P = PLOTS[name];
+  const { ctx, w, h } = setupCanvas(P.cv);
+  ctx.clearRect(0, 0, w, h);
+  const l = 40, r = 8, top = 6, b = 18, pw = w - l - r, ph = h - top - b;
+  P.geo = { l, pw, t0, t1 };
+  const i0 = Math.max(0, lowerBound(D.t, t0) - 1), i1 = D.t.length;
+  // y-Bereich
+  let mn = Infinity, mx = -Infinity;
+  P.series.forEach(s => { const a = D[s.k]; for (let i = i0; i < i1; i++) { const y = a[i]; if (Number.isFinite(y)) { if (y < mn) mn = y; if (y > mx) mx = y; } } });
+  if (P.hl) P.hl().forEach(hh => { mn = Math.min(mn, hh.y); mx = Math.max(mx, hh.y); });
+  if (!Number.isFinite(mn)) { mn = 0; mx = P.minSpan; }
+  if (P.y0 != null) mn = Math.min(mn, P.y0);
+  if (P.sym) { const m = Math.max(Math.abs(mn), Math.abs(mx), P.minSpan / 2); mn = -m; mx = m; }
+  if (mx - mn < P.minSpan) { const c = (mx + mn) / 2; mn = c - P.minSpan / 2; mx = c + P.minSpan / 2; if (P.y0 != null && mn < P.y0) { mx += P.y0 - mn; mn = P.y0; } }
+  const step = niceStep(mx - mn, Math.max(2, Math.floor(ph / 32)));
+  mn = Math.floor(mn / step) * step; mx = Math.ceil(mx / step) * step;
+  if (P.y0 != null) mn = Math.max(mn, P.y0);
+  const X = t => l + (t - t0) / (t1 - t0) * pw;
+  const Y = y => top + ph - (y - mn) / (mx - mn) * ph;
+  P.geo.Y = Y;
+  // Band
+  if (P.band) { ctx.fillStyle = COL.band; ctx.fillRect(l, Y(P.band), pw, Y(-P.band) - Y(P.band)); }
+  // Gitter + y-Achse
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+  ctx.lineWidth = 1;
+  for (let y = mn; y <= mx + step * 0.01; y += step) {
+    const py = Math.round(Y(y)) + 0.5;
+    ctx.strokeStyle = Math.abs(y) < step * 0.01 && P.sym ? COL.axis : COL.grid;
+    ctx.beginPath(); ctx.moveTo(l, py); ctx.lineTo(l + pw, py); ctx.stroke();
+    ctx.fillStyle = COL.muted;
+    ctx.fillText(fmt(y, step < 1 ? decimals(+step.toPrecision(2)) : 0), l - 5, py);
+  }
+  // x-Achse
+  const tsteps = [5, 10, 15, 20, 30, 60, 120, 300, 600];
+  const nT = Math.max(2, Math.floor(pw / 70));
+  let ts = tsteps.find(s => (t1 - t0) / s <= nT) || 600;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let t = Math.ceil(t0 / ts) * ts; t <= t1; t += ts) {
+    const px = Math.round(X(t)) + 0.5;
+    ctx.strokeStyle = COL.grid; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, top + ph); ctx.stroke();
+    ctx.fillStyle = COL.muted; ctx.fillText(fmtT(t), px, top + ph + 4);
+  }
+  ctx.strokeStyle = COL.axis; ctx.beginPath(); ctx.moveTo(l, top + ph + 0.5); ctx.lineTo(l + pw, top + ph + 0.5); ctx.stroke();
+  // Schwellen
+  if (P.hl) P.hl().forEach(hh => {
+    if (hh.y < mn || hh.y > mx) return;
+    const py = Math.round(Y(hh.y)) + 0.5;
+    ctx.strokeStyle = COL[hh.c]; ctx.setLineDash([2, 3]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(l, py); ctx.lineTo(l + pw, py); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = COL.ink2; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText(hh.l, l + 4, py - 2);
+  });
+  // Linien
+  ctx.save();
+  ctx.beginPath(); ctx.rect(l, top - 2, pw, ph + 4); ctx.clip();
+  const stride = Math.max(1, Math.floor((i1 - i0) / (pw * 1.5)));
+  P.series.forEach(s => {
+    const a = D[s.k];
+    ctx.strokeStyle = COL[s.c]; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    ctx.setLineDash(s.dash ? [5, 4] : []);
+    ctx.beginPath();
+    let pen = false;
+    for (let i = i0; i < i1; i += stride) {
+      const y = a[i];
+      if (!Number.isFinite(y)) { pen = false; continue; }
+      const px = X(D.t[i]), py = Y(clamp(y, mn - (mx - mn), mx + (mx - mn)));
+      if (pen) ctx.lineTo(px, py); else { ctx.moveTo(px, py); pen = true; }
+    }
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  ctx.restore();
+  // Fadenkreuz
+  if (hover && hover.t >= t0 && hover.t <= t1 && D.t.length) {
+    const j = clamp(lowerBound(D.t, hover.t), 0, D.t.length - 1);
+    const px = Math.round(X(D.t[j])) + 0.5;
+    ctx.strokeStyle = COL.ink2; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, top + ph); ctx.stroke();
+    P.series.forEach(s => {
+      const y = D[s.k][j]; if (!Number.isFinite(y) || y < mn || y > mx) return;
+      ctx.fillStyle = COL[s.c]; ctx.strokeStyle = COL.surface; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(px, Y(y), 4, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    });
+    if (hover.plot === name) {
+      P.tip.innerHTML = `<div class="r"><em>Zeit</em><b>${fmtT(D.t[j])}</b></div>` +
+        P.series.map(s => `<div class="r"><em>${s.l}</em><b>${fmt(D[s.k][j], P.dec)} ${P.unit}</b></div>`).join('');
+      P.tip.style.display = 'block';
+      const tw = P.tip.offsetWidth, cw = P.cv.parentElement.clientWidth;
+      let tx = hover.x + 16; if (tx + tw > cw - 4) tx = hover.x - tw - 12;
+      P.tip.style.left = Math.max(4, tx) + 'px';
+      P.tip.style.top = (P.cv.offsetTop + 8) + 'px';
+    } else P.tip.style.display = 'none';
+  } else P.tip.style.display = 'none';
+}
+
+/* Kennlinienfamilie */
+const FAM = [1.5, 2, 3, 4, 6, 8, 11, 15];
+(function buildKlLegend() {
+  $('lg-kl').innerHTML =
+    `<span><i style="border-color:var(--fam)"></i>kalibriert je Spalt</span>` +
+    `<span><i style="border-color:var(--s1)"></i>wahr jetzt</span>` +
+    `<span><i class="dash" style="border-color:var(--s2)"></i>Firmware glaubt</span>`;
+})();
+function drawKl() {
+  const cv = $('cv-kl');
+  const { ctx, w, h } = setupCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const l = 40, r = 40, top = 8, b = 30, pw = w - l - r, ph = h - top - b;
+  const vMax = 16;
+  const Pcal = (s, v) => (FbCal(s, v) + cfg.FrollFw) * v;
+  let yMax = Math.min(1500, Math.max(300, Pcal(FAM[0], vMax)));
+  const step = niceStep(yMax, 5); yMax = Math.ceil(yMax / step) * step;
+  const X = v => l + v / vMax * pw, Y = p => top + ph - p / yMax * ph;
+  ctx.font = '11px system-ui, sans-serif'; ctx.lineWidth = 1;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let p = 0; p <= yMax + 0.1; p += step) {
+    const py = Math.round(Y(p)) + 0.5;
+    ctx.strokeStyle = p === 0 ? COL.axis : COL.grid; ctx.beginPath(); ctx.moveTo(l, py); ctx.lineTo(l + pw, py); ctx.stroke();
+    ctx.fillStyle = COL.muted; ctx.fillText(fmt(p), l - 5, py);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let kmh = 0; kmh <= vMax * 3.6; kmh += 10) {
+    const px = Math.round(X(kmh / 3.6)) + 0.5;
+    ctx.strokeStyle = COL.grid; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, top + ph); ctx.stroke();
+    ctx.fillStyle = COL.muted; ctx.fillText(kmh, px, top + ph + 4);
+  }
+  ctx.fillStyle = COL.ink2; ctx.fillText('km/h', l + pw / 2, top + ph + 16);
+  ctx.save(); ctx.translate(10, top + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle'; ctx.fillText('W', 0, 0); ctx.restore();
+  const curve = (fn, col, dash, lw) => {
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash ? [5, 4] : []);
+    ctx.beginPath();
+    for (let i = 0; i <= 80; i++) { const v = vMax * i / 80; const p = fn(v); const py = Y(Math.min(p, yMax * 1.05)); if (i) ctx.lineTo(X(v), py); else ctx.moveTo(X(v), py); }
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  ctx.save(); ctx.beginPath(); ctx.rect(l, top - 2, pw + 2, ph + 4); ctx.clip();
+  FAM.forEach(s => curve(v => Pcal(s, v), COL.fam, false, 1.2));
+  curve(v => (FbTrue(S.sMag, v, S.T) + cfg.Froll) * v, COL.s1, false, 2);
+  curve(v => (FbCal(fw.sFw, v) * fTcomp() + cfg.FrollFw) * v, COL.s2, true, 2);
+  ctx.restore();
+  // Beschriftung der Familie am rechten Rand
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = COL.muted;
+  let lastY = -99;
+  FAM.slice().reverse().forEach(s => {
+    const p = Pcal(s, vMax); if (p > yMax) return;
+    let py = Y(p); if (py > lastY - 11 && lastY > 0) py = lastY - 11; if (py < top) return;
+    ctx.fillText(fmt(s, s % 1 ? 1 : 0) + ' mm', l + pw + 4, py); lastY = py;
+  });
+  // Arbeitspunkte
+  const dot = (v, p, col) => { if (p > yMax) return; ctx.fillStyle = col; ctx.strokeStyle = COL.surface; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(Math.min(v, vMax)), Y(p), 5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); };
+  dot(S.v, (FbTrue(S.sMag, S.v, S.T) + cfg.Froll) * S.v, COL.s1);
+  dot(fw.vf, (FbCal(fw.sFw, fw.vf) * fTcomp() + cfg.FrollFw) * fw.vf, COL.s2);
+}
+
+/* Bremse schematisch */
+function drawMech() {
+  const cv = $('cv-mech');
+  const { ctx, w, h } = setupCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const cx = w * 0.42, cy = h * 0.5, R = Math.min(w * 0.3, h * 0.38);
+  // Scheibe mit Temperaturfarbe
+  const tt = clamp((S.T - cfg.Tamb) / Math.max(1, cfg.Tkrit - cfg.Tamb), 0, 1.2);
+  const mix = (a, b2, f) => Math.round(a + (b2 - a) * f);
+  ctx.fillStyle = `rgb(${mix(150, 220, Math.min(tt, 1))},${mix(155, 70, Math.min(tt, 1))},${mix(165, 40, Math.min(tt, 1))})`;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.fill();
+  ctx.strokeStyle = COL.ink2; ctx.lineWidth = 1.5; ctx.stroke();
+  // drehende Markierungen
+  const ang = (S.rollAng * 0.05) % (2 * Math.PI);
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 3;
+  for (let k = 0; k < 6; k++) {
+    const a = ang + k * Math.PI / 3;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * R * 0.25, cy + Math.sin(a) * R * 0.25); ctx.lineTo(cx + Math.cos(a) * R * 0.85, cy + Math.sin(a) * R * 0.85); ctx.stroke();
+  }
+  ctx.fillStyle = COL.ink2; ctx.beginPath(); ctx.arc(cx, cy, R * 0.12, 0, 2 * Math.PI); ctx.fill();
+  // Magnet (rechts der Scheibe), Abstand skaliert
+  const scale = Math.max(2, (w - cx - R - 40) / (cfg.sMaxMech + 2));
+  const mx = cx + R + S.sMag * scale;
+  ctx.fillStyle = COL.crit; ctx.fillRect(mx, cy - R * 0.45, 10, R * 0.9);
+  ctx.fillStyle = COL.s1; ctx.fillRect(mx + 10, cy - R * 0.45, 6, R * 0.9);
+  // Servoarm
+  ctx.strokeStyle = COL.ink2; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(mx + 16, cy); ctx.lineTo(w - 12, cy + R * 0.7); ctx.stroke();
+  ctx.fillStyle = COL.ink2; ctx.beginPath(); ctx.arc(w - 12, cy + R * 0.7, 5, 0, 2 * Math.PI); ctx.fill();
+  // Beschriftung
+  ctx.font = '12px system-ui, sans-serif'; ctx.fillStyle = COL.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(`Spalt ${fmt(S.sMag, 1)} mm`, 8, 6);
+  ctx.fillText(`${fmt(S.T)} °C`, 8, 22);
+  ctx.fillStyle = COL.ink2;
+  ctx.fillText(`Bremse ${fmt(S.Pb)} W`, 8, h - 34);
+  ctx.fillText(`k ${fmt(kOf(S.sMag) * fTemp(S.T, cfg.alpha), 2)} W/(m/s)²`, 8, h - 18);
+}
+
+/* Workout-Leiste */
+function drawWo() {
+  const cv = $('cv-wo');
+  const { ctx, w, h } = setupCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const segs = WO.segs; if (!segs.length) return;
+  const tot = segs.reduce((a, s) => a + s.d, 0);
+  let x = 0;
+  const maxE = Math.max(400, ...segs.filter(s => s.m === 'ERG').map(s => s.val));
+  segs.forEach((s, i) => {
+    const sw = s.d / tot * w;
+    let f;
+    if (s.m === 'ERG') f = s.val / maxE; else if (s.m === 'SIM') f = clamp((s.val + 10) / 30, 0.05, 1); else f = clamp(1 - s.val / cfg.sMaxMech, 0.05, 1);
+    const bh = Math.max(4, f * (h - 6));
+    ctx.fillStyle = s.m === 'ERG' ? COL.s1 : s.m === 'SIM' ? COL.s3 : COL.s2;
+    ctx.globalAlpha = WO.run && i === WO.idx ? 1 : 0.55;
+    ctx.fillRect(x + 1, h - bh, Math.max(1, sw - 2), bh);
+    x += sw;
+  });
+  ctx.globalAlpha = 1;
+  if (WO.run || WO.t > 0) {
+    const px = clamp(WO.t / tot, 0, 1) * w;
+    ctx.strokeStyle = COL.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
+  }
+}
+
+/* ===================== Anzeige ===================== */
+function setText(id, val, unit) { const el = $(id); el.firstChild.nodeValue = val; if (el.lastChild && el.lastChild.tagName === 'SMALL') el.lastChild.textContent = unit; }
+function updateTiles() {
+  const failsafe = fw.bleFail || fw.tempFail;
+  setText('tSoll', fw.spin ? 'Spindown' : Number.isFinite(fw.target) ? fmt(fw.target) : (fw.mode === 'FEST' && !failsafe ? 'Fest' : 'aus'), Number.isFinite(fw.target) ? 'W' : '');
+  $('tSollX').textContent = failsafe ? 'Failsafe aktiv' : fw.mode === 'SIM' ? `SIM ${fmt(fw.grade, 1)} %` : fw.mode === 'ERG' ? 'ERG' : `Spalt ${fmt(fw.gapMan, 1)} mm`;
+  setText('tTrue', fmt(S.PtrueF), 'W');
+  setText('tEst', fmt(fw.PestDisp), 'W');
+  const err = S.PtrueF > 20 ? (fw.PestDisp - S.PtrueF) / S.PtrueF * 100 : NaN;
+  setText('tErr', (err > 0 ? '+' : '') + fmt(err, 1), '%');
+  $('tileErr').className = 'tile' + (Math.abs(err) > 10 ? ' crit' : Math.abs(err) > 5 ? ' warn' : '');
+  setText('tCad', fmt(S.cad), 'U/min');
+  $('tGear').textContent = `Gang ${cfg.zKb}/${cfg.zRz}, i = ${fmt(cfg.zKb / cfg.zRz, 2)}`;
+  setText('tV', fmt(S.v * 3.6, 1), 'km/h');
+  setText('tGap', fmt(S.sMag, 2), 'mm');
+  $('tGapX').textContent = fw.sat === 'lo' ? 'am Anschlag (max. Bremse)' : `Kommando ${fmt(fw.sCmd, 2)} mm`;
+  const tEl = $('tileTemp');
+  const hot = S.T >= cfg.Tkrit ? 'crit' : S.T >= cfg.Twarn ? 'warn' : '';
+  tEl.className = 'tile' + (hot ? ' ' + hot : '');
+  setText('tTemp', fmt(S.T), '°C');
+  $('tTempX').innerHTML = hot === 'crit' ? '<span class="ico crit">!</span>Kritisch, Schätzung' : hot === 'warn' ? '<span class="ico warn">!</span>Warnung, Schätzung' : 'Schätzmodell';
+  // Statuszeile
+  const pills = [];
+  pills.push(S.ble ? `<span class="pill good"><span class="ico good">✓</span>BLE verbunden</span>` : `<span class="pill crit"><span class="ico crit">!</span>BLE getrennt seit ${fmt(S.t - S.bleLostAt, 1)} s</span>`);
+  if (fw.bleFail) pills.push(`<span class="pill crit"><span class="ico crit">!</span>Failsafe: Spalt auf ${fmt(cfg.sFs, 1)} mm</span>`);
+  else if (!S.ble) pills.push(`<span class="pill warn"><span class="ico warn">!</span>Firmware hält noch das letzte Ziel</span>`);
+  if (fw.tempFail) pills.push(`<span class="pill crit"><span class="ico crit">!</span>Übertemperatur: Widerstand runter</span>`);
+  if (fw.spin) pills.push(`<span class="pill warn"><span class="ico warn">!</span>Spindown: ${fw.spin.phase === 'anfahren' ? 'beschleunigen' : 'auslaufen lassen'}</span>`);
+  if (fw.sat === 'lo') pills.push(`<span class="pill warn"><span class="ico warn">!</span>Bremse am Anschlag</span>`);
+  if (!cfg.aw && Math.abs(fw.I) > 3) pills.push(`<span class="pill warn"><span class="ico warn">!</span>Integrator aufgezogen: ${fmt(fw.I, 1)} mm</span>`);
+  pills.push(`<span class="pill">Temperaturkompensation: ${cfg.tempComp === 'aus' ? 'aus' : cfg.tempComp === 'ntc' ? 'NTC' : 'Thermomodell'}</span>`);
+  pills.push(`<span class="pill">Rollreibung Firmware ${fmt(cfg.FrollFw, 2)} N, wahr ${fmt(cfg.Froll, 2)} N</span>`);
+  $('status').innerHTML = pills.join('');
+  // Legenden-Werte
+  const last = D.t.length - 1;
+  Object.keys(PLOTS).forEach(n => { const P = PLOTS[n]; P.series.forEach((s, i) => { P.vals[i].textContent = last >= 0 ? fmt(D[s.k][last], P.dec) : 'k. A.'; }); });
+  // SIM-Info
+  const mTr = mFwEq() + cfg.mBein;
+  $('simInfo').textContent = `Trägheit: Trainer etwa ${fmt(mTr, 1)} kg (Schwungrad, Rad, Beine), Straße ${fmt(cfg.mRider + cfg.mBike)} kg. Ohne Kompensation fühlt sich Antreten leichter an als draußen.`;
+  // Aktive Mode-Karte und Fahrerparameter
+  ['ERG', 'SIM', 'FEST'].forEach(m => $('card-' + m).classList.toggle('active', app.mode === m));
+  DEF.filter(d => d.rm).forEach(d => ui[d.k].box.classList.toggle('inactive', d.rm !== cfg.riderMode));
+  if (WO.segs.length) {
+    const tot = WO.segs.reduce((a, s) => a + s.d, 0);
+    if (WO.run && WO.idx >= 0) {
+      let acc = 0; for (let i = 0; i < WO.idx; i++) acc += WO.segs[i].d;
+      const sg = WO.segs[WO.idx];
+      $('woInfo').textContent = `Abschnitt ${WO.idx + 1}/${WO.segs.length}: ${sg.m} ${fmt(sg.val, sg.m === 'ERG' ? 0 : 1)}${sg.m === 'ERG' ? ' W' : sg.m === 'SIM' ? ' %' : ' mm'}, noch ${fmtT(acc + sg.d - WO.t)}, gesamt ${fmtT(WO.t)} von ${fmtT(tot)}`;
+    }
+  }
+}
+function updateBleBtn() { const b = $('ble'); b.textContent = S && !S.ble ? 'BLE verbinden' : 'BLE trennen'; b.classList.toggle('danger', !!(S && !S.ble)); }
+function updateSpinBtn() { $('spin').textContent = fw && fw.spin ? 'Spindown abbrechen' : 'Spindown starten'; }
+function setMode(m) {
+  app.mode = m;
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+}
+
+/* ===================== Bedienung ===================== */
+let running = true, speed = 1, winS = 120;
+$('run').addEventListener('click', () => { running = !running; $('run').textContent = running ? 'Pause' : 'Weiter'; });
+$('reset').addEventListener('click', () => { reset(); });
+$('speed').addEventListener('change', e => { speed = parseFloat(e.target.value); });
+$('win').addEventListener('change', e => { winS = parseFloat(e.target.value); });
+document.querySelectorAll('#modeSeg button').forEach(b => b.addEventListener('click', () => { setMode(b.dataset.m); log(`App: Modus ${b.dataset.m}${S.ble ? '' : ' (kommt ohne BLE nicht an)'}`); }));
+$('ble').addEventListener('click', () => {
+  S.ble = !S.ble;
+  if (!S.ble) { S.bleLostAt = S.t; log('BLE-Verbindung getrennt (die Firmware merkt es noch nicht).'); }
+  else log('BLE-Verbindung steht wieder.');
+  updateBleBtn();
+});
+$('spin').addEventListener('click', () => startSpin());
+$('riderMode').addEventListener('change', e => { cfg.riderMode = e.target.value; S.rI = Math.max(0, S.rI); });
+['ff', 'aw', 'accTerm', 'inertiaComp', 'followCad'].forEach(k => $(k).addEventListener('change', e => { cfg[k] = e.target.checked; if (k === 'aw' && cfg.aw) fw.I = clamp(fw.I, -14, 14); }));
+$('tempComp').addEventListener('change', e => { cfg.tempComp = e.target.value; if (cfg.tempComp === 'ntc') fw.Tfw = cfg.Tcal; if (cfg.tempComp === 'modell') fw.Tfw = cfg.Tamb; log('Temperaturkompensation: ' + e.target.selectedOptions[0].textContent); });
+$('woLoad').addEventListener('click', () => { $('woText').value = PRESETS[$('preset').value]; loadWorkout(); WO.run = false; WO.t = 0; WO.idx = -1; updateWoBtn(); });
+$('preset').addEventListener('change', () => { $('woText').value = PRESETS[$('preset').value]; loadWorkout(); WO.run = false; WO.t = 0; WO.idx = -1; updateWoBtn(); });
+$('woText').addEventListener('change', () => { loadWorkout(); });
+$('woRun').addEventListener('click', () => {
+  if (WO.run) { WO.run = false; log('Workout gestoppt.'); }
+  else { if (!loadWorkout()) return; WO.run = true; WO.t = 0; WO.idx = -1; log('Workout gestartet.'); }
+  updateWoBtn();
+});
+$('csv').addEventListener('click', () => {
+  const head = ['t_s', 'soll_W', 'wahr_W', 'geschaetzt_W', 'kadenz_rpm', 'zielkadenz_rpm', 'spalt_kommando_mm', 'spalt_ist_mm', 'spalt_fw_mm', 'T_wahr_C', 'T_fw_C', 'fehler_pct', 'v_kmh'];
+  const rows = [head.join(';')];
+  for (let i = 0; i < D.t.length; i++) rows.push(KEYS.map(k => Number.isFinite(D[k][i]) ? D[k][i].toFixed(3) : '').join(';'));
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'smart-trainer-sim.csv'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+// Darstellung
+const THEMES = ['auto', 'light', 'dark'], THEME_L = { auto: 'Auto', light: 'Hell', dark: 'Dunkel' };
+let theme = 'auto';
+try { theme = localStorage.getItem('st-theme') || 'auto'; } catch (e) { theme = 'auto'; }
+function applyTheme() {
+  if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = theme;
+  $('theme').textContent = 'Darstellung: ' + THEME_L[theme];
+  readColors();
+}
+$('theme').addEventListener('click', () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % 3];
+  try { localStorage.setItem('st-theme', theme); } catch (e) { /* egal */ }
+  applyTheme();
+});
+if (window.matchMedia) { const mq = window.matchMedia('(prefers-color-scheme: dark)'); (mq.addEventListener ? mq.addEventListener('change', readColors) : mq.addListener(readColors)); }
+
+/* ===================== Schleife ===================== */
+let lastFrame = performance.now(), lastSlow = 0;
+function frame(now) {
+  const wall = Math.min(0.05, Math.max(0, (now - lastFrame) / 1000));
+  lastFrame = now;
+  if (running) advance(wall * speed);
+  const t1 = Math.max(winS, S.t), t0 = t1 - winS;
+  Object.keys(PLOTS).forEach(n => drawPlot(n, t0, t1));
+  drawMech();
+  if (now - lastSlow > 200) { lastSlow = now; updateTiles(); drawKl(); drawWo(); }
+  requestAnimationFrame(frame);
+}
+function advance(simT) {
+  const dt = cfg.dtPhys;
+  S.acc += simT;
+  let n = 0;
+  if (fw.nextTick < S.t - 1) fw.nextTick = S.t;
+  while (S.acc >= dt && n < 20000) {
+    physStep(dt);
+    if (S.t >= fw.nextTick) { woTick(cfg.dtFw); fwTick(cfg.dtFw); record(); fw.nextTick += cfg.dtFw; }
+    S.acc -= dt; n++;
+  }
+}
+/* Für Tests: Simulation ohne Bildschirm vorspulen */
+window.__sim = { advance: s => advance(s), state: () => ({ S, fw, cfg, D, WO }), setMode, setParam, startSpin };
+
+$('woText').value = PRESETS.kadenz;
+setMode('ERG');
+applyTheme();
+reset();
+loadWorkout();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
