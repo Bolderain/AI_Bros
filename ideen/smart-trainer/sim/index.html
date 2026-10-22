@@ -104,12 +104,12 @@ select, input[type=number], textarea {
 .seg button { border: 0; border-radius: 0; background: var(--surface); }
 .seg button + button { border-left: 1px solid var(--border); }
 .seg button.on { background: var(--accent); color: var(--accent-ink); }
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; min-width: 0; }
 .tile .k { font-size: 12px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile .v { font-size: 20px; font-weight: 600; white-space: nowrap; }
 .tile .v small { font-size: 12px; font-weight: 400; color: var(--ink2); margin-left: 2px; }
-.tile .x { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .x { font-size: 12px; color: var(--muted); line-height: 1.3; }
 .tile.warn { border-color: var(--warn); box-shadow: inset 4px 0 0 var(--warn); }
 .tile.crit { border-color: var(--crit); box-shadow: inset 4px 0 0 var(--crit); }
 .tile.good { box-shadow: inset 4px 0 0 var(--good); }
@@ -222,7 +222,7 @@ footer ul { padding-left: 18px; }
 
   <div class="tiles">
     <div class="tile"><div class="k">Soll (Firmware)</div><div class="v" id="tSoll">0<small>W</small></div><div class="x" id="tSollX"></div></div>
-    <div class="tile"><div class="k">Wahre Leistung</div><div class="v" id="tTrue">0<small>W</small></div><div class="x">an der Kurbel, 1 s geglättet</div></div>
+    <div class="tile"><div class="k">Wahre Leistung</div><div class="v" id="tTrue">0<small>W</small></div><div class="x">an der Kurbel, geglättet</div></div>
     <div class="tile"><div class="k">Geschätzt</div><div class="v" id="tEst">0<small>W</small></div><div class="x">aus v und Kennlinie</div></div>
     <div class="tile" id="tileErr"><div class="k">Schätzfehler</div><div class="v" id="tErr">0<small>%</small></div><div class="x">geschätzt gegen wahr</div></div>
     <div class="tile"><div class="k">Kadenz</div><div class="v" id="tCad">0<small>U/min</small></div><div class="x" id="tGear"></div></div>
@@ -255,7 +255,7 @@ footer ul { padding-left: 18px; }
       </div>
       <div class="two">
         <div class="card">
-          <h2>Kennlinienfamilie P(v) je Spalt</h2>
+          <h2>Kennlinienfamilie P(v) je Spalt <span class="u" style="font-weight:400;color:var(--muted)">W über km/h</span></h2>
           <div class="lg" id="lg-kl"></div>
           <canvas id="cv-kl" height="240"></canvas>
           <p class="info">Graue Linien: kalibrierte Kennlinie (Bremse plus Rollreibung) bei Kalibriertemperatur. Blau: wahre Kurve beim aktuellen Spalt und der aktuellen Scheibentemperatur. Orange gestrichelt: was die Firmware glaubt.</p>
@@ -291,7 +291,7 @@ footer ul { padding-left: 18px; }
         <div id="g-erg"></div>
         <label class="chk"><input type="checkbox" id="ff" checked> Vorsteuerung über die Kennlinie</label>
         <label class="chk"><input type="checkbox" id="aw" checked> Anti-Windup (Integrator stoppt am Anschlag)</label>
-        <p class="info">Regler: Spalt = Vorsteuerung minus (Kp·e + Ki·∫e), e = Soll minus Schätzung. Zum Aufziehen des Integrators: Anti-Windup aus, ERG 500 W, Kadenz 55, danach Kadenz 95.</p>
+        <p class="info">Regler: Spalt = Vorsteuerung minus (Kp·e + Ki·∫e), e = Soll minus Schätzung. Zum Aufziehen des Integrators: Anti-Windup aus, ERG 400 W, Kadenz 55 eine halbe Minute halten, danach Kadenz 95.</p>
       </div>
 
       <div class="card" id="card-SIM">
@@ -534,7 +534,7 @@ const vPerRpm = () => (cfg.zKb / cfg.zRz) * cfg.U / 60;
 function reset() {
   const v0 = cfg.riderMode === 'kadenz' ? cfg.cadTarget * vPerRpm() : 8;
   S = {
-    t: 0, v: v0, theta: 0, rI: 0, T: cfg.Tamb, Ptrue: 0, PtrueF: 0, Pb: 0, cad: 0,
+    t: 0, v: v0, theta: 0, rI: 0, T: cfg.Tamb, Ptrue: 0, Ptrue1: 0, PtrueF: 0, Pb: 0, cad: 0,
     servoQ: [], servoTgt: 0, sServo: 0, sMag: 0, rollAng: 0,
     ble: true, bleLostAt: 0, riderOff: false, spinV: null, coupled: true, acc: 0,
   };
@@ -542,7 +542,7 @@ function reset() {
     mode: app.mode, erg: cfg.erg, grade: cfg.grade, gapMan: cfg.gapMan,
     sim: { m: cfg.mRider + cfg.mBike, CwA: cfg.CwA, Crr: cfg.Crr, wind: cfg.wind },
     vf: v0, af: 0, sCmd: 0, sFw: 0, Tfw: cfg.Tcal, PbEst: 0, Pctrl: 0, PestDisp: 0,
-    I: 0, target: NaN, bleFail: false, tempFail: false, spin: null, sat: false, lastSatLog: -99,
+    I: 0, satT: 0, Pest1: 0, target: NaN, bleFail: false, tempFail: false, spin: null, sat: false, lastSatLog: -99,
     nextTick: 0, warned: false,
   };
   // Start-Spalt aus der Vorsteuerung, damit es nicht mit einem Sprung beginnt
@@ -553,7 +553,7 @@ function reset() {
   // Fahrer im Gleichgewicht starten
   S.rI = FbTrue(s0, v0, S.T) + cfg.Froll;
   const p0 = (S.rI) * v0;
-  S.PtrueF = p0; fw.PestDisp = p0; fw.Pctrl = p0;
+  S.PtrueF = S.Ptrue1 = p0; fw.PestDisp = fw.Pest1 = fw.Pctrl = p0;
   clearData();
   $('log').innerHTML = '';
   WO.run = false; WO.t = 0; WO.idx = -1; updateWoBtn();
@@ -590,7 +590,9 @@ function physStep(dt) {
   // Leistung an der Kurbel: Muskelkraft minus der Anteil, der die eigenen Beine beschleunigt
   const Fc = coupled ? Fm - cfg.mBein * a : 0;
   S.Ptrue = Fc * S.v;
-  S.PtrueF += (S.Ptrue - S.PtrueF) * dt / (cfg.tauDisp + dt);
+  const td = cfg.tauDisp / 2;
+  S.Ptrue1 += (S.Ptrue - S.Ptrue1) * dt / (td + dt);
+  S.PtrueF += (S.Ptrue1 - S.PtrueF) * dt / (td + dt);
   S.Pb = Fb * S.v;
   S.T += (S.Pb - (cfg.G0 + cfg.G1 * S.v) * (S.T - cfg.Tamb)) / cfg.Cth * dt;
   S.coupled = coupled;
@@ -638,7 +640,9 @@ function fwTick(dt) {
   fw.PbEst = FbE * fw.vf;
   const mA = mFwAssumed();
   fw.Pctrl = (FbE + cfg.FrollFw) * fw.vf + (cfg.accTerm ? mA * fw.af * fw.vf : 0);
-  fw.PestDisp += (fw.Pctrl - fw.PestDisp) * dt / (cfg.tauDisp + dt);
+  const td = cfg.tauDisp / 2;
+  fw.Pest1 += (fw.Pctrl - fw.Pest1) * dt / (td + dt);
+  fw.PestDisp += (fw.Pest1 - fw.PestDisp) * dt / (td + dt);
   // 6. Übertemperatur (nur wenn die Firmware T kennt)
   if (cfg.tempComp !== 'aus') {
     if (!fw.tempFail && fw.Tfw >= cfg.Tkrit) { fw.tempFail = true; fw.I = 0; log(`Firmware: Scheibe ${fmt(fw.Tfw)} °C über Abregelschwelle, Widerstand runter.`); }
@@ -675,7 +679,8 @@ function fwTick(dt) {
       } else fw.I = Inew;
     }
   }
-  if (satState === 'lo' && fw.sat !== 'lo' && S.t - fw.lastSatLog > 8) {
+  fw.satT = satState === 'lo' ? (fw.satT || 0) + dt : 0;
+  if (fw.satT >= 3 && fw.satT < 3 + dt * 1.5 && S.t - fw.lastSatLog > 8) {
     fw.lastSatLog = S.t;
     log('Bremse am Anschlag: Ziel bei dieser Geschwindigkeit nicht erreichbar (kleinerer Gang = noch weniger Bremskraft).');
   }
@@ -955,7 +960,10 @@ function drawPlot(name, t0, t1) {
   for (let t = Math.ceil(t0 / ts) * ts; t <= t1; t += ts) {
     const px = Math.round(X(t)) + 0.5;
     ctx.strokeStyle = COL.grid; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, top + ph); ctx.stroke();
-    ctx.fillStyle = COL.muted; ctx.fillText(fmtT(t), px, top + ph + 4);
+    const lab = fmtT(t), tw = ctx.measureText(lab).width;
+    ctx.fillStyle = COL.muted;
+    if (px + tw / 2 > w - 1) { ctx.textAlign = 'right'; ctx.fillText(lab, w - 1, top + ph + 4); ctx.textAlign = 'center'; }
+    else ctx.fillText(lab, px, top + ph + 4);
   }
   ctx.strokeStyle = COL.axis; ctx.beginPath(); ctx.moveTo(l, top + ph + 0.5); ctx.lineTo(l + pw, top + ph + 0.5); ctx.stroke();
   // Schwellen
@@ -1042,7 +1050,6 @@ function drawKl() {
     ctx.fillStyle = COL.muted; ctx.fillText(kmh, px, top + ph + 4);
   }
   ctx.fillStyle = COL.ink2; ctx.fillText('km/h', l + pw / 2, top + ph + 16);
-  ctx.save(); ctx.translate(10, top + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle'; ctx.fillText('W', 0, 0); ctx.restore();
   const curve = (fn, col, dash, lw) => {
     ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash ? [5, 4] : []);
     ctx.beginPath();

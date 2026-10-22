@@ -13,6 +13,15 @@ keinen Unterschied.
 
 ![Aufbau-Skizze](aufbau.svg)
 
+**Zum Ausprobieren:** [`sim/index.html`](sim/index.html) ist eine interaktive Simulation im Browser
+(eine Datei, ohne Installation). Fahrer mit Kadenz, Gang und Schwungmasse, Wirbelstrombremse mit
+Kennlinienfamilie über den Magnetspalt, Servo mit Totzeit und begrenzter Stellgeschwindigkeit,
+ERG mit PI-Regler und Anti-Windup, SIM mit Straßenmodell, Spindown, Failsafe bei BLE-Abbruch,
+Leistungsschätzung gegen wahre Leistung und ein einfaches Temperaturmodell der Bremsscheibe.
+Alle Konstanten sind Platzhalter (P) bzw. Schätzungen und in der Seite änderbar.
+
+![Screenshot der Simulation](sim/screenshot.png)
+
 ## Prinzip Wirbelstrombremse
 
 ![Prinzip](prinzip.svg)
