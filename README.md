@@ -7,6 +7,8 @@ Budget 300 Euro, Raspberry Pi ist vorhanden. Doku auf Deutsch.
 **Es ist noch nichts entschieden.** Jede Idee liegt in einem eigenen Ordner unter
 [`ideen/`](ideen/) und darf unterschiedlich weit gediehen sein.
 
+Alle Simulationen zum Ausprobieren: [`sim-hub/`](sim-hub/) (Übersichtsseite mit Reitern).
+
 ## Die Ideen
 
 | Idee | Worum es geht | Stand | Budget (Schätzung) |
