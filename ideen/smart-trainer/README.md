@@ -123,9 +123,9 @@ Summe Variante 2: grob 60 bis 110 € (Schätzung), passt ins Budget von 300 €
 ## Synergien
 
 - [`ideen/powermeter`](../powermeter/): ein selbstgebauter Powermeter wäre die Referenz für die Kalibrierung,
-  umgekehrt ist der Trainer ein Prüfstand für den Powermeter. (Ordner zum Zeitpunkt dieses Stands noch nicht angelegt.)
+  umgekehrt ist der Trainer ein Prüfstand für den Powermeter.
 - [`ideen/gravel-navi`](../gravel-navi/): gleicher BLE-Stack auf dem ESP32 (Cycling Power, Speed/Cadence),
-  Code und Erfahrung teilbar. (Ordner zum Zeitpunkt dieses Stands noch nicht angelegt.)
+  Code und Erfahrung teilbar.
 
 ## Offene Punkte
 
