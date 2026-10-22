@@ -1,0 +1,1742 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pflanzenautomat Simulation</title>
+<meta name="description" content="Interaktive Simulation des Pflanzenautomaten Stufe 1: Topf- und Feuchtemodell, Sonde mit Rauschen und Drift, Entscheidungslogik nach Spezifikation v1.2, Düngeplan, Vorräte, Störfälle und Handy-Meldungen im Zeitraffer.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f1;
+  --surface: #fcfcfb;
+  --surface2: #f0efec;
+  --ink: #0b0b0b;
+  --ink2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s7: #6250d6;
+  --good: #0ca30c;
+  --goodText: #006300;
+  --warn: #fab219;
+  --serious: #ec835a;
+  --crit: #d03b3b;
+  --btn: #2a78d6;
+  --btnInk: #ffffff;
+  --night: rgba(11,11,11,0.045);
+  --window: rgba(42,120,214,0.08);
+  --phone: #e9e8e3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --surface: #1a1a19;
+    --surface2: #242422;
+    --ink: #f0efec;
+    --ink2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s7: #9085e9;
+    --goodText: #0ca30c;
+    --btn: #3987e5;
+    --btnInk: #0b0b0b;
+    --night: rgba(0,0,0,0.30);
+    --window: rgba(57,135,229,0.12);
+    --phone: #121211;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --surface: #1a1a19;
+  --surface2: #242422;
+  --ink: #f0efec;
+  --ink2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s7: #9085e9;
+  --goodText: #0ca30c;
+  --btn: #3987e5;
+  --btnInk: #0b0b0b;
+  --night: rgba(0,0,0,0.30);
+  --window: rgba(57,135,229,0.12);
+  --phone: #121211;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+.wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
+header.top { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+header.top h1 { font-size: 1.5rem; margin: 0 0 4px; line-height: 1.2; }
+header.top p { margin: 4px 0; color: var(--ink2); max-width: 78ch; }
+.tag {
+  display: inline-block; font-size: 0.72rem; font-weight: 600; line-height: 1;
+  padding: 3px 5px; border-radius: 4px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--ink2); vertical-align: 1px; margin-left: 3px;
+  white-space: nowrap;
+}
+.tag.p { color: var(--ink2); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; min-width: 0;
+}
+.card h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.card h3 { font-size: 0.95rem; margin: 12px 0 6px; }
+.small { font-size: 0.85rem; color: var(--ink2); }
+.muted { color: var(--muted); }
+button, select, input {
+  font: inherit; color: var(--ink);
+}
+code { overflow-wrap: anywhere; }
+button {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 11px; cursor: pointer; min-height: 36px;
+}
+button:hover { border-color: var(--axis); }
+button.primary { background: var(--btn); color: var(--btnInk); border-color: transparent; font-weight: 600; }
+button.on { outline: 2px solid var(--crit); outline-offset: -2px; font-weight: 600; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+select, input[type=text], input[type=number], input[type=date] {
+  background: var(--surface); border: 1px solid var(--axis); border-radius: 6px; padding: 5px 7px; min-height: 34px;
+  max-width: 100%;
+}
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bar label { display: inline-flex; gap: 6px; align-items: center; }
+.clock { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.05rem; min-width: 15ch; }
+.controls { margin: 14px 0; }
+.tiles {
+  display: grid; gap: 10px; margin: 0 0 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr));
+}
+@media (min-width: 760px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; min-width: 0; }
+.tile .k { font-size: 0.78rem; color: var(--ink2); }
+.tile .v { font-size: 1.35rem; font-weight: 700; line-height: 1.2; }
+.tile .s { font-size: 0.8rem; color: var(--ink2); }
+.status { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.good { background: var(--good); } .dot.warn { background: var(--warn); }
+.dot.crit { background: var(--crit); } .dot.info { background: var(--muted); }
+.layout { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1020px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 360px; }
+  .layout > .phoneWrap { grid-column: 2; grid-row: 1 / span 8; }
+  .phoneWrap .phone { position: sticky; top: 12px; }
+}
+.chart { margin: 6px 0 14px; }
+.chart .head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.chart .title { font-weight: 600; font-size: 0.92rem; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink2); }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.sw.dash { background: none !important; border-top: 2px dashed var(--muted); height: 0; }
+.mk { width: 9px; height: 9px; display: inline-block; }
+canvas { width: 100%; display: block; touch-action: pan-y; }
+.readout { font-size: 0.8rem; color: var(--ink2); min-height: 2.6em; font-variant-numeric: tabular-nums;
+  background: var(--surface2); border-radius: 6px; padding: 4px 8px; }
+.phone {
+  background: var(--phone); border: 1px solid var(--border); border-radius: 26px; padding: 12px;
+  max-height: calc(100vh - 24px); display: flex; flex-direction: column;
+}
+.phone .notch { width: 90px; height: 6px; border-radius: 3px; background: var(--axis); margin: 2px auto 10px; }
+.phone .ph { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 0 4px 8px; }
+.phone .ph b { font-size: 0.95rem; }
+.tabs { display: flex; gap: 4px; }
+.tabs button { min-height: 30px; padding: 4px 9px; font-size: 0.82rem; }
+.tabs button[aria-selected=true] { background: var(--btn); color: var(--btnInk); }
+.feed { overflow-y: auto; display: flex; flex-direction: column; gap: 7px; min-height: 120px; max-height: 70vh; padding: 2px; }
+@media (min-width: 1020px) { .feed { max-height: none; flex: 1; } }
+.note {
+  background: var(--surface); border-radius: 14px; padding: 8px 10px 8px 12px; border: 1px solid var(--border);
+  border-left: 4px solid var(--muted); font-size: 0.85rem;
+}
+.note.crit { border-left-color: var(--crit); } .note.warn { border-left-color: var(--warn); }
+.note.info { border-left-color: var(--muted); opacity: 0.9; }
+.note.good { border-left-color: var(--good); }
+.note .nh { display: flex; justify-content: space-between; gap: 8px; font-size: 0.74rem; color: var(--ink2); }
+.note .nt { font-weight: 650; margin: 1px 0; }
+.note .nb { color: var(--ink2); overflow-wrap: anywhere; }
+.note code { font-size: 0.75rem; overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: 0.85rem; padding: 10px; text-align: center; }
+.faults { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+.faults button { text-align: left; line-height: 1.25; }
+.faults button small { display: block; color: var(--ink2); font-weight: 400; font-size: 0.76rem; }
+.trace { list-style: none; margin: 0; padding: 0; font-size: 0.86rem; }
+.trace li { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--grid); }
+.trace li:last-child { border-bottom: 0; }
+.trace .r { flex: none; width: 3.4em; font-weight: 700; font-size: 0.75rem; padding-top: 2px; }
+.trace .r.ja { color: var(--goodText); } .trace .r.nein { color: var(--crit); } .trace .r.info { color: var(--muted); }
+.pgrid { display: grid; gap: 6px 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.pf { display: grid; grid-template-columns: minmax(0, 1fr) 118px; gap: 6px; align-items: center; padding: 4px 0;
+  border-bottom: 1px solid var(--grid); }
+.pf .nm { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; overflow-wrap: anywhere; }
+.pf .ds { font-size: 0.74rem; color: var(--ink2); }
+.pf input[type=text] { width: 118px; }
+.pf.bad input { border-color: var(--crit); outline: 1px solid var(--crit); }
+.pf.diff .nm::after { content: " geändert"; color: var(--s2); font-family: system-ui, sans-serif; font-size: 0.7rem; }
+.msg { font-size: 0.86rem; margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: var(--surface2); }
+.msg.bad { border-left: 4px solid var(--crit); } .msg.ok { border-left: 4px solid var(--good); }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+td, th { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--ink2); font-weight: 600; }
+.tbl { overflow-x: auto; }
+.ann li { margin: 0 0 6px; font-size: 0.86rem; }
+.ann b { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; }
+details summary { cursor: pointer; font-weight: 600; }
+.mgrid { display: grid; gap: 6px 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+.mgrid label { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 6px; align-items: center; font-size: 0.86rem; }
+.mgrid input, .mgrid select { width: 110px; }
+footer { margin: 18px 0 8px; font-size: 0.8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Pflanzenautomat: Simulation Stufe 1</h1>
+    <p>Topf, Sonde, Pumpen und Tank im Zeitraffer. Die Entscheidungslogik ist nach
+    <code>docs/00-spezifikation-stufe1.md</code> (v1.2) nachgebaut und als reine Funktion abgetrennt (wie
+    <code>firmware/components/plant_logic/</code>). Alle Modellwerte sind Schätzungen. Wo die Spezifikation
+    etwas offen lässt, steht eine Annahme mit Nummer <span class="tag">A1</span> und <span class="tag">(P)</span>, Liste unten.</p>
+  </div>
+  <button id="themeBtn" type="button" aria-label="Farbschema wechseln">Schema: Auto</button>
+</header>
+
+<section class="card controls" aria-label="Zeitsteuerung">
+  <div class="bar">
+    <span class="clock" id="clock">Mo 01.03.2027 00:00</span>
+    <button class="primary" id="playBtn" type="button">Start</button>
+    <label>Tempo
+      <select id="speed">
+        <option value="60">1 Stunde/s</option>
+        <option value="360">6 Stunden/s</option>
+        <option value="1440" selected>1 Tag/s</option>
+        <option value="4320">3 Tage/s</option>
+        <option value="10080">1 Woche/s</option>
+      </select>
+    </label>
+    <button id="dayBtn" type="button">+1 Tag</button>
+    <button id="weekBtn" type="button">+1 Woche</button>
+    <label>Ansicht
+      <select id="span">
+        <option value="3">3 Tage</option>
+        <option value="7">7 Tage</option>
+        <option value="14" selected>14 Tage</option>
+        <option value="28">4 Wochen</option>
+        <option value="56">8 Wochen</option>
+        <option value="0">alles</option>
+      </select>
+    </label>
+    <button id="resetBtn" type="button">Neu starten</button>
+  </div>
+</section>
+
+<section class="tiles" id="tiles" aria-label="Zustand"></section>
+
+<div class="layout">
+
+  <section class="card" aria-label="Verläufe">
+    <h2>Verläufe</h2>
+    <div class="readout" id="readout">Zeiger über ein Diagramm bewegen oder antippen, um Werte abzulesen.</div>
+
+    <div class="chart">
+      <div class="head"><span class="title">Bodenfeuchte (%)</span>
+        <span class="legend">
+          <span><i class="sw" style="background:var(--s1)"></i>Sonde (wie die Logik sie sieht)</span>
+          <span><i class="sw" style="background:var(--s2)"></i>Modell (wahrer Wert)</span>
+          <span><i class="sw dash"></i>Schwelle, Not-Schwelle</span>
+          <span><svg class="mk" viewBox="0 0 10 10"><path d="M5 1 L9 9 L1 9 Z" fill="var(--s1)"/></svg>Gießen</span>
+          <span><svg class="mk" viewBox="0 0 10 10"><path d="M5 0 L10 5 L5 10 L0 5 Z" fill="var(--s3)"/></svg>Dünger</span>
+          <span><svg class="mk" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="var(--s7)"/></svg>Handgießen erkannt</span>
+          <span><svg class="mk" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" fill="var(--crit)"/></svg>Alarm</span>
+        </span>
+      </div>
+      <canvas id="cMoist" height="210" aria-label="Diagramm Bodenfeuchte"></canvas>
+    </div>
+
+    <div class="chart">
+      <div class="head"><span class="title">Gießmenge pro Tag (ml, gemessen am Tank)</span>
+        <span class="legend"><span><i class="sw dash"></i>Tageslimit <code>max_water_day_ml</code></span></span>
+      </div>
+      <canvas id="cWater" height="120" aria-label="Diagramm Gießmenge pro Tag"></canvas>
+    </div>
+
+    <div class="chart">
+      <div class="head"><span class="title">Wassertank (ml)</span>
+        <span class="legend"><span><svg class="mk" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" fill="var(--warn)"/></svg>Reichweite-Warnung</span></span>
+      </div>
+      <canvas id="cTank" height="120" aria-label="Diagramm Wassertank"></canvas>
+    </div>
+
+    <div class="chart">
+      <div class="head"><span class="title">Düngerbehälter (ml Lösung)</span>
+        <span class="legend"><span><svg class="mk" viewBox="0 0 10 10"><path d="M5 0 L10 5 L5 10 L0 5 Z" fill="var(--s3)"/></svg>Düngergabe mit Dosis</span></span>
+      </div>
+      <canvas id="cFert" height="120" aria-label="Diagramm Düngerbehälter"></canvas>
+    </div>
+
+    <div class="chart">
+      <div class="head"><span class="title">Lufttemperatur am Topf (°C, Modell)</span>
+        <span class="legend"><span>helle Flächen: Tag, blaue Fläche: Gießfenster (bis 14 Tage Ansicht)</span></span>
+      </div>
+      <canvas id="cTemp" height="90" aria-label="Diagramm Temperatur"></canvas>
+    </div>
+  </section>
+
+  <aside class="phoneWrap" aria-label="Handy-Benachrichtigungen">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="ph"><b>Handy</b>
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" id="tabPush" aria-selected="true">Push</button>
+          <button type="button" role="tab" id="tabAll" aria-selected="false">Alles</button>
+          <button type="button" role="tab" id="tabMqtt" aria-selected="false">MQTT</button>
+        </div>
+      </div>
+      <div class="small" style="padding:0 4px 8px" id="feedHint">Push über die HA Companion App. Welche Ereignisse pushen: <span class="tag">A14 (P)</span></div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </aside>
+
+  <section class="card" aria-label="Letzte Entscheidung">
+    <h2>Was die Logik zuletzt entschieden hat</h2>
+    <div class="small" id="traceHead"></div>
+    <ul class="trace" id="trace"></ul>
+  </section>
+
+  <section class="card" aria-label="Störfälle">
+    <h2>Störfälle einspielen</h2>
+    <p class="small">Schalter bleiben aktiv, bis sie erneut gedrückt werden. Danach im Handy und in der Entscheidung oben ablesen, was die Logik tut.</p>
+    <div class="faults" id="faults"></div>
+  </section>
+
+  <section class="card" aria-label="Bedienung">
+    <h2>Bedienung im Dashboard (R11)</h2>
+    <div class="bar" id="ops"></div>
+    <p class="small" id="opsMsg"></p>
+  </section>
+
+  <section class="card" aria-label="Parameter">
+    <h2>Parameter <code>plant/&lt;id&gt;/config</code> (Spezifikation 5.2)</h2>
+    <p class="small">Werte ändern und senden. Die Zentrale legt die Config retained ab, der Node übernimmt sie beim nächsten Zyklus (T12) und prüft sie gegen die absoluten Grenzen (5.3). Ungültig: verworfen, letzte gültige Config bleibt, Event <code>config_rejected</code>. Ob die ganze Config oder nur der Einzelwert verworfen wird: <span class="tag">A2 (P)</span>. Zusätzliche Plausibilitätsprüfungen: <span class="tag">A3 (P)</span>.</p>
+    <div class="bar" style="margin-bottom:10px">
+      <button class="primary" id="sendCfg" type="button">Config senden</button>
+      <button id="defCfg" type="button">Defaults in Felder</button>
+      <button id="actCfg" type="button">aktive Config in Felder</button>
+    </div>
+    <div class="pgrid" id="pgrid"></div>
+    <div class="msg" id="cfgMsg">Aktiv: Defaults der Spezifikation.</div>
+    <h3>Absolute Firmware-Grenzen (5.3, fest im Code)</h3>
+    <div class="tbl"><table id="absTbl"></table></div>
+  </section>
+
+  <section class="card" aria-label="Modell">
+    <h2>Modell von Topf, Sonde und Pumpen</h2>
+    <p class="small">Nur die Simulation, nicht Teil der Spezifikation. Alles Schätzungen <span class="tag">(P)</span>. Änderungen wirken sofort, Startwerte nach "Neu starten".</p>
+    <div class="mgrid" id="mgrid"></div>
+    <details style="margin-top:10px"><summary>Wie das Modell rechnet</summary>
+      <p class="small">Pflanzenverfügbares Wasser im Topf W (ml) zwischen "trocken" (0 %) und "frisch gegossen" (100 % = Topfkapazität). Verdunstung pro Minute = Basis/Tag × Licht-Tagesgang × 2<sup>(T−21)/10</sup> × Pflanzengröße × min(1, Feuchte/25 %). Wasser über der Kapazität läuft mit 30 min Zeitkonstante in den Untersetzer ab. Die Sonde sitzt 3 bis 5 cm vom Auslass und sieht die Feuchte mit 20 min Verzögerung (Durchfeuchtung). Rohwert = trocken_roh − (trocken_roh − nass_roh) × Feuchte, plus Rauschen je Einzelmessung und Drift pro Tag; 10 Einzelmessungen werden gemittelt, die Streuung geprüft. Wägezellen mit Rauschen. Pumpenlaufzeit = Menge / kalibrierte Förderrate, gefördert wird mit der tatsächlichen Förderrate.</p>
+    </details>
+  </section>
+
+  <section class="card" aria-label="Annahmen">
+    <h2>Annahmen, wo die Spezifikation offen ist</h2>
+    <p class="small">Keine davon ist entschieden. Einige lassen sich hier umschalten, um die Wirkung zu sehen.</p>
+    <div class="mgrid" id="agrid" style="margin-bottom:10px"></div>
+    <ol class="ann" id="annList"></ol>
+  </section>
+
+</div>
+
+<footer>Simulation, kein Messergebnis. Spezifikation maßgeblich: <code>ideen/pflanzenautomat/docs/00-spezifikation-stufe1.md</code>. Logik im Quelltext dieser Seite im Block <code>PlantLogic</code> (ohne I/O).</footer>
+</div>
+
+<!-- ===================================================================== -->
+<!-- PlantLogic: reine Funktionen ohne I/O, ohne DOM, ohne Zufall, ohne Uhr. -->
+<!-- Entspricht firmware/components/plant_logic/ (Spezifikation 0.4).        -->
+<!-- Die Zentrale-Funktionen (Restreichweite) stehen getrennt in Zentrale.   -->
+<!-- ===================================================================== -->
+<script id="plant-logic">
+const PlantLogic = (() => {
+  'use strict';
+
+  // Absolute Firmware-Grenzen, Spezifikation 5.3. Fest, nicht per Config änderbar.
+  const ABS = Object.freeze({
+    ABS_MAX_WATER_DAY_ML: 300,   // TODO(P)
+    ABS_MAX_WATER_WEEK_ML: 1000, // TODO(P)
+    ABS_MAX_PUMP_RUNTIME_S: 120, // TODO(P)
+    ABS_MAX_FERT_DAY_ML: 10      // TODO(P)
+  });
+  const DAY_MIN = 1440;
+
+  const NUM_KEYS = ['moisture_dry_raw', 'moisture_wet_raw', 'moisture_threshold_pct', 'emergency_threshold_pct',
+    'water_dose_ml', 'water_split', 'split_pause_s', 'max_water_day_ml', 'max_water_week_ml',
+    'pump_water_ml_per_s', 'pump_fert_ml_per_s', 'max_pump_runtime_s', 'fert_ml_per_l', 'fert_predilution',
+    'fert_interval_days', 'fert_tank_ml', 'reserve_warn_days', 'flow_check_min_ratio', 'moisture_rise_min_pct',
+    'rise_check_delay_min', 'manual_detect_jump_pct', 'sensor_margin_pct', 'settle_s', 'measure_interval_min'];
+
+  function r1(x) { return Math.round(x * 10) / 10; }
+  function r2(x) { return Math.round(x * 100) / 100; }
+
+  // "06:00-09:00" -> {start, end} in Minuten ab Mitternacht
+  function parseWindow(s) {
+    const m = /^\s*(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\s*$/.exec(String(s));
+    if (!m) return null;
+    const a = +m[1] * 60 + +m[2], b = +m[3] * 60 + +m[4];
+    if (+m[1] > 23 || +m[3] > 24 || +m[2] > 59 || +m[4] > 59) return null;
+    return { start: a, end: b };
+  }
+  // "3-9" oder "3,4,5" oder "3-5,9" -> [3,4,5,...]
+  function parseMonths(s) {
+    const out = new Set();
+    const parts = String(s).split(',').map(x => x.trim()).filter(Boolean);
+    if (!parts.length) return null;
+    for (const p of parts) {
+      const m = /^(\d{1,2})(?:\s*-\s*(\d{1,2}))?$/.exec(p);
+      if (!m) return null;
+      const a = +m[1], b = m[2] ? +m[2] : a;
+      if (a < 1 || a > 12 || b < 1 || b > 12 || b < a) return null;
+      for (let i = a; i <= b; i++) out.add(i);
+    }
+    return [...out].sort((x, y) => x - y);
+  }
+
+  // Düngerdosis, Spezifikation 5.2: dose_ml = fert_ml_per_l × Wassermenge_ml / 1000 × fert_predilution
+  function fertDose(waterMl, cfg) {
+    return cfg.fert_ml_per_l * waterMl / 1000 * cfg.fert_predilution;
+  }
+
+  function moisturePct(raw, cfg) {
+    return (cfg.moisture_dry_raw - raw) / (cfg.moisture_dry_raw - cfg.moisture_wet_raw) * 100;
+  }
+
+  // Config-Prüfung. 5.3 sind die Pflichtprüfungen, der Rest ist Plausibilität (Annahme A3).
+  function validateConfig(c) {
+    const errors = [];
+    const err = (k, msg, src) => errors.push({ k, msg, src });
+    for (const k of NUM_KEYS) {
+      if (typeof c[k] !== 'number' || !Number.isFinite(c[k])) err(k, 'keine gültige Zahl', 'A3');
+    }
+    if (typeof c.pause !== 'boolean') err('pause', 'kein bool', 'A3');
+    if (typeof c.ota_hold !== 'boolean') err('ota_hold', 'kein bool', 'A3');
+    // --- Absolute Grenzen 5.3 ---
+    if (!(c.max_water_day_ml <= ABS.ABS_MAX_WATER_DAY_ML))
+      err('max_water_day_ml', `${c.max_water_day_ml} > ABS_MAX_WATER_DAY_ML (${ABS.ABS_MAX_WATER_DAY_ML})`, '5.3');
+    if (!(c.max_water_week_ml <= ABS.ABS_MAX_WATER_WEEK_ML))
+      err('max_water_week_ml', `${c.max_water_week_ml} > ABS_MAX_WATER_WEEK_ML (${ABS.ABS_MAX_WATER_WEEK_ML})`, '5.3');
+    if (!(c.max_pump_runtime_s <= ABS.ABS_MAX_PUMP_RUNTIME_S))
+      err('max_pump_runtime_s', `${c.max_pump_runtime_s} > ABS_MAX_PUMP_RUNTIME_S (${ABS.ABS_MAX_PUMP_RUNTIME_S})`, '5.3');
+    const fd = fertDose(c.water_dose_ml, c);
+    if (!(fd <= ABS.ABS_MAX_FERT_DAY_ML))
+      err('fert_ml_per_l', `Düngerdosis ${r2(fd)} ml > ABS_MAX_FERT_DAY_ML (${ABS.ABS_MAX_FERT_DAY_ML})`, '5.3 über A4');
+    // --- Plausibilität (Annahme A3) ---
+    if (!(c.moisture_dry_raw !== c.moisture_wet_raw)) err('moisture_wet_raw', 'gleich moisture_dry_raw', 'A3');
+    if (!(c.moisture_threshold_pct > 0 && c.moisture_threshold_pct <= 100)) err('moisture_threshold_pct', 'nicht in 0 bis 100', 'A3');
+    if (!(c.emergency_threshold_pct >= 0 && c.emergency_threshold_pct < c.moisture_threshold_pct))
+      err('emergency_threshold_pct', 'muss unter moisture_threshold_pct liegen', 'A3');
+    if (!(c.water_dose_ml > 0)) err('water_dose_ml', 'muss > 0 sein', 'A3');
+    if (!(c.water_dose_ml <= c.max_water_day_ml)) err('water_dose_ml', 'größer als max_water_day_ml', 'A3');
+    if (!(Number.isInteger(c.water_split) && c.water_split >= 1 && c.water_split <= 10)) err('water_split', 'ganze Zahl 1 bis 10', 'A3');
+    if (!(c.split_pause_s >= 0 && c.split_pause_s <= 3600)) err('split_pause_s', '0 bis 3600', 'A3');
+    const w = parseWindow(c.water_window);
+    if (!w || !(w.start < w.end)) err('water_window', 'Format HH:MM-HH:MM, Beginn vor Ende', 'A3');
+    if (!(c.max_water_week_ml >= c.max_water_day_ml)) err('max_water_week_ml', 'kleiner als Tageslimit', 'A3');
+    if (!(c.max_water_day_ml > 0)) err('max_water_day_ml', 'muss > 0 sein', 'A3');
+    if (!(c.pump_water_ml_per_s > 0)) err('pump_water_ml_per_s', 'muss > 0 sein', 'A3');
+    if (!(c.pump_fert_ml_per_s > 0)) err('pump_fert_ml_per_s', 'muss > 0 sein', 'A3');
+    if (!(c.max_pump_runtime_s > 0)) err('max_pump_runtime_s', 'muss > 0 sein', 'A3');
+    const portionS = c.water_dose_ml / c.water_split / c.pump_water_ml_per_s;
+    if (!(portionS <= c.max_pump_runtime_s)) err('water_split', `Portion braucht ${r1(portionS)} s > max_pump_runtime_s`, 'A3');
+    const fertS = fd / c.pump_fert_ml_per_s;
+    if (!(fertS <= c.max_pump_runtime_s)) err('pump_fert_ml_per_s', `Düngerlauf ${r1(fertS)} s > max_pump_runtime_s`, 'A3');
+    if (!(c.fert_ml_per_l >= 0)) err('fert_ml_per_l', 'muss ≥ 0 sein', 'A3');
+    if (!(c.fert_predilution >= 1)) err('fert_predilution', 'muss ≥ 1 sein', 'A3');
+    if (!(c.fert_interval_days >= 1)) err('fert_interval_days', 'muss ≥ 1 sein', 'A3');
+    if (!parseMonths(c.fert_months)) err('fert_months', 'Format z. B. 3-9 oder 3,4,5', 'A3');
+    if (!(c.fert_tank_ml > 0)) err('fert_tank_ml', 'muss > 0 sein', 'A3');
+    if (!(c.reserve_warn_days >= 0)) err('reserve_warn_days', 'muss ≥ 0 sein', 'A3');
+    if (!(c.flow_check_min_ratio > 0 && c.flow_check_min_ratio <= 1)) err('flow_check_min_ratio', 'muss in (0, 1] liegen', 'A3');
+    if (!(c.moisture_rise_min_pct >= 0)) err('moisture_rise_min_pct', 'muss ≥ 0 sein', 'A3');
+    if (!(c.rise_check_delay_min >= 1)) err('rise_check_delay_min', 'muss ≥ 1 sein', 'A3');
+    if (!(c.manual_detect_jump_pct > 0)) err('manual_detect_jump_pct', 'muss > 0 sein', 'A3');
+    if (!(c.sensor_margin_pct >= 0)) err('sensor_margin_pct', 'muss ≥ 0 sein', 'A3');
+    if (!(c.settle_s >= 0)) err('settle_s', 'muss ≥ 0 sein', 'A3');
+    if (!(Number.isInteger(c.measure_interval_min) && c.measure_interval_min >= 1 && c.measure_interval_min <= 1440))
+      err('measure_interval_min', 'ganze Zahl 1 bis 1440', 'A3');
+    if (errors.length) return { ok: false, errors };
+    const cfg = Object.assign({}, c, { _win: w, _months: parseMonths(c.fert_months) });
+    return { ok: true, errors: [], cfg };
+  }
+
+  // Sonde auswerten (Spezifikation 7, Zeile "Sonde ungültig").
+  // m = {raw_mean, raw_std}; ann.sensor_std_max ist eine Annahme (A5), 5.2 nennt keine Grenze.
+  function sensorCheck(m, cfg, ann) {
+    const pct = moisturePct(m.raw_mean, cfg);
+    const lo = -cfg.sensor_margin_pct, hi = 100 + cfg.sensor_margin_pct; // A6: Toleranz in %-Punkten der Kalibrierspanne
+    if (!(pct >= lo && pct <= hi))
+      return { valid: false, pct, reason: 'range', text: `Rohwert ${Math.round(m.raw_mean)} ergibt ${r1(pct)} %, außerhalb Kalibrierbereich ± ${cfg.sensor_margin_pct} %` };
+    if (m.raw_std > ann.sensor_std_max)
+      return { valid: false, pct, reason: 'scatter', text: `Streuung ${r1(m.raw_std)} ADC über Grenze ${ann.sensor_std_max} ADC` };
+    return { valid: true, pct: Math.min(100, Math.max(0, pct)), reason: null, text: '' };
+  }
+
+  function weekSum(totals, day) {
+    let s = 0;
+    for (let d = day - 6; d <= day; d++) s += totals[d] || 0; // A7: gleitende 7 Tage
+    return s;
+  }
+  function inWindow(minute, cfg) { return minute >= cfg._win.start && minute < cfg._win.end; }
+
+  // Prüfungen in jedem Zyklus (5.1 Punkt 5). Liefert Events bei Zustandswechsel (A8).
+  function cycleChecks(inp) {
+    const { st, sensor, time } = inp;
+    const events = [], patch = {};
+    if (!sensor.valid && !st.sensor_alarm) {
+      events.push({ type: 'alarm', level: 'crit', reason: 'sensor_invalid', text: 'Sonde ungültig: ' + sensor.text + '. Kein Gießen.' });
+      patch.sensor_alarm = true;
+    } else if (sensor.valid && st.sensor_alarm) {
+      events.push({ type: 'alarm', level: 'info', reason: 'sensor_ok', text: 'Sonde wieder gültig.' });
+      patch.sensor_alarm = false;
+    }
+    if (!time.valid && !st.emergency_mode) {
+      events.push({ type: 'emergency', level: 'warn', reason: 'no_time', text: 'Keine gültige Zeit: Notbetrieb. Gießen nur unter Not-Schwelle, höchstens einmal pro 24 h, kein Dünger.' });
+      patch.emergency_mode = true;
+    } else if (time.valid && st.emergency_mode) {
+      events.push({ type: 'emergency', level: 'info', reason: 'time_ok', text: 'Zeit wieder gültig, Notbetrieb beendet.' });
+      patch.emergency_mode = false;
+    }
+    return { events, patch };
+  }
+
+  // Ist eine Düngung fällig? (Saison aus dem Kalender, Abstand ab letzter Düngung)
+  function fertDueNow(time, st, cfg) {
+    if (st.fert_due) return true; // bleibt fällig bis zum nächsten Gießen (5.1 Punkt 9, A9)
+    if (!cfg._months.includes(time.month)) return false;
+    if (st.last_fert_day === null) return true;
+    return time.day - st.last_fert_day >= cfg.fert_interval_days;
+  }
+
+  function buildSteps(waterMl, fertMl, cfg) {
+    const portion = waterMl / cfg.water_split;
+    const steps = [{ op: 'water', ml: portion, n: 1 }];
+    if (fertMl > 0) steps.push({ op: 'fert', ml: fertMl });
+    for (let i = 2; i <= cfg.water_split; i++) {
+      steps.push({ op: 'pause', s: cfg.split_pause_s });
+      steps.push({ op: 'water', ml: portion, n: i });
+    }
+    return steps;
+  }
+
+  // Hauptentscheidung (5.1 Punkt 6 bis 9, 5.5, 7).
+  // inp: { trigger: 'cycle'|'water_now', time:{valid, day, minute, month}, sensor:{valid,pct},
+  //        tank:{water_ml, fert_ml}, st:{persistente Zähler und Flags}, cfg, ann }
+  function decide(inp) {
+    const { trigger, time, sensor, tank, st, cfg, ann } = inp;
+    const out = { action: null, events: [], patch: {}, trace: [], decided: false };
+    const T = (res, text) => out.trace.push({ res, text });
+    const manual = trigger === 'water_now';
+    const dose = cfg.water_dose_ml;
+
+    // ---------- Notbetrieb ohne gültige Zeit (5.5) ----------
+    if (!time.valid) {
+      out.decided = true;
+      T('info', 'Keine gültige Zeit: Notbetrieb (5.5), Gießfenster unbekannt.');
+      if (manual) T('info', 'Befehl water_now im Notbetrieb wie eine Notgießung behandelt (A10).');
+      if (!manual && !sensor.valid) { T('nein', 'Sonde ungültig: nicht gießen.'); return out; }
+      if (st.lock_water) { T('nein', 'Wassersperre aktiv (' + st.lock_water + '): nicht gießen.'); return out; }
+      if (st.emerg_min_since !== null && st.emerg_min_since < DAY_MIN) {
+        T('nein', `Letzte Notgießung vor ${r1(st.emerg_min_since / 60)} h Laufzeit, Mindestabstand 24 h.`); return out;
+      }
+      if (!manual) {
+        if (sensor.pct >= cfg.emergency_threshold_pct) {
+          T('nein', `Feuchte ${r1(sensor.pct)} % ≥ Not-Schwelle ${cfg.emergency_threshold_pct} %: nicht gießen.`); return out;
+        }
+        T('ja', `Feuchte ${r1(sensor.pct)} % < Not-Schwelle ${cfg.emergency_threshold_pct} %.`);
+      }
+      if (tank.water_ml < dose) {
+        T('nein', `Tank ${Math.round(tank.water_ml)} ml < Dosis ${dose} ml: nicht gießen, Alarm.`);
+        out.events.push({ type: 'alarm', level: 'crit', reason: 'tank_empty', text: `Wassertank leer (${Math.round(tank.water_ml)} ml < ${dose} ml). Nicht gegossen.` });
+        return out;
+      }
+      T('ja', `Notgießung ${dose} ml in ${cfg.water_split} Portionen, kein Dünger (5.5).`);
+      out.events.push({ type: 'emergency', level: 'warn', reason: 'emergency_water', requested_ml: dose, text: `Notbetrieb: gieße ${dose} ml ohne Dünger.` });
+      out.action = { emergency: true, water_ml: dose, fert_ml: 0, steps: buildSteps(dose, 0, cfg) };
+      out.patch.emerg_min_since = 0;
+      return out;
+    }
+
+    // ---------- Normalbetrieb mit gültiger Zeit ----------
+    if (!manual) {
+      if (cfg.pause) { T('nein', 'Parameter pause = true: Automatik aus.'); return out; }
+      if (!inWindow(time.minute, cfg)) return out; // außerhalb des Fensters wird nicht entschieden (stumm)
+      if (ann.decision_mode === 'first' && st.last_decision_day === time.day) return out;
+      if (ann.decision_mode === 'until_water' && st.last_water_day === time.day) return out;
+      out.decided = true;
+      out.patch.last_decision_day = time.day;
+      T('ja', `Im Gießfenster ${cfg.water_window}, ` + (ann.decision_mode === 'first' ? 'erste Entscheidung heute (A1).' : 'heute noch nicht gegossen (A1).'));
+    } else {
+      out.decided = true;
+      T('info', 'Befehl water_now: Fenster, Schwelle und pause übersprungen, Grenzen und Sperren gelten (A10).');
+    }
+
+    // Düngeplan
+    const due = fertDueNow(time, st, cfg);
+    if (due && !st.fert_due) { out.patch.fert_due = true; T('info', 'Düngung ist ab heute fällig (Saison ' + cfg.fert_months + ', Abstand ' + cfg.fert_interval_days + ' d).'); }
+    else if (due) T('info', 'Düngung ist fällig (Flag gesetzt).');
+
+    if (!manual && !sensor.valid) { T('nein', 'Sonde ungültig: nicht gießen (Alarm kam beim Zustandswechsel).'); return out; }
+    if (st.lock_water) {
+      T('nein', 'Wassersperre aktiv (' + st.lock_water + '): nicht gießen, nur unlock hebt sie auf.');
+      out.events.push({ type: 'alarm', level: 'info', reason: 'locked', text: 'Gießen ausgelassen, Wassersperre aktiv: ' + st.lock_water });
+      return out;
+    }
+    if (!manual) {
+      if (sensor.pct >= cfg.moisture_threshold_pct) {
+        T('nein', `Feuchte ${r1(sensor.pct)} % ≥ Schwelle ${cfg.moisture_threshold_pct} %: kein Gießen (T02).`);
+        if (due) T('info', 'Düngung bleibt fällig und wird beim nächsten Gießen nachgeholt (T19).');
+        return out;
+      }
+      T('ja', `Feuchte ${r1(sensor.pct)} % < Schwelle ${cfg.moisture_threshold_pct} %.`);
+    }
+    if (tank.water_ml < dose) {
+      T('nein', `Tank ${Math.round(tank.water_ml)} ml < Dosis ${dose} ml: nicht gießen, Alarm.`);
+      out.events.push({ type: 'alarm', level: 'crit', reason: 'tank_empty', text: `Wassertank leer (${Math.round(tank.water_ml)} ml < ${dose} ml). Nicht gegossen.` });
+      return out;
+    }
+    T('ja', `Tank ${Math.round(tank.water_ml)} ml ≥ Dosis ${dose} ml.`);
+    const today = st.day_totals[time.day] || 0, week = weekSum(st.day_totals, time.day);
+    const dayLim = Math.min(cfg.max_water_day_ml, ABS.ABS_MAX_WATER_DAY_ML);
+    const weekLim = Math.min(cfg.max_water_week_ml, ABS.ABS_MAX_WATER_WEEK_ML);
+    if (today + dose > dayLim) {
+      T('nein', `Tageslimit: ${Math.round(today)} + ${dose} ml > ${dayLim} ml (A11: keine Teilmenge).`);
+      out.events.push({ type: 'alarm', level: 'info', reason: 'limit_day', text: `Tageslimit erreicht (${Math.round(today)} von ${dayLim} ml). Nicht gegossen.` });
+      return out;
+    }
+    if (week + dose > weekLim) {
+      T('nein', `Wochenlimit: ${Math.round(week)} + ${dose} ml > ${weekLim} ml (gleitend 7 Tage, A7).`);
+      out.events.push({ type: 'alarm', level: 'info', reason: 'limit_week', text: `Wochenlimit erreicht (${Math.round(week)} von ${weekLim} ml). Nicht gegossen.` });
+      return out;
+    }
+    T('ja', `Limits frei: heute ${Math.round(today)}/${dayLim} ml, Woche ${Math.round(week)}/${weekLim} ml.`);
+
+    let fertMl = 0;
+    if (due) {
+      const fd = fertDose(dose, cfg);
+      const fertToday = st.fert_day_totals[time.day] || 0;
+      if (st.lock_fert) T('nein', 'Düngersperre aktiv (' + st.lock_fert + '): nur Wasser, Düngung bleibt fällig.');
+      else if (tank.fert_ml < fd) {
+        T('nein', `Düngerbehälter ${r1(tank.fert_ml)} ml < Dosis ${r2(fd)} ml: nur Wasser, Alarm (A12).`);
+        out.events.push({ type: 'alarm', level: 'crit', reason: 'fert_empty', text: `Düngerbehälter leer (${r1(tank.fert_ml)} ml < ${r2(fd)} ml). Nur Wasser gegeben, Düngung bleibt fällig.` });
+      } else if (fertToday + fd > ABS.ABS_MAX_FERT_DAY_ML) {
+        T('nein', `Dünger heute ${r2(fertToday)} + ${r2(fd)} ml > ABS_MAX_FERT_DAY_ML: kein Dünger.`);
+      } else {
+        fertMl = fd;
+        T('ja', `Dünger ${r2(fd)} ml Lösung = ${cfg.fert_ml_per_l} ml/l × ${dose} ml / 1000 × ${cfg.fert_predilution} (5.2).`);
+      }
+    }
+    const steps = buildSteps(dose, fertMl, cfg);
+    T('ja', 'Ablauf: ' + steps.map(s => s.op === 'water' ? `Wasser ${r1(s.ml)} ml` : s.op === 'fert' ? `Dünger ${r2(s.ml)} ml` : `Pause ${s.s} s`).join(', ') + (fertMl > 0 && cfg.water_split < 2 ? ' (water_split = 1: Dünger wird nicht eingespült, A13)' : ''));
+    out.action = { emergency: false, water_ml: dose, fert_ml: fertMl, steps };
+    return out;
+  }
+
+  // Vor jeder Portion erneut gegen die Limits prüfen (A15), falls eine Portion mehr gefördert hat als geplant.
+  function checkPortion(inp) {
+    const { time, st, cfg, ml, tank_ml, emergency } = inp;
+    if (tank_ml < ml) return { ok: false, text: `Tank ${Math.round(tank_ml)} ml reicht nicht für Portion ${r1(ml)} ml.`, reason: 'tank_empty' };
+    if (emergency) return { ok: true };
+    const today = st.day_totals[time.day] || 0, week = weekSum(st.day_totals, time.day);
+    if (today + ml > Math.min(cfg.max_water_day_ml, ABS.ABS_MAX_WATER_DAY_ML) + 1e-9)
+      return { ok: false, text: `Portion abgebrochen: Tageslimit wäre überschritten (${Math.round(today)} + ${r1(ml)} ml).`, reason: 'limit_day' };
+    if (week + ml > Math.min(cfg.max_water_week_ml, ABS.ABS_MAX_WATER_WEEK_ML) + 1e-9)
+      return { ok: false, text: 'Portion abgebrochen: Wochenlimit wäre überschritten.', reason: 'limit_week' };
+    return { ok: true };
+  }
+
+  // Pumpenlauf bewerten: Förderkontrolle per Wägung, Timeout (Spezifikation 7).
+  // run = {kind:'water'|'fert', requested_ml, measured_ml, planned_s, runtime_s, timeout_s}
+  function evalPumpRun(run, cfg) {
+    const res = { ok: true, abort: false, events: [], patch: {} };
+    const name = run.kind === 'water' ? 'Wasserpumpe' : 'Düngerpumpe';
+    if (run.runtime_s >= run.timeout_s && run.planned_s < run.timeout_s) {
+      res.ok = false; res.abort = true;
+      res.events.push({ type: 'alarm', level: 'crit', reason: 'pump_timeout', requested_ml: r2(run.requested_ml), measured_ml: r2(run.measured_ml),
+        text: `${name} hängt: nach ${run.timeout_s} s per Timeout abgeschaltet (geplant ${r1(run.planned_s)} s). Ablauf abgebrochen.` });
+    }
+    if (run.measured_ml < cfg.flow_check_min_ratio * run.requested_ml) {
+      res.ok = false; res.abort = true;
+      const reason = run.kind === 'water' ? 'pump_no_flow' : 'fert_no_flow';
+      const txt = `${name} fördert nicht: ${r1(run.measured_ml)} ml gemessen, ${r1(run.requested_ml)} ml erwartet (Grenze ${cfg.flow_check_min_ratio} × Soll).`;
+      if (run.kind === 'water') {
+        res.patch.lock_water = 'Wasserpumpe fördert nicht';
+        res.events.push({ type: 'alarm', level: 'crit', reason, requested_ml: r2(run.requested_ml), measured_ml: r2(run.measured_ml), text: txt + ' Pumpe aus, Sperre.' });
+      } else {
+        res.abort = false; // Wasser geht weiter, nur Düngung gesperrt (A12)
+        res.patch.lock_fert = 'Düngerpumpe fördert nicht';
+        res.events.push({ type: 'alarm', level: 'crit', reason, requested_ml: r2(run.requested_ml), measured_ml: r2(run.measured_ml), text: txt + ' Düngung gesperrt.' });
+      }
+    }
+    return res;
+  }
+
+  // Anstiegsprüfung nach dem Gießen (Spezifikation 7, "Wasser geht daneben").
+  function evalRise(prePct, curPct, cfg) {
+    const rise = curPct - prePct;
+    if (rise >= cfg.moisture_rise_min_pct) return { ok: true, rise, events: [], patch: {} };
+    return { ok: false, rise, patch: { lock_water: 'Feuchte stieg nach dem Gießen nicht' },
+      events: [{ type: 'alarm', level: 'crit', reason: 'no_rise', text: `Feuchte stieg nach dem Gießen nur um ${r1(rise)} %-Punkte (mindestens ${cfg.moisture_rise_min_pct}). Wasser geht daneben? Sperre.` }] };
+  }
+
+  // Handgießen erkennen (5.1 Punkt 10, R21). minSincePump = Minuten seit dem letzten eigenen Pumpenlauf oder null.
+  function detectManual(prevPct, curPct, minSincePump, cfg) {
+    if (prevPct === null) return false;
+    if (minSincePump !== null && minSincePump <= cfg.rise_check_delay_min) return false; // A16
+    return curPct - prevPct >= cfg.manual_detect_jump_pct;
+  }
+
+  return { ABS, parseWindow, parseMonths, fertDose, moisturePct, validateConfig, sensorCheck, cycleChecks,
+    fertDueNow, decide, checkPortion, evalPumpRun, evalRise, detectManual, weekSum };
+})();
+
+// Zentrale (Raspi, Home Assistant): ebenfalls reine Funktionen.
+const Zentrale = (() => {
+  'use strict';
+  // Restreichweite = Restmenge / mittlerer Tagesverbrauch, gleitend 14 Tage (Spezifikation 8).
+  // hist = [{t, v}] Füllstände der letzten 14 Tage aus plant/<id>/state; Verbrauch = Summe der Abnahmen.
+  function reserveDays(hist, nowMin, noiseMl) {
+    if (hist.length < 2) return Infinity;
+    let used = 0;
+    for (let i = 1; i < hist.length; i++) {
+      const d = hist[i - 1].v - hist[i].v;
+      if (d > noiseMl) used += d; // Zunahmen sind Nachfüllen, kleine Abnahmen Rauschen (A17)
+    }
+    const days = Math.max(1, Math.min(14, (nowMin - hist[0].t) / 1440)); // A17
+    const perDay = used / days;
+    if (perDay <= 0) return Infinity;
+    return hist[hist.length - 1].v / perDay;
+  }
+  return { reserveDays };
+})();
+</script>
+
+<!-- ===================================================================== -->
+<!-- Simulation: Physik, Node-Hülle (wie ESPHome), Zentrale, Oberfläche.     -->
+<!-- ===================================================================== -->
+<script>
+'use strict';
+const DAY = 1440;
+const $ = id => document.getElementById(id);
+const fmt = (x, d = 0) => (x === null || x === undefined || !Number.isFinite(x)) ? 'n/a'
+  : x.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+// ---------- Parameter aus 5.2 ----------
+// src: P = Platzhalter laut Spezifikation, K = aus Kalibrierung (hier Beispielwert der Simulation)
+const PARAMS = [
+  ['moisture_dry_raw', 'ADC', 2600, 'K', 'Rohwert trocken'],
+  ['moisture_wet_raw', 'ADC', 1300, 'K', 'Rohwert frisch gegossen'],
+  ['moisture_threshold_pct', '%', 35, 'P', 'Gießen unterhalb'],
+  ['emergency_threshold_pct', '%', 15, 'P', 'Gießen im Notbetrieb unterhalb'],
+  ['water_dose_ml', 'ml', 50, 'P', 'Menge pro Gießvorgang'],
+  ['water_split', 'Anzahl', 2, 'P', 'Portionen'],
+  ['split_pause_s', 's', 300, 'P', 'Pause zwischen Portionen'],
+  ['water_window', 'Uhrzeit', '06:00-09:00', 'P', 'Gießfenster'],
+  ['max_water_day_ml', 'ml', 150, 'P', 'Tageslimit'],
+  ['max_water_week_ml', 'ml', 500, 'P', 'Wochenlimit'],
+  ['pump_water_ml_per_s', 'ml/s', 1.0, 'K', 'Förderrate Wasser'],
+  ['pump_fert_ml_per_s', 'ml/s', 0.5, 'K', 'Förderrate Dünger'],
+  ['max_pump_runtime_s', 's', 60, 'P', 'Limit pro Lauf'],
+  ['fert_ml_per_l', 'ml/l', 5, 'P', 'Konzentration, laut Etikett (Beispiel 5)'],
+  ['fert_predilution', 'Faktor', 10, 'P', 'Vorverdünnung'],
+  ['fert_interval_days', 'd', 14, 'P', 'Abstand'],
+  ['fert_months', 'Liste', '3-9', 'P', 'Düngesaison (Monate)'],
+  ['fert_tank_ml', 'ml', 100, 'P', 'Füllmenge beim Nachfüllen'],
+  ['reserve_warn_days', 'd', 3, 'P', 'Warnschwelle Restreichweite'],
+  ['flow_check_min_ratio', 'Faktor', 0.5, 'P', 'gemessen/erwartet, darunter Alarm'],
+  ['moisture_rise_min_pct', '%-Pkt', 5, 'P', 'Mindestanstieg nach dem Gießen'],
+  ['rise_check_delay_min', 'min', 60, 'P', 'Wartezeit Anstiegsprüfung'],
+  ['manual_detect_jump_pct', '%-Pkt', 10, 'P', 'Sprung ohne Pumpe = Handgießen'],
+  ['sensor_margin_pct', '%', 5, 'P', 'Toleranz außerhalb Kalibrierbereich'],
+  ['settle_s', 's', 5, 'P', 'Beruhigungszeit vor Wägung'],
+  ['measure_interval_min', 'min', 15, 'P', 'Messintervall Stufe 1'],
+  ['pause', 'bool', false, '', 'Automatik aus'],
+  ['ota_hold', 'bool', false, '', 'wach bleiben für OTA (Stufe 2, hier ohne Wirkung)']
+];
+const DEFAULT_CFG = Object.fromEntries(PARAMS.map(p => [p[0], p[2]]));
+const STR_KEYS = new Set(['water_window', 'fert_months']);
+const BOOL_KEYS = new Set(['pause', 'ota_hold']);
+
+// ---------- Annahmen ----------
+const ANN_TEXT = [
+  ['A1', 'Einmal pro Tag entscheiden (5.1 Punkt 7): Standard "erste Messung im Fenster entscheidet, auch wenn sie nicht gießt". Alternative "jede Messung im Fenster prüft, bis einmal gegossen wurde". Umschaltbar oben.'],
+  ['A2', 'Bei einem ungültigen Wert wird die ganze empfangene Config verworfen, nicht nur der Einzelwert. Jede verworfene Version erzeugt einmal config_rejected.'],
+  ['A3', 'Plausibilitätsprüfungen über 5.3 hinaus (Zahl gültig, Not-Schwelle unter Schwelle, Dosis nicht über Tageslimit, Portion passt in max_pump_runtime_s, Fensterformat, Monatsliste, Wochenlimit ≥ Tageslimit). 5.3 nennt nur die vier Konstanten.'],
+  ['A4', 'ABS_MAX_FERT_DAY_ML wird bei der Config-Prüfung über die berechnete Dosis aus water_dose_ml geprüft und zusätzlich vor jeder Düngergabe gegen den Düngerzähler des Tages.'],
+  ['A5', 'Grenze für die Streuung der 10 Einzelmessungen: Spezifikation 5.1 sagt "Streuung prüfen", nennt aber keinen Parameter in 5.2. Hier sensor_std_max, umschaltbar oben.'],
+  ['A6', 'sensor_margin_pct wird als %-Punkte der Kalibrierspanne gelesen: gültig, wenn der umgerechnete Wert zwischen −margin und 100 + margin liegt. Werte knapp außerhalb 0 bis 100 werden auf 0 bzw. 100 begrenzt.'],
+  ['A7', 'Wochenzähler als gleitende 7 Kalendertage, Tageszähler je Kalendertag (Ortszeit). Gezählt wird die per Wägung gemessene Menge.'],
+  ['A8', 'Alarme für Sonde ungültig und Notbetrieb werden beim Zustandswechsel gemeldet, nicht in jedem Zyklus. Tank leer und Limits werden bei jedem Gießversuch gemeldet.'],
+  ['A9', 'Fälligkeit der Düngung wird bei der täglichen Entscheidung geprüft. Das Flag bleibt auch nach Saisonende bis zum nächsten Gießen gesetzt (wörtlich nach 5.1 Punkt 9).'],
+  ['A10', 'Befehl water_now: ignoriert Gießfenster, Schwelle und pause, beachtet Sperren, Tank, Limits und fällige Düngung. Im Notbetrieb wie eine Notgießung (ohne Dünger, 24-h-Regel).'],
+  ['A11', 'Passt die Dosis nicht mehr ins Tages- oder Wochenlimit, wird gar nicht gegossen (keine Teilmenge).'],
+  ['A12', 'Düngerbehälter leer oder Düngerpumpe fördert nicht: Wasser wird trotzdem gegeben, Düngung bleibt fällig bzw. gesperrt, Alarm.'],
+  ['A13', 'water_split = 1 mit fälliger Düngung: Dünger nach der einzigen Portion, ohne Einspülen. Bei mehr als 2 Portionen Pause vor jeder weiteren Portion.'],
+  ['A14', 'Push für Alarme (rot), Warnungen (gelb: Reichweite, Notbetrieb, config_rejected, Lebenszeichen). Gießen, Düngen, Handgießen und Limit-Infos nur still im Verlauf ("Alles").'],
+  ['A15', 'Vor jeder Portion werden Tank und Limits erneut geprüft, damit eine hängende Pumpe in Portion 1 nicht noch Portion 2 auslöst. "Pumpe hängt" führt laut 7 nur zu Abschaltung und Alarm, nicht zu einer Sperre.'],
+  ['A16', 'Handgießen: Sprung zwischen zwei Messungen ≥ manual_detect_jump_pct, ohne eigenen Pumpenlauf innerhalb von rise_check_delay_min.'],
+  ['A17', 'Restreichweite in der Zentrale aus dem Verlauf von tank_water_ml: Summe der Abnahmen über 5 ml (Dünger 1 ml) zwischen zwei Messungen in 14 Tagen, geteilt durch beobachtete Tage (mindestens 1, höchstens 14). Dünger zusätzlich warnen, wenn weniger als 2 Dosen übrig sind (T05, die Reichweite allein greift bei 14 Tagen Abstand kaum).'],
+  ['A18', 'Zeit bleibt nach einmaliger NTP-Synchronisation gültig, bis der Node neu startet. Nach Neustart ohne Raspi: Notbetrieb. Laufzeit seit der letzten Notgießung wird persistent mitgezählt.'],
+  ['A19', 'Laufende Gießabläufe und eine ausstehende Anstiegsprüfung gehen bei Stromausfall verloren, Zähler, Sperren und Flags bleiben (5.4). Events, die der Node bei ausgeschaltetem Raspi sendet, gehen verloren (nicht retained).'],
+  ['A20', 'Anstiegsprüfung: Vergleich mit der Feuchte bei der Entscheidung, frühestens rise_check_delay_min nach der letzten Portion, beim ersten gültigen Messwert. Bei Abbruch des Ablaufs keine Anstiegsprüfung.'],
+  ['A21', 'Sperre während Abwesenheit (E9 offen): Die Simulation hält die Sperre bis unlock, die Pflanze kann dabei vertrocknen. Keine Zentrale (E3 offen): unbegrenzt autonom mit letzter Config.'],
+  ['A22', 'Nutzer im Modell: füllt Wasser bzw. Dünger nach einer Warnung oder einem Alarm nach Ablauf einer Reaktionszeit nach, im Urlaub erst nach der Rückkehr. Abschaltbar oben.']
+];
+
+const ANN_DEF = { decision_mode: 'first', sensor_std_max: 40, user_refill: true, refill_delay_h: 12 };
+const MODEL_DEF = {
+  start: '2027-03-01', startPct: 60, cap: 300, et: 30, size: '1', light: '1', troom: 21,
+  noise: 8, drift: 0.5, pumpTrue: 1.0, fertTrue: 0.5, tankMl: 500
+};
+
+// ---------- Zufall (reproduzierbar) ----------
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let rnd = mulberry32(42);
+function gauss() { let u = 0, v = 0; while (u === 0) u = rnd(); v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+
+// ---------- Zustand ----------
+let S = null;
+let ANN = Object.assign({}, ANN_DEF);
+let MODEL = Object.assign({}, MODEL_DEF);
+
+function newPersist() {
+  return { day_totals: {}, fert_day_totals: {}, last_decision_day: null, last_water_day: null, fert_due: false,
+    last_fert_day: null, lock_water: null, lock_fert: null, emerg_min_since: null, sensor_alarm: false, emergency_mode: false };
+}
+
+function reset() {
+  rnd = mulberry32(42);
+  const [y, m, d] = MODEL.start.split('-').map(Number);
+  const startMs = Date.UTC(y || 2027, (m || 3) - 1, d || 1);
+  const v = PlantLogic.validateConfig(DEFAULT_CFG);
+  S = {
+    t: 0, startMs,
+    pot: { W: MODEL.cap * MODEL.startPct / 100, probe: MODEL.startPct / 100, drained: 0, spilled: 0, manual: 0 },
+    hw: { dry: DEFAULT_CFG.moisture_dry_raw, wet: DEFAULT_CFG.moisture_wet_raw },
+    tank: { water: MODEL.tankMl, fert: DEFAULT_CFG.fert_tank_ml },
+    env: { temp: MODEL.troom, light: 0 },
+    faults: { probeOut: false, scatter: false, drift: false, suction: false, hang: false, outlet: false, fertSuction: false, raspiOff: false, nodeOff: false },
+    timed: { heatUntil: -1, vacUntil: -1 },
+    node: { on: true, uptime: 0, timeValid: true, cfg: v.cfg, cfgVersion: 0, persist: newPersist(), seq: null, rise: null,
+      prevPct: null, lastPumpT: null, nextCycle: 0, cmdQ: [], trace: [], traceT: null, traceTrigger: '', sensor: null, raw: null, std: null,
+      tankMeas: MODEL.tankMl, fertMeas: DEFAULT_CFG.fert_tank_ml },
+    central: { cfgVersion: 0, pendingCfg: null, lastStateT: 0, lifeAlarm: false, warnW: true, warnF: true, hist: [], reserveW: Infinity, reserveF: Infinity },
+    user: { refillAt: null, fertRefillAt: null },
+    phys: [], meas: [], events: [], feed: [], cfgMsg: null, rejectedKeys: new Set()
+  };
+  samplePhys();
+}
+
+// ---------- Kalender ----------
+function dateOf(tMin) { return new Date(S.startMs + tMin * 60000); }
+function timeInfo(tMin) {
+  const dt = dateOf(tMin);
+  return { valid: true, day: Math.floor(tMin / DAY) + Math.floor(S.startMs / 86400000), minute: dt.getUTCHours() * 60 + dt.getUTCMinutes(), month: dt.getUTCMonth() + 1 };
+}
+function fmtTime(tMin, withYear) {
+  const dt = dateOf(tMin);
+  const p = n => String(n).padStart(2, '0');
+  return `${WD[dt.getUTCDay()]} ${p(dt.getUTCDate())}.${p(dt.getUTCMonth() + 1)}.${withYear ? dt.getUTCFullYear() : ''} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}`;
+}
+
+// ---------- Physik ----------
+function lightAt(minute) {
+  const h = minute / 60;
+  return (h > 6.5 && h < 19.5) ? Math.sin(Math.PI * (h - 6.5) / 13) : 0;
+}
+function physicsMinute() {
+  const ti = timeInfo(S.t);
+  const heat = S.t < S.timed.heatUntil;
+  const L = lightAt(ti.minute) * (+MODEL.light) * (heat ? 1.3 : 1);
+  const T = MODEL.troom + 1.5 * Math.sin(2 * Math.PI * (ti.minute / 60 - 9) / 24) + (heat ? 9 : 0);
+  S.env.temp = T; S.env.light = L;
+  const cap = MODEL.cap;
+  const theta = S.pot.W / cap;
+  const g = 0.4 + 1.2 * L;
+  const et = MODEL.et / DAY / 0.8139 * g * Math.pow(2, (T - 21) / 10) * (+MODEL.size) * Math.min(1, theta / 0.25);
+  S.pot.W = Math.max(0, S.pot.W - et);
+  if (S.pot.W > cap) { const d = (S.pot.W - cap) * (1 - Math.exp(-1 / 30)); S.pot.W -= d; S.pot.drained += d; }
+  const target = Math.min(S.pot.W / cap, 1.03);
+  S.pot.probe += (target - S.pot.probe) * (1 - Math.exp(-1 / 20));
+  const drift = (S.faults.drift ? 15 : MODEL.drift) / DAY;
+  S.hw.dry += drift; S.hw.wet += drift;
+}
+function samplePhys() {
+  S.phys.push({ t: S.t, p: S.pot.W / MODEL.cap * 100, tank: S.tank.water, fert: S.tank.fert, temp: S.env.temp });
+}
+
+// ---------- Node-Hülle (I/O wie ESPHome) ----------
+function readProbe() {
+  // 10 Einzelmessungen, gemittelt, Streuung (5.1 Punkt 2)
+  const n = 10, xs = [];
+  for (let i = 0; i < n; i++) {
+    let raw;
+    if (S.faults.probeOut) raw = S.hw.dry + 420 + gauss() * MODEL.noise; // Luftwert über "trocken" (P)
+    else raw = S.hw.dry - (S.hw.dry - S.hw.wet) * S.pot.probe + gauss() * MODEL.noise;
+    if (S.faults.scatter) raw += gauss() * 160 + (rnd() < 0.3 ? (rnd() - 0.5) * 900 : 0);
+    xs.push(raw);
+  }
+  const mean = xs.reduce((a, b) => a + b, 0) / n;
+  const std = Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
+  return { raw_mean: mean, raw_std: std };
+}
+function weighWater() { return Math.max(0, S.tank.water + gauss() * 0.4); }   // Wägezelle H06, Rauschen nach Mittelung (P)
+function weighFert() { return Math.max(0, S.tank.fert + gauss() * 0.15); }    // Wägezelle H06b, Rauschen (P)
+function online() { return !S.faults.raspiOff; }
+function nodeTime() { const ti = timeInfo(S.t); ti.valid = S.node.timeValid; return ti; }
+
+function applyPatch(p) { Object.assign(S.node.persist, p); }
+
+function emit(ev) {
+  const e = Object.assign({ ts: S.t }, ev);
+  e.delivered = online() && S.node.on;
+  S.events.push(e);
+  if (S.events.length > 4000) S.events.splice(0, 500);
+  if (e.delivered) centralOnEvent(e);
+  else addFeed({ t: S.t, level: 'info', kind: 'lost', title: 'Nicht zugestellt (Raspi aus)', body: e.text, ev: e });
+}
+
+function cycle() {
+  const N = S.node;
+  // 4. Zentrale, Zeit, Config
+  if (online()) {
+    if (!N.timeValid) N.timeValid = true; // NTP vom Raspi (A18)
+    if (S.central.pendingCfg && S.central.cfgVersion !== N.cfgVersion) {
+      N.cfgVersion = S.central.cfgVersion;
+      const v = PlantLogic.validateConfig(S.central.pendingCfg);
+      if (v.ok) {
+        N.cfg = v.cfg; S.rejectedKeys = new Set();
+        S.cfgMsg = { ok: true, text: `Config v${N.cfgVersion} am ${fmtTime(S.t)} übernommen.` };
+        emit({ type: 'calib', level: 'info', reason: 'config_ok', text: `Config v${N.cfgVersion} übernommen.` });
+      } else {
+        S.rejectedKeys = new Set(v.errors.map(e => e.k));
+        S.cfgMsg = { ok: false, text: `Config v${N.cfgVersion} verworfen, letzte gültige bleibt aktiv: ` + v.errors.map(e => `${e.k}: ${e.msg} [${e.src}]`).join('; ') };
+        emit({ type: 'config_rejected', level: 'warn', reason: v.errors[0].k, text: 'Config verworfen: ' + v.errors.map(e => `${e.k} (${e.msg})`).join(', ') + '. Letzte gültige bleibt aktiv.' });
+      }
+    }
+  }
+  const cfg = N.cfg;
+  // 2. Sonde
+  const m = readProbe();
+  const sensor = PlantLogic.sensorCheck(m, cfg, ANN);
+  N.raw = m.raw_mean; N.std = m.raw_std; N.sensor = sensor;
+  // 3. Wägung (nie während eines Pumpenlaufs; Pumpenläufe sind hier kürzer als ein Zeitschritt)
+  N.tankMeas = weighWater(); N.fertMeas = weighFert();
+  const time = nodeTime();
+  // 5. Gültigkeitsprüfungen
+  const chk = PlantLogic.cycleChecks({ st: N.persist, sensor, time });
+  applyPatch(chk.patch); chk.events.forEach(emit);
+  // 10. Handgießen
+  if (sensor.valid) {
+    const since = N.lastPumpT === null ? null : S.t - N.lastPumpT;
+    if (PlantLogic.detectManual(N.prevPct, sensor.pct, since, cfg))
+      emit({ type: 'manual_detected', level: 'info', reason: 'jump', text: `Feuchtesprung ${fmt(sensor.pct - N.prevPct, 1)} %-Punkte ohne eigenen Pumpenlauf: manuelles Gießen erkannt.` });
+    N.prevPct = sensor.pct;
+  } else N.prevPct = null;
+  // Anstiegsprüfung
+  if (N.rise && S.t >= N.rise.dueT && sensor.valid) {
+    const r = PlantLogic.evalRise(N.rise.prePct, sensor.pct, cfg);
+    applyPatch(r.patch); r.events.forEach(emit);
+    setTrace([{ res: r.ok ? 'ja' : 'nein', text: `Anstiegsprüfung: ${fmt(N.rise.prePct, 1)} % auf ${fmt(sensor.pct, 1)} % (+${fmt(r.rise, 1)}, nötig ${cfg.moisture_rise_min_pct}).` + (r.ok ? '' : ' Sperre, Alarm.') }], 'Anstiegsprüfung', true);
+    N.rise = null;
+  }
+  S.meas.push({ t: S.t, p: sensor.valid ? sensor.pct : null, raw: m.raw_mean });
+  // 6. bis 9. Entscheidung
+  if (!N.seq) runDecision('cycle', sensor, time);
+  // 11. state publizieren
+  if (online()) {
+    S.central.lastStateT = S.t;
+    if (S.central.lifeAlarm) { S.central.lifeAlarm = false; addFeed({ t: S.t, level: 'good', title: 'Pflanzenautomat wieder online', body: 'Lebenszeichen empfangen.' }); }
+    centralOnState();
+  }
+  N.nextCycle = S.t + cfg.measure_interval_min;
+}
+
+function runDecision(trigger, sensor, time) {
+  const N = S.node;
+  const out = PlantLogic.decide({ trigger, time, sensor: sensor || { valid: false, pct: NaN }, tank: { water_ml: N.tankMeas, fert_ml: N.fertMeas },
+    st: N.persist, cfg: N.cfg, ann: ANN });
+  applyPatch(out.patch);
+  out.events.forEach(emit);
+  if (out.decided || out.trace.length) setTrace(out.trace, trigger === 'water_now' ? 'Befehl water_now' : 'Zyklus');
+  if (out.action) startSeq(out.action, sensor && sensor.valid ? sensor.pct : null, time);
+}
+
+function setTrace(tr, trigger, append) {
+  const N = S.node;
+  if (append && N.traceT !== null && S.t - N.traceT < DAY) { N.trace = N.trace.concat(tr); return; }
+  N.trace = tr; N.traceT = S.t; N.traceTrigger = trigger;
+}
+
+function startSeq(action, prePct, time) {
+  S.node.seq = { action, i: 0, nextT: S.t, prePct, time, measured: 0, fertMl: 0, aborted: false };
+  runSeq();
+}
+
+function runSeq() {
+  const N = S.node, cfg = N.cfg, q = N.seq;
+  while (q && q.i < q.action.steps.length && S.t >= q.nextT) {
+    const st = q.action.steps[q.i];
+    if (st.op === 'pause') { q.nextT = S.t + Math.ceil(st.s / 60); q.i++; continue; }
+    const timeout = Math.min(cfg.max_pump_runtime_s, PlantLogic.ABS.ABS_MAX_PUMP_RUNTIME_S);
+    if (st.op === 'water') {
+      const before = weighWater();
+      const pc = PlantLogic.checkPortion({ time: q.time, st: N.persist, cfg, ml: st.ml, tank_ml: before, emergency: q.action.emergency });
+      if (!pc.ok) {
+        emit({ type: 'alarm', level: pc.reason === 'tank_empty' ? 'crit' : 'info', reason: pc.reason, text: pc.text });
+        q.aborted = true; break;
+      }
+      const planned = st.ml / cfg.pump_water_ml_per_s;
+      const runtime = S.faults.hang ? timeout : Math.min(planned, timeout);
+      const delivered = S.faults.suction ? 0 : Math.min(S.tank.water, runtime * MODEL.pumpTrue);
+      S.tank.water -= delivered;
+      if (S.faults.outlet) S.pot.spilled += delivered; else S.pot.W += delivered;
+      const after = weighWater(); // nach settle_s
+      const measured = Math.max(0, before - after);
+      if (!q.action.emergency) N.persist.day_totals[q.time.day] = (N.persist.day_totals[q.time.day] || 0) + measured;
+      q.measured += measured;
+      N.lastPumpT = S.t;
+      const r = PlantLogic.evalPumpRun({ kind: 'water', requested_ml: st.ml, measured_ml: measured, planned_s: planned, runtime_s: runtime, timeout_s: timeout }, cfg);
+      applyPatch(r.patch); r.events.forEach(emit);
+      if (r.abort) { q.aborted = true; break; }
+    } else if (st.op === 'fert') {
+      const before = weighFert();
+      const planned = st.ml / cfg.pump_fert_ml_per_s;
+      const runtime = S.faults.hang ? timeout : Math.min(planned, timeout);
+      const delivered = S.faults.fertSuction ? 0 : Math.min(S.tank.fert, runtime * MODEL.fertTrue);
+      S.tank.fert -= delivered;
+      if (S.faults.outlet) S.pot.spilled += delivered; else S.pot.W += delivered;
+      const after = weighFert();
+      const measured = Math.max(0, before - after);
+      N.lastPumpT = S.t;
+      const r = PlantLogic.evalPumpRun({ kind: 'fert', requested_ml: st.ml, measured_ml: measured, planned_s: planned, runtime_s: runtime, timeout_s: timeout }, cfg);
+      applyPatch(r.patch); r.events.forEach(emit);
+      if (r.ok) {
+        N.persist.fert_due = false; N.persist.last_fert_day = q.time.day;
+        N.persist.fert_day_totals[q.time.day] = (N.persist.fert_day_totals[q.time.day] || 0) + measured;
+        q.fertMl = measured;
+        emit({ type: 'fert', level: 'info', reason: 'plan', requested_ml: +st.ml.toFixed(2), measured_ml: +measured.toFixed(2), text: `Gedüngt: ${fmt(measured, 1)} ml Lösung (Soll ${fmt(st.ml, 2)} ml) zwischen den Wasserportionen.` });
+      }
+      if (r.abort) { q.aborted = true; break; }
+    }
+    q.i++;
+  }
+  if (q && (q.aborted || q.i >= q.action.steps.length)) {
+    if (q.measured > 0 || !q.aborted) {
+      emit({ type: 'water', level: 'info', reason: q.action.emergency ? 'emergency' : 'threshold', requested_ml: q.action.water_ml, measured_ml: +q.measured.toFixed(1),
+        text: `${q.action.emergency ? 'Notgießung' : 'Gegossen'}: ${fmt(q.measured, 0)} ml gemessen (Soll ${q.action.water_ml} ml)` + (q.aborted ? ', Ablauf abgebrochen.' : '.') });
+    }
+    if (!q.aborted && !q.action.emergency) N.persist.last_water_day = q.time.day;
+    if (!q.aborted && q.prePct !== null) N.rise = { dueT: S.t + N.cfg.rise_check_delay_min, prePct: q.prePct };
+    N.seq = null;
+  }
+}
+
+function processCmd(c) {
+  const N = S.node;
+  if (c === 'water_now') {
+    if (N.seq) return;
+    const m = readProbe(); const sensor = PlantLogic.sensorCheck(m, N.cfg, ANN);
+    N.tankMeas = weighWater(); N.fertMeas = weighFert();
+    emit({ type: 'manual', level: 'info', reason: 'water_now', text: 'Befehl water_now empfangen.' });
+    runDecision('water_now', sensor, nodeTime());
+  } else if (c === 'unlock') {
+    const had = N.persist.lock_water || N.persist.lock_fert;
+    applyPatch({ lock_water: null, lock_fert: null });
+    emit({ type: 'manual', level: 'info', reason: 'unlock', text: had ? 'Sperren aufgehoben (unlock).' : 'unlock: keine Sperre aktiv.' });
+  } else if (c === 'fert_refilled') {
+    emit({ type: 'manual', level: 'info', reason: 'fert_refilled', text: 'Dünger nachgefüllt gemeldet.' });
+  }
+}
+
+function boot() {
+  const N = S.node;
+  N.on = true; N.uptime = 0; N.seq = null; N.rise = null; N.prevPct = null; N.nextCycle = S.t; N.cmdQ = [];
+  N.timeValid = online();
+  N.persist.emergency_mode = false; // wird im ersten Zyklus neu bewertet
+  addFeed({ t: S.t, level: 'info', title: 'Node gestartet', body: online() ? 'Zeit per NTP vom Raspi.' : 'Keine Zeitquelle erreichbar.' });
+}
+
+// ---------- Zentrale ----------
+function centralOnEvent(e) {
+  const pushLevels = { crit: true, warn: true };
+  const titles = { water: 'Gegossen', fert: 'Gedüngt', alarm: e.level === 'info' ? 'Info' : 'Alarm', manual: 'Bedienung', manual_detected: 'Handgießen erkannt',
+    calib: 'Config', config_rejected: 'Config verworfen', emergency: 'Notbetrieb' };
+  addFeed({ t: S.t, level: e.level, push: !!pushLevels[e.level], title: titles[e.type] || e.type, body: e.text, ev: e });
+  if (e.reason === 'tank_empty') userScheduleRefill('water');
+  if (e.reason === 'fert_empty') userScheduleRefill('fert');
+}
+function centralOnState() {
+  const C = S.central, N = S.node;
+  C.hist.push({ t: S.t, w: N.tankMeas, f: N.fertMeas });
+  while (C.hist.length && C.hist[0].t < S.t - 14 * DAY) C.hist.shift();
+  const cfg = N.cfg;
+  C.reserveW = Zentrale.reserveDays(C.hist.map(h => ({ t: h.t, v: h.w })), S.t, 5);
+  C.reserveF = Zentrale.reserveDays(C.hist.map(h => ({ t: h.t, v: h.f })), S.t, 1);
+  const lim = cfg.reserve_warn_days;
+  if (C.reserveW < lim && C.warnW) {
+    C.warnW = false;
+    addFeed({ t: S.t, level: 'warn', push: true, title: 'Wasser bald leer', body: `Restreichweite ${fmt(C.reserveW, 1)} Tage (${fmt(N.tankMeas, 0)} ml). Bitte nachfüllen (T04).` });
+    userScheduleRefill('water');
+  } else if (C.reserveW >= lim + 1) C.warnW = true;
+  const nextDose = PlantLogic.fertDose(cfg.water_dose_ml, cfg);
+  const lowF = C.reserveF < lim || N.fertMeas < 2 * nextDose; // A17
+  if (lowF && C.warnF) {
+    C.warnF = false;
+    addFeed({ t: S.t, level: 'warn', push: true, title: 'Dünger fast leer', body: `${fmt(N.fertMeas, 1)} ml Lösung, Dosis ${fmt(nextDose, 1)} ml, Reichweite ${Number.isFinite(C.reserveF) ? fmt(C.reserveF, 0) + ' Tage' : 'unbestimmt'} (T05).` });
+    userScheduleRefill('fert');
+  } else if (!lowF) C.warnF = true;
+}
+function centralMinute() {
+  const C = S.central;
+  if (!online()) return;
+  if (!C.lifeAlarm && S.t - C.lastStateT > 26 * 60) { // 26 h (P)
+    C.lifeAlarm = true;
+    addFeed({ t: S.t, level: 'crit', push: true, title: 'Lebenszeichen fehlt', body: 'Seit 26 h kein state vom Pflanzenautomaten (T10).' });
+  }
+}
+
+// ---------- Nutzer im Modell (A22) ----------
+function userScheduleRefill(kind) {
+  if (!ANN.user_refill) return;
+  let at = S.t + ANN.refill_delay_h * 60;
+  if (S.t < S.timed.vacUntil) at = Math.max(at, S.timed.vacUntil + 120);
+  if (kind === 'water' && S.user.refillAt === null) S.user.refillAt = at;
+  if (kind === 'fert' && S.user.fertRefillAt === null) S.user.fertRefillAt = at;
+}
+function refillWater(by) {
+  S.tank.water = MODEL.tankMl;
+  addFeed({ t: S.t, level: 'good', title: 'Wassertank nachgefüllt', body: by + `, ${MODEL.tankMl} ml.` });
+}
+function refillFert(by) {
+  S.tank.fert = S.node.cfg.fert_tank_ml;
+  addFeed({ t: S.t, level: 'good', title: 'Dünger nachgefüllt', body: by + `, ${S.node.cfg.fert_tank_ml} ml Lösung (fert_tank_ml).` });
+  if (online() && S.node.on) S.node.cmdQ.push('fert_refilled');
+}
+function userMinute() {
+  const vac = S.t < S.timed.vacUntil;
+  if (S.user.refillAt !== null && S.t >= S.user.refillAt && !vac) { S.user.refillAt = null; refillWater('Vom Nutzer im Modell'); }
+  if (S.user.fertRefillAt !== null && S.t >= S.user.fertRefillAt && !vac) { S.user.fertRefillAt = null; refillFert('Vom Nutzer im Modell'); }
+}
+
+// ---------- Feed ----------
+function addFeed(n) {
+  n.id = (S.feedId = (S.feedId || 0) + 1);
+  S.feed.push(n);
+  if (S.feed.length > 1500) S.feed.splice(0, 300);
+  feedDirty = true;
+}
+
+// ---------- Zeitschritt ----------
+function tick() {
+  physicsMinute();
+  userMinute();
+  const N = S.node;
+  if (N.on) {
+    N.uptime++;
+    if (N.persist.emerg_min_since !== null) N.persist.emerg_min_since++;
+    while (N.cmdQ.length) processCmd(N.cmdQ.shift());
+    if (N.seq && S.t >= N.seq.nextT) runSeq();
+    if (S.t >= N.nextCycle) cycle();
+  }
+  centralMinute();
+  S.t++;
+  if (S.t % 15 === 0) samplePhys();
+  if (S.phys.length > 40000) { S.phys.splice(0, 5000); }
+  if (S.meas.length > 60000) { S.meas.splice(0, 8000); }
+}
+function advance(minutes) { for (let i = 0; i < minutes; i++) tick(); }
+
+// ---------- Störfälle ----------
+const FAULTS = [
+  { k: 'probeOut', t: 'Sonde aus der Erde gezogen', s: 'T07: Luftwert außerhalb Kalibrierbereich', toggle: true },
+  { k: 'scatter', t: 'Sonde Wackelkontakt', s: 'Streuung der 10 Messungen zu hoch (A5)', toggle: true },
+  { k: 'drift', t: 'Sonde driftet stark', s: '15 ADC pro Tag statt Modellwert, zeigt Nachkalibrierbedarf', toggle: true },
+  { k: 'suction', t: 'Wasserpumpe läuft trocken', s: 'T06: Ansaugschlauch aus dem Tank gezogen', toggle: true },
+  { k: 'hang', t: 'Pumpe hängt', s: 'Stopp kommt nicht an, Timeout schaltet ab (A15)', toggle: true },
+  { k: 'outlet', t: 'Auslass vom Topf gelöst', s: 'T08: Wasser geht in die Auffangwanne', toggle: true },
+  { k: 'fertSuction', t: 'Düngerschlauch gezogen', s: 'T20: Düngerpumpe fördert nicht', toggle: true },
+  { k: 'raspiOff', t: 'Raspi aus', s: 'T09: keine Config, kein Push, Node autark', toggle: true },
+  { k: 'nodeOff', t: 'Node stromlos', s: 'T10, T13: Lebenszeichen, Persistenz', toggle: true },
+  { k: 'reboot', t: 'Neustart ohne Zeitquelle', s: 'T18: Raspi aus und Node neu starten, Notbetrieb' },
+  { k: 'tankLow', t: 'Tank fast leer', s: 'Wassertank auf 30 ml (T04, Tank leer)' },
+  { k: 'fertLow', t: 'Dünger fast leer', s: 'Düngerbehälter auf 4 ml (T05)' },
+  { k: 'vacation', t: 'Urlaub 14 Tage', s: 'Niemand füllt nach (A22)' },
+  { k: 'heat', t: 'Hitzewelle 7 Tage', s: '+9 °C, mehr Licht (P)' },
+  { k: 'vacHeat', t: 'Urlaub + Hitzewelle', s: 'beides ab jetzt' },
+  { k: 'handWater', t: 'Von Hand gießen 150 ml', s: 'T21: manual_detected' },
+  { k: 'badCfg', t: 'Config mit Tageslimit 400 ml', s: 'T17: über ABS_MAX_WATER_DAY_ML' }
+];
+function doFault(k) {
+  const F = S.faults;
+  if (k in F) {
+    F[k] = !F[k];
+    if (k === 'nodeOff') {
+      if (F.nodeOff) { S.node.on = false; S.node.seq = null; S.node.rise = null; addFeed({ t: S.t, level: 'info', title: 'Node stromlos (Störfall)', body: 'Zähler, Sperren und Flags liegen im Flash (5.4).' }); }
+      else boot();
+    }
+    if (k === 'raspiOff' && !F.raspiOff) S.central.lastStateT = S.t; // Zentrale startet neu, Lebenszeichen-Timer ab jetzt
+    if (k === 'raspiOff') addFeed({ t: S.t, level: 'info', title: F.raspiOff ? 'Raspi aus (Störfall)' : 'Raspi wieder an', body: F.raspiOff ? 'Keine Push-Meldungen, keine Config, kein NTP.' : 'Zentrale erreichbar.' });
+  } else if (k === 'reboot') {
+    F.raspiOff = true; F.nodeOff = false; boot();
+  } else if (k === 'tankLow') { S.tank.water = 30; }
+  else if (k === 'fertLow') { S.tank.fert = 4; }
+  else if (k === 'vacation') { S.timed.vacUntil = S.t + 14 * DAY; addFeed({ t: S.t, level: 'info', title: 'Urlaub beginnt', body: 'Bis ' + fmtTime(S.timed.vacUntil) + ' füllt niemand nach.' }); }
+  else if (k === 'heat') { S.timed.heatUntil = S.t + 7 * DAY; addFeed({ t: S.t, level: 'info', title: 'Hitzewelle beginnt', body: 'Bis ' + fmtTime(S.timed.heatUntil) + ', +9 °C.' }); }
+  else if (k === 'vacHeat') { doFault('vacation'); doFault('heat'); return; }
+  else if (k === 'handWater') { S.pot.W += 150; S.pot.manual += 150; addFeed({ t: S.t, level: 'info', title: 'Von Hand gegossen (Störfall)', body: '150 ml direkt in den Topf.' }); }
+  else if (k === 'badCfg') {
+    const c = readForm(); c.max_water_day_ml = 400; writeForm(c); sendCfg(c);
+  }
+  renderAll(true);
+}
+
+// ---------- Bedienung (R11) ----------
+const OPS = [
+  ['water_now', 'Jetzt gießen'],
+  ['unlock', 'Sperren aufheben (unlock)'],
+  ['pause', 'Pause an/aus'],
+  ['refill', 'Wassertank nachfüllen'],
+  ['fertRefill', 'Dünger nachgefüllt'],
+  ['recal', 'Sonde nachkalibrieren']
+];
+function doOp(k) {
+  const msg = $('opsMsg');
+  const needCentral = ['water_now', 'unlock', 'pause', 'recal'];
+  if (needCentral.includes(k) && !online()) { msg.textContent = 'Raspi aus: Dashboard nicht erreichbar, Befehl nicht gesendet.'; return; }
+  if (k === 'water_now' || k === 'unlock') {
+    if (!S.node.on) { msg.textContent = 'Node stromlos: nicht-retained Befehl geht verloren.'; return; }
+    S.node.cmdQ.push(k); msg.textContent = `Befehl ${k} gesendet, wirkt sofort (Stufe 1 ist wach).`;
+    advance(1);
+  } else if (k === 'pause') {
+    const c = readForm(); c.pause = !S.node.cfg.pause; writeForm(c); sendCfg(c);
+    msg.textContent = `pause = ${c.pause} gesendet, wirkt beim nächsten Zyklus.`;
+  } else if (k === 'refill') { refillWater('Von Hand'); S.user.refillAt = null; msg.textContent = 'Wassertank voll.'; }
+  else if (k === 'fertRefill') { refillFert('Von Hand'); S.user.fertRefillAt = null; msg.textContent = 'Düngerbehälter voll, fert_refilled gesendet.'; }
+  else if (k === 'recal') {
+    // Vereinfachung (P): calibrate_dry/calibrate_wet in einem Schritt, übernimmt die aktuelle Kennlinie der Sonde.
+    const c = readForm(); c.moisture_dry_raw = Math.round(S.hw.dry); c.moisture_wet_raw = Math.round(S.hw.wet); writeForm(c); sendCfg(c);
+    emit({ type: 'calib', level: 'info', reason: 'recal', text: `Kalibrierung: trocken ${c.moisture_dry_raw}, nass ${c.moisture_wet_raw} ADC (vereinfacht, beide Punkte auf einmal (P)).` });
+    msg.textContent = 'Kalibrierwerte übernommen und als Config gesendet (vereinfacht (P)).';
+  }
+  renderAll(true);
+}
+
+// ---------- Config-Formular ----------
+function buildForm() {
+  const g = $('pgrid'); g.innerHTML = '';
+  for (const [k, unit, def, src, desc] of PARAMS) {
+    const row = document.createElement('div'); row.className = 'pf'; row.dataset.k = k;
+    const tag = src === 'P' ? '<span class="tag">(P)</span>' : src === 'K' ? '<span class="tag" title="aus Kalibrierung, hier Beispielwert der Simulation">Kalib. (P)</span>' : '';
+    const lab = document.createElement('label'); lab.htmlFor = 'f_' + k;
+    lab.innerHTML = `<div class="nm">${k}</div><div class="ds">${desc}, ${unit}${tag}</div>`;
+    let inp;
+    if (BOOL_KEYS.has(k)) {
+      inp = document.createElement('select');
+      inp.innerHTML = '<option value="false">false</option><option value="true">true</option>';
+    } else { inp = document.createElement('input'); inp.type = 'text'; inp.inputMode = STR_KEYS.has(k) ? 'text' : 'decimal'; inp.autocomplete = 'off'; }
+    inp.id = 'f_' + k;
+    inp.addEventListener('input', markDiff);
+    row.append(lab, inp); g.append(row);
+  }
+  writeForm(DEFAULT_CFG);
+  const abs = PlantLogic.ABS;
+  $('absTbl').innerHTML = '<tr><th>Konstante</th><th>Wert</th><th>geprüft gegen</th></tr>' +
+    [['ABS_MAX_WATER_DAY_ML', 'max_water_day_ml'], ['ABS_MAX_WATER_WEEK_ML', 'max_water_week_ml'], ['ABS_MAX_PUMP_RUNTIME_S', 'max_pump_runtime_s'], ['ABS_MAX_FERT_DAY_ML', 'berechnete Düngerdosis (A4)']]
+      .map(([k, v]) => `<tr><td><code>${k}</code></td><td>${abs[k]} <span class="tag">(P)</span></td><td><code>${v}</code></td></tr>`).join('');
+}
+function writeForm(c) {
+  for (const [k] of PARAMS) {
+    const el = $('f_' + k);
+    if (BOOL_KEYS.has(k)) el.value = String(c[k]);
+    else if (typeof c[k] === 'number') el.value = Number.isFinite(c[k]) ? String(c[k]).replace('.', ',') : '';
+    else el.value = c[k];
+  }
+  markDiff();
+}
+function readForm() {
+  const c = {};
+  for (const [k] of PARAMS) {
+    const el = $('f_' + k);
+    if (BOOL_KEYS.has(k)) c[k] = el.value === 'true';
+    else if (STR_KEYS.has(k)) c[k] = el.value.trim();
+    else { const s = el.value.trim().replace(',', '.'); c[k] = s === '' ? NaN : Number(s); }
+  }
+  return c;
+}
+function markDiff() {
+  if (!S) return;
+  const c = readForm(), a = S.node.cfg;
+  for (const [k] of PARAMS) {
+    const row = document.querySelector(`.pf[data-k="${k}"]`);
+    const same = (typeof c[k] === 'number' && typeof a[k] === 'number') ? c[k] === a[k] : String(c[k]) === String(a[k]);
+    row.classList.toggle('diff', !same);
+    row.classList.toggle('bad', S.rejectedKeys.has(k));
+  }
+}
+function sendCfg(c) {
+  S.central.pendingCfg = c; S.central.cfgVersion++;
+  if (!online()) S.cfgMsg = { ok: false, text: `Raspi aus: Config v${S.central.cfgVersion} kann nicht abgelegt werden.` , pending: true};
+  else S.cfgMsg = { ok: true, pending: true, text: `Config v${S.central.cfgVersion} retained abgelegt, der Node übernimmt sie beim nächsten Zyklus.` };
+  if (!online()) { S.central.cfgVersion--; S.central.pendingCfg = null; }
+  renderCfgMsg();
+}
+function renderCfgMsg() {
+  const el = $('cfgMsg');
+  const m = S.cfgMsg;
+  if (!m) { el.className = 'msg'; el.textContent = 'Aktiv: Defaults der Spezifikation (v0).'; return; }
+  el.className = 'msg ' + (m.pending ? '' : m.ok ? 'ok' : 'bad');
+  el.textContent = m.text;
+  markDiff();
+}
+
+// ---------- Modell- und Annahmen-Felder ----------
+function buildModel() {
+  const defs = [
+    ['start', 'Startdatum', 'date'], ['startPct', 'Startfeuchte %', 'num'], ['cap', 'Topfkapazität ml (0 bis 100 %)', 'num'],
+    ['et', 'Verdunstung ml/Tag bei 21 °C', 'num'],
+    ['size', 'Pflanzengröße', [['0.6', 'klein'], ['1', 'mittel'], ['1.6', 'groß']]],
+    ['light', 'Licht am Standort', [['0.5', 'wenig'], ['1', 'mittel'], ['1.6', 'viel']]],
+    ['troom', 'Raumtemperatur °C', 'num'], ['noise', 'Sondenrauschen σ ADC', 'num'], ['drift', 'Sondendrift ADC/Tag', 'num'],
+    ['pumpTrue', 'tatsächl. Förderrate Wasser ml/s', 'num'], ['fertTrue', 'tatsächl. Förderrate Dünger ml/s', 'num'], ['tankMl', 'Wassertank ml (H11)', 'num']
+  ];
+  const g = $('mgrid'); g.innerHTML = '';
+  for (const [k, l, t] of defs) {
+    const lab = document.createElement('label');
+    lab.innerHTML = `<span>${l} <span class="tag">(P)</span></span>`;
+    let el;
+    if (Array.isArray(t)) { el = document.createElement('select'); el.innerHTML = t.map(([v, n]) => `<option value="${v}">${n}</option>`).join(''); }
+    else { el = document.createElement('input'); el.type = t === 'date' ? 'date' : 'text'; if (t === 'num') el.inputMode = 'decimal'; }
+    el.value = String(MODEL[k]).replace(t === 'num' ? '.' : '\u0000', ',');
+    el.addEventListener('change', () => {
+      if (t === 'num') { const v = Number(el.value.replace(',', '.')); if (Number.isFinite(v) && v >= 0) MODEL[k] = v; else el.value = String(MODEL[k]).replace('.', ','); }
+      else MODEL[k] = el.value;
+      if (k === 'cap' && MODEL.cap < 50) MODEL.cap = 50;
+      renderAll(true);
+    });
+    lab.append(el); g.append(lab);
+  }
+  const ag = $('agrid'); ag.innerHTML = '';
+  const adefs = [
+    ['decision_mode', 'A1 Einmal pro Tag', [['first', 'erste zählt'], ['until_water', 'bis gegossen']]],
+    ['sensor_std_max', 'A5 Streuungsgrenze ADC', 'num'],
+    ['user_refill', 'A22 Nutzer füllt nach', [['true', 'ja'], ['false', 'nein']]],
+    ['refill_delay_h', 'A22 Reaktionszeit h', 'num']
+  ];
+  for (const [k, l, t] of adefs) {
+    const lab = document.createElement('label');
+    lab.innerHTML = `<span>${l} <span class="tag">(P)</span></span>`;
+    let el;
+    if (Array.isArray(t)) { el = document.createElement('select'); el.innerHTML = t.map(([v, n]) => `<option value="${v}">${n}</option>`).join(''); }
+    else { el = document.createElement('input'); el.type = 'text'; el.inputMode = 'decimal'; }
+    el.value = String(ANN[k]);
+    el.addEventListener('change', () => {
+      if (t === 'num') { const v = Number(el.value.replace(',', '.')); if (Number.isFinite(v) && v >= 0) ANN[k] = v; else el.value = String(ANN[k]); }
+      else ANN[k] = el.value === 'true' ? true : el.value === 'false' ? false : el.value;
+    });
+    lab.append(el); ag.append(lab);
+  }
+  $('annList').innerHTML = ANN_TEXT.map(([id, tx]) => `<li><b>${id}</b> ${tx} <span class="tag">(P)</span></li>`).join('');
+}
+
+// ---------- Oberfläche: Kacheln, Trace, Feed ----------
+let feedTab = 'push', feedDirty = true;
+function tile(k, v, s, st) {
+  return `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${st ? `<span class="status"><i class="dot ${st}"></i>${s}</span>` : s}</div></div>`;
+}
+function renderTiles() {
+  const N = S.node, P = N.persist, cfg = N.cfg, C = S.central;
+  const ti = timeInfo(S.t);
+  const sens = N.sensor;
+  let mode, modeSt;
+  if (!N.on) { mode = 'Node aus'; modeSt = 'crit'; }
+  else if (!N.timeValid) { mode = 'Notbetrieb'; modeSt = 'warn'; }
+  else if (cfg.pause) { mode = 'Pause'; modeSt = 'warn'; }
+  else { mode = 'Automatik'; modeSt = 'good'; }
+  const locks = [P.lock_water && 'Wasser', P.lock_fert && 'Dünger'].filter(Boolean);
+  const today = P.day_totals[ti.day] || 0, week = PlantLogic.weekSum(P.day_totals, ti.day);
+  const html = [
+    tile('Feuchte laut Sonde', sens ? (sens.valid ? fmt(sens.pct, 0) + ' %' : 'ungültig') : 'n/a',
+      N.raw !== null ? `Roh ${fmt(N.raw, 0)} ADC, σ ${fmt(N.std, 0)}` : '', sens && !sens.valid ? 'crit' : null),
+    tile('Feuchte im Modell', fmt(S.pot.W / MODEL.cap * 100, 0) + ' %', `Schwelle ${cfg.moisture_threshold_pct} %, Not ${cfg.emergency_threshold_pct} %`),
+    tile('Wassertank', fmt(S.tank.water, 0) + ' ml', 'Reichweite ' + (Number.isFinite(C.reserveW) ? fmt(C.reserveW, 1) + ' d' : 'n/a') + ' (Zentrale)',
+      C.reserveW < cfg.reserve_warn_days ? 'warn' : null),
+    tile('Düngerbehälter', fmt(S.tank.fert, 1) + ' ml', P.fert_due ? 'Düngung fällig' : (P.last_fert_day !== null ? 'zuletzt ' + fmtDay(P.last_fert_day) : 'noch nicht gedüngt'), P.fert_due ? 'warn' : null),
+    tile('Gegossen heute / 7 Tage', fmt(today, 0) + ' / ' + fmt(week, 0) + ' ml', `Limits ${cfg.max_water_day_ml} / ${cfg.max_water_week_ml} ml`),
+    tile('Modus', mode, (locks.length ? 'Sperre: ' + locks.join(', ') : 'keine Sperre'), locks.length ? 'crit' : modeSt),
+    tile('Zeit und Zentrale', N.timeValid ? 'Zeit gültig' : 'keine Zeit', online() ? 'Raspi online' : 'Raspi aus', online() ? 'good' : 'crit'),
+    tile('Wasser daneben / Ablauf', fmt(S.pot.spilled, 0) + ' / ' + fmt(S.pot.drained, 0) + ' ml', 'Auffangwanne / Untersetzer')
+  ];
+  $('tiles').innerHTML = html.join('');
+  $('clock').textContent = fmtTime(S.t, true);
+}
+function fmtDay(dayNum) {
+  const dt = new Date(dayNum * 86400000);
+  return `${String(dt.getUTCDate()).padStart(2, '0')}.${String(dt.getUTCMonth() + 1).padStart(2, '0')}.`;
+}
+function renderTrace() {
+  const N = S.node;
+  if (N.traceT === null) { $('traceHead').textContent = 'Noch keine Entscheidung. Entschieden wird im Gießfenster ' + N.cfg.water_window + ' (oder sofort im Notbetrieb).'; $('trace').innerHTML = ''; return; }
+  $('traceHead').textContent = `${N.traceTrigger}, ${fmtTime(N.traceT, true)}`;
+  $('trace').innerHTML = N.trace.map(x => `<li><span class="r ${x.res}">${x.res === 'ja' ? 'ja' : x.res === 'nein' ? 'nein' : 'info'}</span><span>${esc(x.text)}</span></li>`).join('');
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function renderFeed() {
+  if (!feedDirty) return;
+  feedDirty = false;
+  const el = $('feed');
+  let items;
+  if (feedTab === 'push') items = S.feed.filter(n => n.push);
+  else if (feedTab === 'all') items = S.feed;
+  else items = S.feed.filter(n => n.ev);
+  items = items.slice(-150).reverse();
+  if (!items.length) { el.innerHTML = '<div class="empty">' + (feedTab === 'push' ? 'Keine Push-Meldungen. Alles in Ordnung.' : 'Noch nichts.') + '</div>'; return; }
+  el.innerHTML = items.map(n => {
+    if (feedTab === 'mqtt') {
+      const e = n.ev;
+      const o = { ts: fmtTime(e.ts, true), type: e.type, reason: e.reason };
+      if (e.requested_ml !== undefined) o.requested_ml = e.requested_ml;
+      if (e.measured_ml !== undefined) o.measured_ml = e.measured_ml;
+      return `<div class="note ${n.level}"><div class="nh"><span>plant/topf1/event${e.delivered ? '' : ', nicht zugestellt'}</span></div><code>${esc(JSON.stringify(o))}</code></div>`;
+    }
+    return `<div class="note ${n.level}"><div class="nh"><span>Home Assistant${n.push ? '' : ', still'}</span><span>${fmtTime(n.t)}</span></div><div class="nt">${esc(n.title)}</div><div class="nb">${esc(n.body)}</div></div>`;
+  }).join('');
+}
+
+// ---------- Diagramme ----------
+const charts = {};
+let hoverT = null;
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function setupCanvas(id) {
+  const c = $(id);
+  const h = +c.getAttribute('height');
+  charts[id] = { c, h };
+  const onMove = ev => {
+    const r = c.getBoundingClientRect();
+    const x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+    const ch = charts[id];
+    if (!ch.x0) return;
+    hoverT = ch.t0 + (x - ch.x0) / (ch.x1 - ch.x0) * (ch.t1 - ch.t0);
+    if (hoverT < ch.t0 || hoverT > Math.min(ch.t1, S.t)) hoverT = null;
+    drawCharts(); renderReadout();
+  };
+  c.addEventListener('mousemove', onMove);
+  c.addEventListener('touchstart', onMove, { passive: true });
+  c.addEventListener('mouseleave', () => { hoverT = null; drawCharts(); renderReadout(); });
+}
+function viewRange() {
+  const span = +$('span').value;
+  if (!span) return [0, Math.max(S.t, DAY)];
+  const w = span * DAY;
+  return [Math.max(0, S.t - w), Math.max(S.t, w)];
+}
+function prep(id) {
+  const ch = charts[id], c = ch.c;
+  const dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(ch.h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(ch.h * dpr); c.style.height = ch.h + 'px'; }
+  const g = c.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, ch.h);
+  const [t0, t1] = viewRange();
+  Object.assign(ch, { w, t0, t1, x0: 38, x1: w - 8, y0: 8, y1: ch.h - 20 });
+  return { g, ch };
+}
+function X(ch, t) { return ch.x0 + (t - ch.t0) / (ch.t1 - ch.t0) * (ch.x1 - ch.x0); }
+function Y(ch, v, lo, hi) { return ch.y1 - (v - lo) / (hi - lo) * (ch.y1 - ch.y0); }
+function frame(g, ch, lo, hi, ticks, unit) {
+  const grid = cssVar('--grid'), muted = cssVar('--muted'), axis = cssVar('--axis');
+  const spanD = (ch.t1 - ch.t0) / DAY;
+  // Tag/Nacht und Gießfenster
+  if (spanD <= 14.01) {
+    const win = S.node.cfg._win;
+    const d0 = Math.floor((S.startMs / 60000 + ch.t0) / DAY) - 1;
+    const d1 = Math.ceil((S.startMs / 60000 + ch.t1) / DAY) + 1;
+    for (let d = d0; d <= d1; d++) {
+      const base = d * DAY - S.startMs / 60000;
+      const n1 = X(ch, Math.max(ch.t0, base + 19.5 * 60)), n2 = X(ch, Math.min(ch.t1, base + DAY + 6.5 * 60));
+      g.fillStyle = cssVar('--night'); if (n2 > n1) g.fillRect(n1, ch.y0, n2 - n1, ch.y1 - ch.y0);
+      const w1 = X(ch, Math.max(ch.t0, base + win.start)), w2 = X(ch, Math.min(ch.t1, base + win.end));
+      g.fillStyle = cssVar('--window'); if (w2 > w1) g.fillRect(w1, ch.y0, w2 - w1, ch.y1 - ch.y0);
+    }
+  }
+  g.font = '11px system-ui, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'right';
+  g.lineWidth = 1;
+  for (const v of ticks) {
+    const y = Math.round(Y(ch, v, lo, hi)) + 0.5;
+    g.strokeStyle = v === lo ? axis : grid; g.beginPath(); g.moveTo(ch.x0, y); g.lineTo(ch.x1, y); g.stroke();
+    g.fillStyle = muted; g.fillText(fmt(v) + (unit || ''), ch.x0 - 4, y);
+  }
+  // Zeitachse: Tagesmarken
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  const step = spanD <= 4 ? 1 : spanD <= 15 ? 2 : spanD <= 30 ? 7 : spanD <= 60 ? 7 : 14;
+  const d0 = Math.ceil((S.startMs / 60000 + ch.t0) / DAY);
+  const d1 = Math.floor((S.startMs / 60000 + ch.t1) / DAY);
+  let lastX = -99;
+  for (let d = d0; d <= d1; d++) {
+    if ((d - Math.floor(S.startMs / 86400000)) % step !== 0) continue;
+    const t = d * DAY - S.startMs / 60000;
+    const x = X(ch, t);
+    if (x - lastX < 46 || x > ch.x1 - 10) continue;
+    lastX = x;
+    g.strokeStyle = grid; g.beginPath(); g.moveTo(Math.round(x) + 0.5, ch.y0); g.lineTo(Math.round(x) + 0.5, ch.y1); g.stroke();
+    g.fillStyle = muted; g.fillText(fmtDay(d), x, ch.y1 + 4);
+  }
+}
+function line(g, ch, pts, key, lo, hi, color, width) {
+  g.strokeStyle = color; g.lineWidth = width || 2; g.lineJoin = 'round'; g.beginPath();
+  let pen = false;
+  let lo0 = 0, hi0 = pts.length;
+  while (lo0 < hi0) { const m = (lo0 + hi0) >> 1; if (pts[m].t < ch.t0 - 30) lo0 = m + 1; else hi0 = m; }
+  for (let i = Math.max(0, lo0 - 1); i < pts.length; i++) {
+    const p = pts[i];
+    if (p.t < ch.t0 - 30 || p.t > ch.t1) continue;
+    const v = p[key];
+    if (v === null || v === undefined) { pen = false; continue; }
+    const x = X(ch, p.t), y = Y(ch, Math.max(lo, Math.min(hi, v)), lo, hi);
+    if (pen) g.lineTo(x, y); else { g.moveTo(x, y); pen = true; }
+  }
+  g.stroke();
+}
+function hline(g, ch, v, lo, hi, color, label) {
+  const y = Math.round(Y(ch, v, lo, hi)) + 0.5;
+  g.save(); g.setLineDash([4, 4]); g.strokeStyle = color; g.lineWidth = 1; g.beginPath(); g.moveTo(ch.x0, y); g.lineTo(ch.x1, y); g.stroke(); g.restore();
+  if (label) { g.fillStyle = cssVar('--ink2'); g.font = '11px system-ui, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'bottom'; g.fillText(label, ch.x0 + 4, y - 2); }
+}
+function marker(g, x, y, shape, color) {
+  g.fillStyle = color; g.strokeStyle = cssVar('--surface'); g.lineWidth = 2; g.beginPath();
+  if (shape === 'tri') { g.moveTo(x, y - 5); g.lineTo(x + 5, y + 4); g.lineTo(x - 5, y + 4); g.closePath(); }
+  else if (shape === 'dia') { g.moveTo(x, y - 5); g.lineTo(x + 5, y); g.lineTo(x, y + 5); g.lineTo(x - 5, y); g.closePath(); }
+  else if (shape === 'sq') g.rect(x - 4, y - 4, 8, 8);
+  else g.arc(x, y, 4.5, 0, Math.PI * 2);
+  g.stroke(); g.fill();
+}
+function crosshair(g, ch) {
+  if (hoverT === null) return;
+  const x = Math.round(X(ch, hoverT)) + 0.5;
+  g.strokeStyle = cssVar('--ink2'); g.lineWidth = 1; g.beginPath(); g.moveTo(x, ch.y0); g.lineTo(x, ch.y1); g.stroke();
+}
+function nowLine(g, ch) {
+  if (S.t >= ch.t1 - 1) return;
+  const x = Math.round(X(ch, S.t)) + 0.5;
+  g.save(); g.setLineDash([2, 3]); g.strokeStyle = cssVar('--axis'); g.beginPath(); g.moveTo(x, ch.y0); g.lineTo(x, ch.y1); g.stroke(); g.restore();
+}
+function visibleEvents(ch) { return S.events.filter(e => e.ts >= ch.t0 && e.ts <= ch.t1); }
+
+function drawCharts() {
+  const s1 = cssVar('--s1'), s2 = cssVar('--s2'), s3 = cssVar('--s3'), s7 = cssVar('--s7'), crit = cssVar('--crit'), warn = cssVar('--warn'), muted = cssVar('--muted');
+  const cfg = S.node.cfg;
+  // Feuchte
+  {
+    const { g, ch } = prep('cMoist');
+    frame(g, ch, 0, 100, [0, 25, 50, 75, 100], ' %');
+    hline(g, ch, cfg.moisture_threshold_pct, 0, 100, muted, 'Schwelle ' + cfg.moisture_threshold_pct + ' %');
+    hline(g, ch, cfg.emergency_threshold_pct, 0, 100, muted, 'Not-Schwelle ' + cfg.emergency_threshold_pct + ' %');
+    line(g, ch, S.phys, 'p', 0, 100, s2, 1.5);
+    line(g, ch, S.meas, 'p', 0, 100, s1, 2);
+    const evs = visibleEvents(ch);
+    for (const e of evs) {
+      const x = X(ch, e.ts);
+      if (e.type === 'water') marker(g, x, ch.y1 - 7, 'tri', s1);
+      else if (e.type === 'fert') marker(g, x, ch.y1 - 19, 'dia', s3);
+      else if (e.type === 'manual_detected') marker(g, x, ch.y1 - 31, 'dot', s7);
+      else if (e.level === 'crit') marker(g, x, ch.y0 + 6, 'sq', crit);
+    }
+    nowLine(g, ch); crosshair(g, ch);
+  }
+  // Gießmenge pro Tag
+  {
+    const { g, ch } = prep('cWater');
+    const byDay = {};
+    for (const e of S.events) if (e.type === 'water' && e.ts >= ch.t0 - DAY && e.ts <= ch.t1) {
+      const d = Math.floor((S.startMs / 60000 + e.ts) / DAY); byDay[d] = (byDay[d] || 0) + (e.measured_ml || 0);
+    }
+    const maxV = Math.max(cfg.max_water_day_ml, ...Object.values(byDay), 50);
+    const hi = Math.ceil(maxV / 50) * 50;
+    frame(g, ch, 0, hi, [0, hi / 2, hi], '');
+    hline(g, ch, cfg.max_water_day_ml, 0, hi, muted, '');
+    const dayW = (ch.x1 - ch.x0) / ((ch.t1 - ch.t0) / DAY);
+    const bw = Math.max(2, Math.min(18, dayW - 2));
+    g.fillStyle = s1;
+    for (const [d, v] of Object.entries(byDay)) {
+      const tc = +d * DAY - S.startMs / 60000 + DAY / 2;
+      if (tc < ch.t0 || tc > ch.t1) continue;
+      const x = X(ch, tc) - bw / 2, y = Y(ch, v, 0, hi);
+      const r = Math.min(4, bw / 2, ch.y1 - y);
+      g.beginPath();
+      g.moveTo(x, ch.y1); g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.lineTo(x + bw - r, y); g.quadraticCurveTo(x + bw, y, x + bw, y + r); g.lineTo(x + bw, ch.y1); g.closePath(); g.fill();
+    }
+    nowLine(g, ch); crosshair(g, ch);
+  }
+  // Tank
+  {
+    const { g, ch } = prep('cTank');
+    const hi = Math.max(100, Math.ceil(MODEL.tankMl / 100) * 100);
+    frame(g, ch, 0, hi, [0, hi / 2, hi], '');
+    line(g, ch, S.phys, 'tank', 0, hi, s1, 2);
+    for (const n of S.feed) if (n.title === 'Wasser bald leer' && n.t >= ch.t0 && n.t <= ch.t1) marker(g, X(ch, n.t), ch.y0 + 6, 'sq', warn);
+    for (const e of visibleEvents(ch)) if (e.reason === 'tank_empty') marker(g, X(ch, e.ts), ch.y0 + 6, 'sq', crit);
+    nowLine(g, ch); crosshair(g, ch);
+  }
+  // Dünger
+  {
+    const { g, ch } = prep('cFert');
+    const hi = Math.max(20, Math.ceil(cfg.fert_tank_ml / 20) * 20);
+    frame(g, ch, 0, hi, [0, hi / 2, hi], '');
+    line(g, ch, S.phys, 'fert', 0, hi, s3, 2);
+    g.font = '11px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    let lastX = -99;
+    for (const e of visibleEvents(ch)) if (e.type === 'fert') {
+      const x = X(ch, e.ts);
+      marker(g, x, ch.y1 - 8, 'dia', s3);
+      if (x - lastX > 40) { g.fillStyle = cssVar('--ink2'); g.fillText(fmt(e.measured_ml, 1) + ' ml', x, ch.y1 - 15); lastX = x; }
+    }
+    for (const e of visibleEvents(ch)) if (e.reason === 'fert_empty' || e.reason === 'fert_no_flow') marker(g, X(ch, e.ts), ch.y0 + 6, 'sq', crit);
+    nowLine(g, ch); crosshair(g, ch);
+  }
+  // Temperatur
+  {
+    const { g, ch } = prep('cTemp');
+    const lo = Math.floor((MODEL.troom - 4) / 5) * 5, hi = Math.ceil((MODEL.troom + 12) / 5) * 5;
+    frame(g, ch, lo, hi, [lo, (lo + hi) / 2, hi], '°');
+    line(g, ch, S.phys, 'temp', lo, hi, s2, 1.5);
+    nowLine(g, ch); crosshair(g, ch);
+  }
+}
+function nearest(arr, t) {
+  let lo = 0, hi = arr.length - 1;
+  if (hi < 0) return null;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m].t < t) lo = m + 1; else hi = m; }
+  if (lo > 0 && Math.abs(arr[lo - 1].t - t) < Math.abs(arr[lo].t - t)) lo--;
+  return arr[lo];
+}
+function renderReadout() {
+  const el = $('readout');
+  if (hoverT === null) { el.textContent = 'Zeiger über ein Diagramm bewegen oder antippen, um Werte abzulesen.'; return; }
+  const p = nearest(S.phys, hoverT), m = nearest(S.meas, hoverT);
+  const evs = S.events.filter(e => Math.abs(e.ts - hoverT) <= 45 && e.level !== 'info' || (Math.abs(e.ts - hoverT) <= 45 && (e.type === 'water' || e.type === 'fert')));
+  const sensTxt = m && Math.abs(m.t - hoverT) < 60 ? (m.p === null ? 'ungültig' : fmt(m.p, 1) + ' %') : 'keine Messung';
+  el.innerHTML = `<b>${fmtTime(p.t, true)}</b>: Sonde ${sensTxt}, Modell ${fmt(p.p, 1)} %, Tank ${fmt(p.tank, 0)} ml, Dünger ${fmt(p.fert, 1)} ml, ${fmt(p.temp, 1)} °C` +
+    (evs.length ? '<br>' + evs.slice(0, 3).map(e => esc(e.text)).join(' | ') : '');
+}
+
+// ---------- Störfall- und Bedienknöpfe ----------
+function buildButtons() {
+  $('faults').innerHTML = FAULTS.map(f => `<button type="button" data-f="${f.k}" ${f.toggle ? 'aria-pressed="false"' : ''}>${f.t}<small>${f.s}</small></button>`).join('');
+  $('faults').addEventListener('click', e => { const b = e.target.closest('button'); if (b) doFault(b.dataset.f); });
+  $('ops').innerHTML = OPS.map(([k, t]) => `<button type="button" data-o="${k}">${t}</button>`).join('');
+  $('ops').addEventListener('click', e => { const b = e.target.closest('button'); if (b) doOp(b.dataset.o); });
+}
+function renderButtons() {
+  for (const b of document.querySelectorAll('#faults button[aria-pressed]')) {
+    const on = !!S.faults[b.dataset.f];
+    b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on);
+  }
+  const pb = document.querySelector('#ops button[data-o="pause"]');
+  if (pb) pb.textContent = S.node.cfg.pause ? 'Pause aus (Automatik an)' : 'Pause an (Automatik aus)';
+}
+
+let lastFull = 0;
+function renderAll(force) {
+  const now = performance.now();
+  if (!force && now - lastFull < 90) { drawCharts(); return; }
+  lastFull = now;
+  renderTiles(); renderTrace(); renderFeed(); renderButtons(); renderCfgMsg(); drawCharts(); renderReadout();
+}
+
+// ---------- Laufsteuerung ----------
+let running = false, lastFrame = 0, carry = 0;
+function loop(ts) {
+  if (!running) return;
+  const dt = Math.min(0.1, (ts - lastFrame) / 1000 || 0);
+  lastFrame = ts;
+  carry += dt * +$('speed').value;
+  const n = Math.min(20000, Math.floor(carry));
+  carry -= n;
+  advance(n);
+  renderAll(false);
+  requestAnimationFrame(loop);
+}
+function setRunning(r) {
+  running = r;
+  $('playBtn').textContent = r ? 'Anhalten' : 'Start';
+  if (r) { lastFrame = performance.now(); requestAnimationFrame(loop); }
+}
+
+// ---------- Thema ----------
+const THEMES = ['auto', 'light', 'dark'];
+function applyTheme(t) {
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  $('themeBtn').textContent = 'Schema: ' + ({ auto: 'Auto', light: 'Hell', dark: 'Dunkel' }[t]);
+  try { localStorage.setItem('pflanze-theme', t); } catch (e) { /* ohne Speicher weiter */ }
+  if (S) drawCharts();
+}
+
+// ---------- Start ----------
+function init() {
+  buildForm(); buildModel(); buildButtons();
+  ['cMoist', 'cWater', 'cTank', 'cFert', 'cTemp'].forEach(setupCanvas);
+  reset();
+  // Vorlauf: zwei Tage, damit Verläufe sichtbar sind
+  advance(2 * DAY + 8 * 60);
+  renderAll(true);
+  $('playBtn').onclick = () => setRunning(!running);
+  $('dayBtn').onclick = () => { advance(DAY); renderAll(true); };
+  $('weekBtn').onclick = () => { advance(7 * DAY); renderAll(true); };
+  $('resetBtn').onclick = () => { reset(); writeForm(DEFAULT_CFG); renderAll(true); feedDirty = true; renderFeed(); };
+  $('span').onchange = () => renderAll(true);
+  $('sendCfg').onclick = () => { sendCfg(readForm()); renderAll(true); };
+  $('defCfg').onclick = () => writeForm(DEFAULT_CFG);
+  $('actCfg').onclick = () => writeForm(S.node.cfg);
+  const tabs = { tabPush: 'push', tabAll: 'all', tabMqtt: 'mqtt' };
+  for (const [id, v] of Object.entries(tabs)) $(id).onclick = () => {
+    feedTab = v; for (const i of Object.keys(tabs)) $(i).setAttribute('aria-selected', String(i === id));
+    feedDirty = true; renderFeed();
+  };
+  let th = 'auto';
+  try { th = localStorage.getItem('pflanze-theme') || 'auto'; } catch (e) { /* egal */ }
+  if (!THEMES.includes(th)) th = 'auto';
+  applyTheme(th);
+  $('themeBtn').onclick = () => { const cur = document.documentElement.getAttribute('data-theme') || 'auto'; applyTheme(THEMES[(THEMES.indexOf(cur) + 1) % 3]); };
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => drawCharts());
+  window.addEventListener('resize', () => drawCharts());
+  if ('ResizeObserver' in window) new ResizeObserver(() => drawCharts()).observe($('cMoist'));
+}
+// Schnittstelle für Tests
+window.__sim = { get S() { return S; }, advance, doFault, doOp, reset, sendCfg, readForm, writeForm, PlantLogic, Zentrale, renderAll, ANN, MODEL };
+init();
+</script>
+</body>
+</html>
