@@ -26,7 +26,7 @@
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
     --s5: #d55181; --s6: #008300; --s7: #9085e9;
     --good-text: #0ca30c;
-    --forest: #1d321f; --tree: #2c4d2e; --paper: #cfcdc5; --paper-ink: #151513; --paper-mid: #7b7973;
+    --forest: #213b25; --tree: #3a6640; --paper: #cfcdc5; --paper-ink: #151513; --paper-mid: #7b7973;
     --focus: #3987e5;
   }
 }
@@ -38,7 +38,7 @@
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
   --s5: #d55181; --s6: #008300; --s7: #9085e9;
   --good-text: #0ca30c;
-  --forest: #1d321f; --tree: #2c4d2e; --paper: #cfcdc5; --paper-ink: #151513; --paper-mid: #7b7973;
+  --forest: #213b25; --tree: #3a6640; --paper: #cfcdc5; --paper-ink: #151513; --paper-mid: #7b7973;
   --focus: #3987e5;
 }
 * { box-sizing: border-box; }
@@ -115,6 +115,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 #epC { aspect-ratio: 240 / 320; border-radius: 4px; }
 .devbtns { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 6px; }
 .devbtns i { width: 34px; height: 8px; border-radius: 4px; background: #555; display: block; }
+.stats td { font-size: 13px; padding: 5px 4px; }
 .stats td:first-child { color: var(--ink-2); }
 details { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; }
 summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
@@ -133,6 +134,7 @@ summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
   .panel { padding: 11px; }
   #mapC { height: 330px; }
   input[type="number"] { width: 80px; }
+  #sumT td, #sumT th { font-size: 13px; padding: 5px 4px; }
 }
 </style>
 </head>
@@ -570,6 +572,7 @@ function drawRuntime() {
     ctx.fillText(fmt(t) + (t + step > max ? ' h' : ''), x, h - 8);
   }
   runHits = [];
+  const labels = [];
   ['a', 'b'].forEach((v, row) => {
     const y = top + row * (bh + gap);
     const r = eRes[v];
@@ -581,10 +584,8 @@ function drawRuntime() {
     const ok = r.hours >= 10;
     ctx.font = '600 13px system-ui, sans-serif'; ctx.fillStyle = tok.ink;
     const label = fmt(r.hours, 1) + ' h' + (r.hours > max ? ' (gekappt)' : '');
-    ctx.fillText(label, xb + 6, y + 13);
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.fillStyle = ok ? tok['good-text'] : tok.crit;
-    ctx.fillText(ok ? '✓ erfüllt' : '✗ nicht erfüllt', xb + 6, y + 28);
+    const verdict = ok ? '✓ erfüllt' : '✗ nicht erfüllt';
+    labels.push({ x: xb + 6, y, label, verdict, ok });
     runHits.push({ x: L, y, w: xb - L, h: bh, html: `<b>${VAR[v].title}</b><br>Laufzeit <b>${fmt(r.hours, 1)} h</b><br>Leistung am Akku ${fmt(r.batt)} mW<br>nutzbar ${fmt(r.usableWh, 1)} Wh<br>${ok ? 'erfüllt 10 h' : 'erfüllt 10 h nicht'}` });
   });
   /* Linien 10 h (Muss) und 14 h (Wunsch, P) */
@@ -598,7 +599,18 @@ function drawRuntime() {
     ctx.fillText(txt, x, top - 11);
   };
   line(10, tok.crit, [], '10 h');
-  line(14, tok.muted, [5, 4], '14 h (P)');
+  line(14, tok.muted, [5, 4], narrow ? '' : '14 h (P)');
+  /* Beschriftung am Balkenende, mit Hintergrund, damit Linien sie nicht kreuzen */
+  ctx.textAlign = 'left';
+  for (const lb of labels) {
+    ctx.font = '600 13px system-ui, sans-serif';
+    const w1 = ctx.measureText(lb.label).width;
+    ctx.font = '12px system-ui, sans-serif';
+    const w2 = ctx.measureText(lb.verdict).width;
+    ctx.fillStyle = tok.surface; ctx.fillRect(lb.x - 2, lb.y, Math.max(w1, w2) + 4, 31);
+    ctx.font = '600 13px system-ui, sans-serif'; ctx.fillStyle = tok.ink; ctx.fillText(lb.label, lb.x, lb.y + 13);
+    ctx.font = '12px system-ui, sans-serif'; ctx.fillStyle = lb.ok ? tok['good-text'] : tok.crit; ctx.fillText(lb.verdict, lb.x, lb.y + 28);
+  }
 }
 function fillSummary() {
   const rows = [
@@ -606,9 +618,10 @@ function fillSummary() {
     ['Akku, Energieinhalt', r => fmt(r.wh, 1) + ' Wh'],
     ['davon nutzbar (Temperatur, Reserve)', r => fmt(r.usableWh, 1) + ' Wh'],
     ['Laufzeit', r => `<span class="${r.hours >= 10 ? 'ok' : 'bad'}">${r.hours >= 10 ? '✓' : '✗'} ${fmt(r.hours, 1)} h</span>`],
-    ['Akku nötig für 10 h', r => fmt(r.need10mAh, 0) + ' mAh, ' + fmt(r.need10Wh, 1) + ' Wh'],
+    ['Akku nötig für 10 h', r => fmt(r.need10mAh, 0) + ' mAh<br>' + fmt(r.need10Wh, 1) + ' Wh'],
   ];
-  let html = `<thead><tr><th>Schätzung (P)</th><th class="num">${VAR.a.title}</th><th class="num">${VAR.b.title}</th></tr></thead><tbody>`;
+  const nar = $('sumT').parentElement.clientWidth < 520;
+  let html = `<thead><tr><th>Schätzung (P)</th><th class="num">${nar ? 'A' : VAR.a.title}</th><th class="num">${nar ? 'B' : VAR.b.title}</th></tr></thead><tbody>`;
   for (const [n, f] of rows) html += `<tr><td>${n}</td><td class="num">${f(eRes.a)}</td><td class="num">${f(eRes.b)}</td></tr>`;
   html += '</tbody>';
   $('sumT').innerHTML = html;
@@ -708,12 +721,12 @@ function buildWorld(CMDS) {
   /* s = gerade, a = Bogen (Krümmung 1/R, + = links), t = Abbiegen an Abzweig (Grad, + = links),
      k = Kehre mit 20 m Radius, x = abgehender Weg ohne Abbiegen, f = Wald an/aus */
   const C = CMDS || [
-    ['s', 250], ['a', 220, 1 / 300], ['x', 70], ['s', 200], ['t', -80], ['f', 1],
-    ['a', 250, -1 / 250], ['s', 150], ['a', 150, 1 / 200], ['t', 65], ['s', 200], ['s', 160],
-    ['k', 1], ['s', 180], ['k', -1], ['s', 180], ['k', 1], ['s', 150], ['x', -60],
-    ['a', 300, -1 / 400], ['t', -95], ['s', 120], ['f', 0], ['s', 180], ['a', 200, 1 / 250], ['s', 250],
-    ['t', 75], ['s', 200], ['x', 80], ['a', 300, -1 / 300], ['f', 1], ['s', 200], ['t', -70],
-    ['a', 200, 1 / 150], ['s', 250], ['t', 110], ['s', 200], ['f', 0], ['a', 300, -1 / 500], ['s', 300],
+    ['s', 300], ['a', 200, 1 / 400], ['x', 70], ['s', 150], ['t', -50], ['f', 1],
+    ['a', 200, 1 / 300], ['s', 150], ['t', 70], ['s', 150], ['a', 90, -1 / 60],
+    ['s', 180], ['k', 1], ['s', 180], ['k', -1], ['s', 180], ['k', 1], ['s', 150], ['x', -60],
+    ['a', 300, 1 / 500], ['s', 100], ['f', 0], ['s', 200], ['t', -75], ['s', 250], ['a', 250, 1 / 250],
+    ['s', 200], ['x', 80], ['f', 1], ['s', 150], ['t', 70], ['a', 200, -1 / 300], ['s', 200],
+    ['t', 60], ['s', 200], ['f', 0], ['a', 300, 1 / 500], ['s', 300],
   ];
   for (const c of C) {
     if (c[0] === 's') adv(c[1], 0);
@@ -750,7 +763,12 @@ function buildWorld(CMDS) {
       let j = i; while (j + 1 < cand.length && Math.abs(cand[j + 1]) > 35 * D) j++;
       let best = 0; for (let k = i; k <= j; k++) best = Math.max(best, Math.abs(cand[k]));
       const ties = []; for (let k = i; k <= j; k++) if (Math.abs(cand[k]) >= best - 1e-6) ties.push(k);
-      const at = ties[Math.floor(ties.length / 2)];
+      /* scharfer Knick (Abzweig): auf den Knickpunkt legen, sonst Mitte des Bogens */
+      let kink = -1, kv = 0;
+      for (let k = Math.max(1, i); k <= Math.min(j, hd.length - 1); k++) {
+        const dv = Math.abs(hd[k] - hd[k - 1]); if (dv > kv) { kv = dv; kink = k; }
+      }
+      const at = kv > 15 * D ? kink : ties[Math.floor(ties.length / 2)];
       const ss = route.cs[at];
       const ang = (headingAt(Math.min(route.total, ss + 40)) - headingAt(Math.max(0, ss - 40))) / D;
       const side = ang > 0 ? 'links' : 'rechts';
@@ -865,7 +883,7 @@ function createSim(world, P, seed, keepHist) {
     t: 0, s: 0, mode: 'route', b: 0, j: null, armed: false, armedJ: -1, done: false,
     truePos: posAt(R, 0), g: { bx: 0, by: 0, ix: 0, iy: 0, nextFix: 0 },
     fix: null, fixes: [], m: { s: 0, off: false, tAbove: null, tBelow: null, init: false }, mr: null,
-    dev: { speed: 0, cx: 0, cy: 0, alarmT: null, lastFix: null, acc: 0 },
+    dev: { speed: 0, cx: 0, cy: 0, alarmT: null, alarmFalse: false, lastFix: null, acc: 0 },
     pending: null, hist: [],
     st: { fixes: 0, eOpen: 0, nOpen: 0, eForest: 0, nForest: 0, eMax: 0, falseAlarms: 0, falseTime: 0,
           missed: 0, detected: 0, undetected: 0, detTimes: [], detDists: [], jumps: 0, dist: 0 },
@@ -901,11 +919,11 @@ function createSim(world, P, seed, keepHist) {
     const ds = S.m.s - prevS;
     if (wasInit && (ds > Math.max(60, 3 * P.speed / 3.6 / P.rate + 30) || ds < -40)) st.jumps++;
     if (r.event === 'alarm') {
-      S.dev.alarmT = S.t;
+      S.dev.alarmT = S.t; S.dev.alarmFalse = false;
       if (S.pending && !S.pending.detected) {
         S.pending.detected = true; st.detected++;
         st.detTimes.push(S.t - S.pending.t0); st.detDists.push(S.b);
-      } else if (S.mode === 'route') st.falseAlarms++;
+      } else if (S.mode === 'route') { st.falseAlarms++; S.dev.alarmFalse = true; }
     } else if (r.event === 'clear') S.dev.alarmT = null;
     /* Geschwindigkeit und Kurs nur aus Fixen, wie im Gerät */
     const lf = S.dev.lastFix;
@@ -958,7 +976,7 @@ function createSim(world, P, seed, keepHist) {
     }
     S.t += dt; st.dist += v * dt;
     S.truePos = S.mode === 'route' ? posAt(R, S.s) : posAt(S.j.branch, S.b);
-    if (S.m.off && S.mode === 'route') st.falseTime += dt;
+    if (S.m.off && S.dev.alarmFalse) st.falseTime += dt;
     while (S.t >= S.g.nextFix) { S.g.nextFix += 1 / P.rate; onFix(makeFix()); }
   }
   return { S, step };
@@ -1005,7 +1023,7 @@ function drawArrow(ctx, cx, cy, size, angDeg, ink) {
   if (Math.abs(angDeg) >= 135) {
     const dir = angDeg > 0 ? -1 : 1; const r = size * 0.22;
     ctx.beginPath(); ctx.moveTo(cx - dir * r, cy + size * 0.45); ctx.lineTo(cx - dir * r, cy - size * 0.05);
-    ctx.arc(cx, cy - size * 0.05, r, Math.PI, 0, dir < 0);
+    ctx.arc(cx, cy - size * 0.05, r, dir < 0 ? 0 : Math.PI, dir < 0 ? Math.PI : 0, dir < 0);
     ctx.lineTo(cx + dir * r, cy + size * 0.12); ctx.stroke();
     const tx = cx + dir * r, ty = cy + size * 0.3;
     ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - size * 0.15, ty - size * 0.2); ctx.lineTo(tx + size * 0.15, ty - size * 0.2); ctx.closePath(); ctx.fill();
@@ -1083,8 +1101,10 @@ function drawEpaper() {
   ctx.fillStyle = paper; ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-9, 9); ctx.lineTo(-5, 0); ctx.lineTo(-9, -9); ctx.closePath(); ctx.fill();
   ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-7, 7); ctx.lineTo(-4, 0); ctx.lineTo(-7, -7); ctx.closePath(); ctx.fill();
   ctx.restore();
-  ctx.fillStyle = ink; ctx.font = `9px ${mono}`; ctx.textAlign = 'left';
-  ctx.fillText('© OpenStreetMap-Mitwirkende (Bsp.)', 4, my0 + mh - 4);
+  ctx.font = `9px ${mono}`; ctx.textAlign = 'left';
+  const attr = '© OpenStreetMap-Mitwirkende (Bsp.)';
+  ctx.fillStyle = paper; ctx.fillRect(2, my0 + mh - 14, ctx.measureText(attr).width + 4, 13);
+  ctx.fillStyle = ink; ctx.fillText(attr, 4, my0 + mh - 4);
   ctx.textAlign = 'right'; ctx.font = `bold 11px ${mono}`; ctx.fillText('N↑', W - 6, my0 + 14);
   ctx.restore();
   ctx.fillStyle = ink; ctx.fillRect(0, my0 + mh, W, 2);
@@ -1095,8 +1115,8 @@ function drawEpaper() {
   ctx.font = `bold 24px ${mono}`;
   ctx.fillText(fmt(E.speed, 0), 10, vy + 44); ctx.fillText(fmt(E.rest, 1), 90, vy + 44);
   ctx.font = `bold 18px ${mono}`; ctx.fillText('±' + fmt(E.acc, 0), 176, vy + 44);
-  ctx.font = `10px ${mono}`;
-  ctx.fillText((P.mode === 'multi' ? 'L1/L5 ' : 'L1 ') + fmt(E.rate, 1) + ' Hz', 176, vy + 60);
+  ctx.font = `10px ${mono}`; ctx.textAlign = 'right';
+  ctx.fillText((P.mode === 'multi' ? 'L1/L5 ' : 'L1 ') + fmt(E.rate, 1) + ' Hz', W - 6, vy + 62);
 }
 
 function drawMap() {

@@ -1,6 +1,18 @@
 # Idee: Gravel-Navi (eigenes Fahrrad-Navi fürs Gravelbiken)
 
-Stand: 22.10.2026. Noch nicht entschieden, eine von mehreren Ideen.
+Stand: 22.10.2026. Eine von mehreren Ideen, ob sie gebaut wird, entscheidet das Team.
+
+> **Nutzerentscheidung (22.10.2026)**
+>
+> - In Frage kommen nur noch **Variante A (ESP32-S3)** und **Variante B (Raspberry Pi Zero 2 W)**.
+>   **C und D scheiden aus.**
+> - **Muss-Kriterien:** **Akku 10 h und mehr** und **gutes GPS**.
+> - Zwischen A und B ist damit **nicht** entschieden. Der Abschnitt
+>   [A gegen B unter den zwei Muss-Kriterien](#a-gegen-b-unter-den-zwei-muss-kriterien) ordnet beide
+>   nur unter diesen Kriterien ein. Die Wahl trifft das Team.
+>
+> Zum Ausprobieren: [Simulation `sim/index.html`](sim/index.html) (Energiebudget A gegen B,
+> GPS-Simulation mit Track-Matching und Off-Course-Warnung). Im Browser öffnen, keine Installation.
 
 ## Idee
 
@@ -30,6 +42,9 @@ Trainingspläne.
 
 ## Varianten
 
+C und D sind seit der Nutzerentscheidung vom 22.10.2026 raus und stehen nur noch zur
+Nachvollziehbarkeit in der Tabelle.
+
 | | A: ESP32-S3 + Display + GNSS | B: Raspberry Pi Zero 2 W | C: Altes Smartphone + eigene App | D: Handy-App + kleines BLE-Display |
 |---|---|---|---|---|
 | Was | Eigene Platine/Board, E-Paper oder transflektives LCD, GNSS-Modul, Tasten | Linux-Rechner mit Display und GNSS-Modul | Ausgemustertes Android-Handy, eigene oder angepasste App, Handy fest am Lenker | Handy bleibt in der Tasche und rechnet, ein kleines Display am Lenker zeigt Pfeil, Distanz, Werte |
@@ -55,6 +70,155 @@ Trainingspläne.
   Garmin-Ersatz in der ersten Version.
 - **Realistische Messlatte:** Eine Tour im Pfälzerwald, 6 bis 8 h, mit dem Gerät als
   einziger Navigation, ohne dass jemand das Handy zücken muss.
+
+## A gegen B unter den zwei Muss-Kriterien
+
+Nur die zwei Kriterien aus der Nutzerentscheidung: **Akku 10 h und mehr**, **gutes GPS**.
+Andere Punkte (Aufwand, Lerneffekt, Karte) sind hier bewusst weggelassen. Alle Zahlen sind
+Schätzungen oder Annahmen, keine Datenblattwerte und keine Messungen.
+
+[![Screenshot der Simulation](sim/screenshot.png)](sim/index.html)
+
+**Simulation:** [`sim/index.html`](sim/index.html), eine Datei, läuft offline im Browser, auch am Handy.
+
+1. **Energiebudget A gegen B:** Leistung je Komponente (SoC/MCU, Display mit Aktualisierungstakt,
+   Licht, GNSS-Modus, BLE, Sonstiges, Wandlerverlust) als editierbare Schätzwerte in mW, Akku in mAh
+   und Wh, Temperatur-Faktor. Balken für Leistung und Laufzeit, rote Linie bei 10 h.
+2. **GPS-Simulation:** synthetische Gravel-Runde mit Feld, zwei Waldstücken, Serpentinen und Abzweigen.
+   Einstellbar: Einband oder Mehrband, Wald-Multipath-Faktor, Aktualisierungsrate, Suchfenster,
+   Off-Course-Schwellen mit Hysterese und Haltezeit, Display-Takt. Daneben die Anzeige im E-Paper-Stil.
+   Knopf "Abzweig absichtlich verpassen", Statistik zu Fehlalarmen und Erkennungszeit, und
+   "20 Fahrten durchrechnen" zum Einstellen der Schwellen.
+
+Die Matching-Logik in der Simulation (`matchStep`) ist schon als reine Funktion ohne I/O geschrieben,
+so wie sie für M1 gedacht ist. Sie ist ein Entwurf zum Spielen und ersetzt M1 und die Messfahrt nicht.
+
+### Kurzfassung
+
+| Kriterium | A: ESP32-S3 | B: Raspberry Pi Zero 2 W | Bemerkung |
+|---|---|---|---|
+| Gutes GPS | hängt an GNSS-Modul, Antenne, Einbau | genauso | Beide hängen am selben Modul (UART). Das Kriterium trennt A und B kaum. Es wird durch Modulwahl (Einband oder Mehrband), Antenne und Einbau entschieden, und durch die Software (Track-Matching, Hysterese). |
+| Akku 10 h und mehr | mit ca. 1000 bis 1300 mAh rechnerisch erreichbar, mit 2500 mAh viel Reserve (Schätzung) | mit 2500 mAh nicht erreicht (ca. 5 bis 7 h), braucht ca. 3500 bis 5000 mAh je nach Temperatur (Schätzung) | Bestimmend ist die Grundlast des Rechners. Zahlen siehe unten, alles erst nach Messung belastbar. |
+
+### Gutes GPS
+
+Was wir mit "gutem GPS" meinen: im Wald auf dem richtigen Weg bleiben und einen verpassten Abzweig
+schnell merken, **ohne Fehlalarme**. Zentimeter sind egal. Was stört, sind Ausreißer und Sprünge
+von einigen zehn Metern (Schätzung) unter Bäumen und in Tälern.
+
+**Mehrband L1/L5 gegen Einband L1**
+
+| | Einband L1 | Mehrband L1/L5 |
+|---|---|---|
+| Frequenzen | GPS L1, Galileo E1 (1575,42 MHz), je nach Modul weitere | zusätzlich GPS L5, Galileo E5a, BeiDou B2a (1176,45 MHz) |
+| Multipath (Reflexionen an Stämmen, Hängen) | L1 C/A hat 1,023 MChip/s, Umwege lassen sich schlechter vom direkten Signal trennen | L5/E5a hat 10,23 MChip/s, also zehnfach. Umwegsignale lassen sich besser trennen. Wie viel das im Wald bringt: **messen** |
+| Ionosphäre | nur über Modell | aus zwei Frequenzen schätzbar. Im Wald ist Multipath vermutlich der größere Posten (Annahme) |
+| Abschattung durch Blätterdach | schwaches Signal | ebenso schwach, Mehrband macht gedämpfte Signale nicht stärker |
+| Einschränkung | | L5 senden nur die neueren GPS-Satelliten, nicht alle. Galileo sendet E5a. Mehrband lohnt sich also vor allem zusammen mit Galileo |
+| Strom, Preis | weniger | mehr Strom und teurer, Modul und Antenne (Größenordnung, Zahlen aus Datenblatt) |
+
+Kandidaten zum Prüfen, keine Festlegung: Massenmarkt-Module mit L1/L5, z. B. u-blox NEO-F10N oder
+die Quectel-LC29H-Familie. Im Datenblatt prüfen: Stromaufnahme je Modus, welche Systeme gleichzeitig,
+Schnittstelle, Antenneneingang (aktiv/passiv), Energiesparmodi, Backup-Versorgung für schnellen Start.
+
+**Mehrkonstellation**
+
+- GPS, Galileo, BeiDou (und GLONASS) gleichzeitig heißt mehr Satelliten. Das zählt vor allem in engen
+  Tälern (Murgtal, Pfälzerwald), wo der Hang einen Teil des Himmels verdeckt: Die Geometrie bleibt
+  besser, und der Empfänger kann schlechte Signale eher verwerfen.
+- Welche Systeme ein Modul **gleichzeitig** empfängt, steht im Datenblatt, nicht jedes kann alle auf einmal.
+  Galileo ist für uns gesetzt (wegen E5a), GPS sowieso.
+- SBAS/EGNOS bringt fürs Track-Folgen vermutlich wenig (Annahme).
+
+**Antenne: Größe und Patch**
+
+- Keramische Patch-Antennen gibt es in gängigen Baugrößen von etwa 12 bis 25 mm Kantenlänge
+  (Schätzung, je Hersteller). Größerer Patch auf größerer Massefläche: mehr Gewinn, hilft bei
+  schwachem Signal im Wald. Chip-Antennen sind klein, aber schwächer (Annahme, messen).
+- Mehrband braucht eine Antenne für **beide** Bänder. Eine reine L1-Antenne am Mehrband-Modul
+  verschenkt den Vorteil. L1/L5-Antennen sind meist größer oder gestapelt und teurer (Schätzung).
+- Einbau: Antenne flach nach oben, nicht unter Display-Platine, Akku oder Metall. Abstand zu
+  Störquellen: Rechner, WLAN/BLE-Funk, Schaltregler, Display-Treiber. Der Fahrer schattet nach
+  hinten ab, das lässt sich nicht vermeiden.
+- **A gegen B:** Platz für einen großen Patch ist bei beiden. Bei beiden sitzt ein Funk-SoC mit
+  schnellen Takten neben der Antenne. Ob das stört, zeigt nur eine Messung: Signalstärke (C/N0) im
+  Modul mit Rechner an und aus vergleichen.
+
+**Waldabschattung im Schwarzwald**
+
+- Nadelwald (Fichte, Tanne) dämpft das ganze Jahr, Laubwald im Sommer mehr als im Winter. Nässe
+  dämpft zusätzlich (Annahme, nicht gemessen).
+- Schwierigster Fall: Wald plus steiler Hang, also wenige Satelliten und Reflexionen am Hang.
+- Folgerung: Die Hardware allein löst das nicht. Die Software muss es aushalten: Suchfenster um die
+  letzte Stelle, Off-Course nur mit Schwelle, Haltezeit und Hysterese, Plausibilität bei Sprüngen.
+- **Messplan (M3):** Ein Einband- und ein Mehrband-Modul gleichzeitig am Lenker, Rohdaten aufzeichnen
+  (NMEA, wenn möglich mit Satellitenzahl und C/N0). Erst Hardtwald, dann ein Stück Murgtal. Am PC
+  gegen den geplanten Track auswerten: Abstand, Ausreißer, Fehlalarme bei den Schwellen (P).
+
+**Was die Simulation dazu zeigt** (selbst gewähltes Fehlermodell, keine Aussage über echte Module):
+Mit den Vorgaben (Mehrband, Wald-Faktor 3, Schwelle 40/25 m, Haltezeit 8/4 s, 1 Hz) gab es in
+20 Fahrten keinen Fehlalarm, jeder verpasste Abzweig wurde nach knapp 20 s bzw. 80 bis 100 m erkannt.
+Mit Einband und Wald-Faktor 5 kamen Fehlalarme und Sprünge im Fortschritt dazu. Kürzere Haltezeit
+oder niedrigere Schwelle erkennt schneller, bringt aber mehr Fehlalarme. Ein großes Suchfenster
+lässt die Zuordnung in den Serpentinen auf den falschen Schenkel springen. Die echten Werte für
+Schwelle und Haltezeit bleiben (P) bis zur Messfahrt.
+
+### Akku 10 h und mehr
+
+**Rechner, der bestimmende Posten**
+
+- **A:** Der ESP32-S3 kann zwischen den Fixen in einen Schlafmodus gehen, BLE-Verbindungen zu
+  Sensoren sollen dabei bestehen bleiben (im Datenblatt und an echter Hardware prüfen). Mittlere
+  Leistung im Rechner angesetzt mit 0,1 W (Schätzung, P).
+- **B:** Auf dem Pi Zero 2 W läuft Linux dauerhaft, einen Schlafmodus, in dem die Anwendung
+  weiterläuft, gibt es praktisch nicht. Grundlast Größenordnung 0,5 bis 1 W (Schätzung aus
+  Erfahrungsberichten, kein Datenblattwert), beim Rechnen mehr. Dazu braucht der Pi 5 V: Der
+  Hochsetzsteller von der Li-Ion-Zelle kostet zusätzlich (Wirkungsgrad angesetzt 85 bis 90 %,
+  Schätzung). Sparhebel, Wirkung unbekannt und zu messen: WLAN, HDMI und LED aus, CPU-Takt
+  begrenzen, Kerne abschalten, kein Desktop.
+
+**Rechenbeispiel mit den Vorgaben der Simulation** (alles Schätzung P; E-Paper, Mehrband-GNSS,
+2 BLE-Sensoren, ohne Licht, 85 % nutzbare Kapazität):
+
+| | A: ESP32-S3 | B: Pi Zero 2 W |
+|---|---|---|
+| Leistung am Akku | ca. 0,29 W | ca. 1,1 W |
+| Laufzeit mit 2500 mAh (3,7 V), 20 °C | ca. 27 h | ca. 7 h |
+| Laufzeit mit 2500 mAh, 0 °C (Faktor 0,85, P) | ca. 23 h | ca. 6 h |
+| Akku für 10 h bei 20 °C | ca. 920 mAh | ca. 3450 mAh |
+| Akku für 10 h bei 0 °C | ca. 1080 mAh | ca. 4060 mAh |
+| Akku für 10 h bei -10 °C (Faktor 0,70, P) | ca. 1310 mAh | ca. 4930 mAh |
+
+Für B heißt das: zwei Zellen statt einer oder ein Akku im Powerbank-Format, mit Folgen für Gewicht,
+Gehäusegröße und Halterung. Für A ist der GNSS-Empfänger nach dem Rechner der größte Posten, Mehrband
+statt Einband kostet dort spürbar Laufzeit, bleibt nach Schätzung aber deutlich über 10 h.
+
+**Display-Typen**
+
+| Typ | Strom | Sonne | Wald, Dämmerung, Nacht | Kälte | Bemerkung |
+|---|---|---|---|---|---|
+| E-Paper | fast nur beim Umschalten, Mittelwert hängt am Takt der Teilaktualisierung | sehr gut | ohne Licht schlecht | wird langsamer (Datenblatt) | Ghosting, gelegentlich Vollbild nötig |
+| Memory-LCD (MIP), reflektiv | sehr gering, Pixel halten ihren Zustand (Schätzung) | gut | nur mit Frontlicht | Datenblatt | schnell genug für flüssige Anzeige, kleine Größen, teurer |
+| Transflektives TFT | Grundlast höher als MIP (Schätzung) | gut | mit Hintergrundlicht gut | Datenblatt | Licht nur bei Bedarf einschalten |
+| TFT/IPS mit Hintergrundlicht | Licht dauernd an, dominiert das Budget (Schätzung) | schwach | gut | Datenblatt | passt nicht zu den Muss-Kriterien |
+
+Der Display-Typ trennt A und B nicht, beide können dasselbe SPI-Display ansteuern. Bei A ist er ein
+spürbarer Anteil am Budget, bei B geht er neben der Grundlast des Pi fast unter. Licht (Nacht, dunkler
+Wald) ist in den Vorgaben nicht eingerechnet und lässt sich in der Simulation über "Licht an, Anteil"
+dazunehmen.
+
+**Messplan:** sobald ein Brettaufbau steht (M3), mit USB-Leistungsmesser eine Stunde Fahrbetrieb
+(GNSS an, Display im Takt, BLE verbunden) messen und die Werte in die Simulation eintragen. Für B
+zusätzlich: Wirkung der Sparhebel einzeln.
+
+### Was das für die Wahl heißt
+
+Keine Entscheidung, nur Einordnung unter den zwei Kriterien:
+
+- **Gutes GPS** ist für A und B gleich gut erreichbar. Die eigentlichen Entscheidungen sind
+  Einband oder Mehrband, Antenne und Einbau, und die lassen sich unabhängig von A/B treffen (offen).
+- **Akku 10 h und mehr** erfüllt A nach Schätzung mit großem Abstand. B erfüllt es nur mit deutlich
+  größerem Akku, belastbar erst nach Messung der Grundlast.
 
 ## Aufbau
 
@@ -105,7 +269,7 @@ Untergrund wird durch Linienstil (durchgezogen, gestrichelt, gepunktet) statt Fa
   mit einem Gravel-Profil, das Schotter bevorzugt und Hauptstraßen meidet. Alternativ
   Planung in Komoot oder einem Web-Frontend von BRouter und GPX-Export.
 - Gerät rechnet **nicht neu**, wenn man abweicht. Es zeigt nur Richtung und Abstand zurück
-  zum Track. Neuplanung unterwegs wäre ein spätere Ausbaustufe (bei C/D über das Handy).
+  zum Track. Neuplanung unterwegs wäre eine spätere Ausbaustufe.
 - Vorverarbeitung am PC: Abbiegepunkte aus dem Track ableiten (Richtungsänderung über
   Winkel (P), an Kreuzungen laut OSM), Höhenprofil aus Höhendaten berechnen, alles in ein
   einfaches Format fürs Gerät packen (Format offen).
@@ -165,7 +329,8 @@ Alle Werte Schätzung, erst nach Bauteilwahl aus Datenblättern belegen und dann
 Bei 0,3 W braucht man für 12 h etwa 3,6 Wh, also z. B. ein Li-Ion-Akku um 1000 mAh bei
 3,7 V plus Reserve. Ein Akku mit 2000 bis 3000 mAh gibt Luft für Kälte und Alterung
 (Schätzung). Für Variante B (Pi Zero 2 W) liegt die Grundlast deutlich höher; dort ist
-10 h nur mit größerem Akku realistisch (Zahl erst nach Messung).
+10 h nur mit größerem Akku realistisch (Zahl erst nach Messung). Rechenbeispiel A gegen B siehe
+[Akku 10 h und mehr](#akku-10-h-und-mehr).
 
 ## Stückliste Variante A (Schätzpreise)
 
@@ -183,9 +348,8 @@ Bei 0,3 W braucht man für 12 h etwa 3,6 Wh, also z. B. ein Li-Ion-Akku um 1000 
 | Reserve (zweites Display, Fehlkäufe) | 40 € |
 | **Summe** | **etwa 165 bis 245 € (Schätzung)** |
 
-Wenn ein zweites Gerät gebaut werden soll (jeder will eins), wird es knapp. Variante C
-kostet fast nichts, wenn alte Handys vorhanden sind. Variante D: Display, kleiner
-Mikrocontroller, Akku, Gehäuse, etwa 60 bis 100 € (Schätzung).
+Wenn ein zweites Gerät gebaut werden soll (jeder will eins), wird es knapp. (Die günstigeren
+Varianten C und D sind seit 22.10.2026 raus.)
 
 ## Meilensteine
 
@@ -201,11 +365,14 @@ Mikrocontroller, Akku, Gehäuse, etwa 60 bis 100 € (Schätzung).
 6. **M6 Gehäuse und Akku:** Dichtes Gehäuse, Halterung, Akkulaufzeit messen (Ziel 10+ h).
 7. **M7 Tagestour:** Schwarzwald oder Pfälzerwald, nur mit dem Gerät.
 
-M1 und M2 sind für alle Varianten gleich und lohnen sich auch, wenn am Ende C oder D gewählt wird.
+M1 und M2 sind für A und B gleich. Die [Simulation](sim/index.html) ist ein Vorgriff auf M1 zum
+Spielen mit Schwellen und Suchfenster, sie ersetzt keine aufgezeichneten Fahrten.
 
 ## Offene Entscheidungen
 
-- Variante A, B, C oder D (oder A nach Prototyp in C).
+- Variante A oder B (C und D sind raus, Nutzerentscheidung 22.10.2026). Muss-Kriterien: Akku 10 h
+  und mehr, gutes GPS.
+- GNSS: Einband oder Mehrband L1/L5, welche Konstellationen, Antenne (Patchgröße, L1 oder L1/L5).
 - Displaytyp: E-Paper oder transflektives LCD; Größe; Graustufen ja/nein.
 - Konkretes GNSS-Modul und Display (Datenblätter prüfen, bevor etwas festgelegt wird).
 - Kartenformat: Raster oder Vektor; Werkzeug zum Rendern; Zoomstufen; Region oder Korridor.
