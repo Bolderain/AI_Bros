@@ -20,12 +20,14 @@ nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .info a{color:var(--accent)}
 iframe{flex:1;min-height:70vh;width:100%;border:1px solid var(--line);border-radius:4px;background:var(--card)}
 </style>
-<header><h1>AI Bros Simulatoren</h1><p>Vier Ideen nachgerechnet. Alle Modellwerte sind Schätzungen oder Platzhalter (P), keine Messungen.</p></header>
+<header><h1>AI Bros Simulatoren</h1><p>Sechs Ideen nachgerechnet. Alle Modellwerte sind Schätzungen oder Platzhalter (P), keine Messungen.</p></header>
 <nav id="tabs" role="tablist"></nav>
 <div class="info"><span id="desc"></span><a id="open" href="#" target="_blank" rel="noopener">Im eigenen Tab öffnen</a></div>
 <iframe id="frame" title="Simulator"></iframe>
 <script>
 const S=[
+ {id:"schach",n:"Schachbrett",d:"H-Bot mit Elektromagnet: Pfadplanung auf den Linien, Abstand zu stehenden Figuren, Schrittzahlen, Magnetkraft."},
+ {id:"pflanze",n:"Pflanzenautomat",d:"Entscheidungslogik nach Spezifikation: Gießen, Düngen, Grenzprüfung der Config, 17 Störfälle im Zeitraffer."},
  {id:"powermeter",n:"Powermeter",d:"Kurbelarm links, DMS-Vollbrücke: Messkette, Drift, Kalibrierung, Fehler durch 2 × links."},
  {id:"navi",n:"Gravel-Navi",d:"A gegen B: Energiebudget mit 10-h-Linie und GNSS-Fehler im Wald mit Off-Course-Warnung."},
  {id:"trainer",n:"Smart-Trainer",d:"Wirbelstrombremse mit Servo: ERG-Regler, Steigungsmodus, Scheibentemperatur, Workouts."},

@@ -1,0 +1,1355 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schachbrett Simulation</title>
+<meta name="description" content="Interaktive Simulation des magnetischen Schachbretts: Pfadplanung auf den Linien zwischen den Feldern, H-Bot-Kinematik mit Schrittzahlen, Abstandsprüfung und Magnetkraft qualitativ. Werte mit (P) sind Platzhalter, nichts ist gemessen.">
+<style>
+/* Farben als Tokens, hell und dunkel. Palette wie bei den anderen Simulationen im Repo. */
+:root {
+  color-scheme: light;
+  --bg: #f4f3ef; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.12); --chip: #ecebe6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --good: #0ca30c; --warn: #fab219; --crit: #d03b3b;
+  --accent: #2a78d6; --accent-ink: #ffffff;
+  --band: rgba(235,104,52,0.13);
+  --sqL: #f2e7cd; --sqD: #c9ad80; --frame: #e6e0d2; --lane: #ece4d2; --mech: #6b655c;
+  --pw: #fbf8f1; --pwS: #3a342c; --pwT: #2f2b28;
+  --pb: #2f2b28; --pbS: #0b0b0b; --pbT: #f4efe4;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.12); --chip: #262624;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --good: #2fae2f; --warn: #fab219; --crit: #e05252;
+    --accent: #3987e5; --accent-ink: #ffffff;
+    --band: rgba(217,89,38,0.18);
+    --sqL: #b8ac93; --sqD: #7d6748; --frame: #23221f; --lane: #2d2b27; --mech: #9a948a;
+    --pw: #f3eee2; --pwS: #0b0b0b; --pwT: #2f2b28;
+    --pb: #151413; --pbS: #a39d92; --pbT: #f0ebdf;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.12); --chip: #262624;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --good: #2fae2f; --warn: #fab219; --crit: #e05252;
+  --accent: #3987e5; --accent-ink: #ffffff;
+  --band: rgba(217,89,38,0.18);
+  --sqL: #b8ac93; --sqD: #7d6748; --frame: #23221f; --lane: #2d2b27; --mech: #9a948a;
+  --pw: #f3eee2; --pwS: #0b0b0b; --pwT: #2f2b28;
+  --pb: #151413; --pbS: #a39d92; --pbT: #f0ebdf;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: 1360px; margin: 0 auto; padding: 16px; }
+header { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; }
+h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 8px; }
+.sub { margin: 0; color: var(--ink2); max-width: 78ch; }
+button, select, input { font: inherit; color: inherit; }
+button { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; min-height: 34px; }
+button:hover { border-color: var(--muted); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+select { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; min-height: 32px; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (min-width: 1000px) {
+  .main { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); }
+  .stick { position: sticky; top: 12px; }
+}
+.col { display: grid; gap: 12px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-width: 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px; }
+.bar label { display: inline-flex; gap: 6px; align-items: center; color: var(--ink2); font-size: 13px; }
+.bar input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: var(--surface); }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
+canvas { display: block; width: 100%; }
+#board { touch-action: manipulation; cursor: pointer; border-radius: 8px; }
+.status { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0 6px; font-size: 13.5px; }
+.lamp { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; border-radius: 999px; background: var(--chip); font-weight: 600; white-space: nowrap; }
+.lamp i { width: 14px; height: 14px; border-radius: 50%; background: var(--axis); display: inline-block; }
+.lamp.on i { background: var(--s2); box-shadow: 0 0 0 3px var(--band), 0 0 10px var(--s2); }
+#phase { color: var(--ink2); min-width: 0; flex: 1 1 220px; }
+.lg { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--ink2); margin: 2px 0 8px; }
+.lg span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.lg i { display: inline-block; width: 16px; height: 0; border-top: 3px solid; }
+.lg i.dash { border-top-style: dashed; border-top-width: 2px; }
+.lg i.dot { width: 11px; height: 11px; border: 0; border-radius: 50%; }
+.lg b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.moves { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 6px; font-size: 12.5px; max-height: 92px; overflow: auto; }
+.moves li { background: var(--chip); border-radius: 6px; padding: 2px 7px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.moves li b { color: var(--ink); font-weight: 600; }
+.prm { margin: 8px 0 10px; }
+.prm .lab { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.prm .lab output { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.prm input[type=range] { width: 100%; margin: 2px 0 0; accent-color: var(--accent); }
+.prm small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.badge { display: inline-block; font-size: 10.5px; color: var(--ink2); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 14px; }
+@media (max-width: 520px) { .two { grid-template-columns: minmax(0, 1fr); } .card { padding: 10px; } .wrap { padding: 12px; } .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+.tile { background: var(--chip); border-radius: 10px; padding: 7px 9px; min-width: 0; }
+.tile .k { font-size: 11.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .v { font-size: 17px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+.tile .v small { font-size: 11.5px; font-weight: 400; color: var(--ink2); margin-left: 2px; }
+.formula { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--chip); border-radius: 8px; padding: 6px 10px; margin: 0 0 8px; overflow-wrap: anywhere; }
+.msg { border-radius: 8px; padding: 8px 10px; font-size: 13px; margin: 8px 0; background: var(--chip); border-left: 4px solid var(--good); }
+.msg.warn { border-left-color: var(--warn); }
+.msg.crit { border-left-color: var(--crit); }
+.ico { display: inline-block; width: 16px; height: 16px; border-radius: 50%; text-align: center; line-height: 16px; font-size: 11px; font-weight: 700; margin-right: 6px; vertical-align: 1px; color: #fff; background: var(--good); }
+.ico.warn { background: var(--warn); color: #0b0b0b; }
+.ico.crit { background: var(--crit); }
+.amp { display: flex; gap: 10px; align-items: center; margin: 8px 0; }
+.amp .lights { display: inline-flex; flex-direction: column; gap: 3px; background: #1d1c1a; padding: 4px; border-radius: 8px; flex: none; border: 1px solid var(--axis); }
+.amp .lights i { width: 14px; height: 14px; border-radius: 50%; background: #3b3a37; display: block; }
+.amp.r .lights i:nth-child(1) { background: #e05252; box-shadow: 0 0 8px #e05252; }
+.amp.y .lights i:nth-child(2) { background: #fab219; box-shadow: 0 0 8px #fab219; }
+.amp.g .lights i:nth-child(3) { background: #2fbf2f; box-shadow: 0 0 8px #2fbf2f; }
+.amp .t { font-size: 13px; min-width: 0; }
+.amp .t b { display: block; }
+.amp .t span { color: var(--ink2); font-size: 12px; }
+.plot { position: relative; }
+.ph { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; margin: 10px 0 4px; font-size: 13px; font-weight: 600; }
+.ph .u { color: var(--muted); font-weight: 400; font-size: 12px; }
+.info { font-size: 12.5px; color: var(--ink2); margin: 6px 0 0; }
+.foot { margin-top: 12px; font-size: 12.5px; color: var(--ink2); }
+.foot ul { margin: 6px 0 0; padding-left: 18px; }
+.foot li { margin: 2px 0; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; font-size: 13px; font-variant-numeric: tabular-nums; margin: 6px 0; }
+.kv dt { color: var(--ink2); }
+.kv dd { margin: 0; text-align: right; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Magnetisches Schachbrett: Simulation</h1>
+    <p class="sub">Draufsicht auf Brett und Mechanik. Figur antippen, dann Ziel antippen. Der Wagen fährt leer zur Figur,
+    schaltet den Elektromagneten ein und zieht sie auf den Linien zwischen den Feldern ins Ziel. Geschlagene Figuren
+    fährt er vorher in die Parkspur am Rand. Maße aus <code>aufbau.md</code> und dem 3D-Modell, Werte mit (P) sind
+    Platzhalter, nichts ist gemessen.</p>
+  </div>
+  <button id="theme" type="button" aria-label="Farbschema wechseln">Design: Auto</button>
+</header>
+
+<div class="main">
+  <section class="card stick" aria-label="Brett">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Modus">
+        <button type="button" id="mRegel" class="on">Regeln</button>
+        <button type="button" id="mFrei">Frei</button>
+      </div>
+      <label><input type="checkbox" id="auto" checked> Schwarz zieht automatisch (Zufall)</label>
+      <button type="button" id="bRand">Gegner zieht</button>
+      <button type="button" id="bNew">Neu</button>
+    </div>
+    <canvas id="board" role="img" aria-label="Schachbrett in Draufsicht mit Magnetwagen, Riemen und Motoren"></canvas>
+    <div class="status">
+      <span class="lamp" id="lamp"><i></i>Magnet <span id="magTxt">AUS</span></span>
+      <span id="phase" aria-live="polite">Bereit.</span>
+    </div>
+    <div class="lg">
+      <span><i style="border-color:var(--s1)"></i>Pfad mit Figur</span>
+      <span><i style="border-color:var(--s3)"></i>geschlagene Figur zum Rand</span>
+      <span><i class="dash" style="border-color:var(--muted)"></i>Leerfahrt</span>
+      <span><i class="dot" style="background:var(--s2)"></i>Magnet an</span>
+      <span><i class="dash" style="border-color:var(--crit)"></i>engste Stelle</span>
+    </div>
+    <div class="bar" style="margin-top:6px">
+      <span style="font-size:13px;color:var(--ink2)">Zeigen:</span>
+      <button type="button" id="dKnight">Springerzug</button>
+      <button type="button" id="dCap">Schlagen</button>
+      <button type="button" id="dCastle">Rochade</button>
+      <button type="button" id="dPark">Volle Parkspur</button>
+    </div>
+    <div class="prm" style="margin-bottom:2px">
+      <div class="lab"><label for="spd">Zeitraffer der Animation</label><output id="o_spd"></output></div>
+      <input type="range" id="spd" min="0.25" max="8" step="0.25" value="1">
+    </div>
+    <ul class="moves" id="moves" aria-label="Zugliste"></ul>
+  </section>
+
+  <div class="col">
+    <section class="card" aria-labelledby="h_hbot">
+      <h2 id="h_hbot">H-Bot: zwei Motoren, ein Riemen</h2>
+      <div class="formula">Δx = (ΔA + ΔB) / 2 &nbsp;&nbsp; Δy = (ΔA − ΔB) / 2<br>umgekehrt: ΔA = Δx + Δy, &nbsp;ΔB = Δx − Δy</div>
+      <div class="tiles">
+        <div class="tile"><div class="k">Wagen x / y ab Home</div><div class="v" id="tPos">0 / 0<small>mm</small></div></div>
+        <div class="tile"><div class="k">Motor A</div><div class="v" id="tA">0<small>Schritte</small></div></div>
+        <div class="tile"><div class="k">Motor B</div><div class="v" id="tB">0<small>Schritte</small></div></div>
+        <div class="tile"><div class="k">ΔA / ΔB dieser Zug</div><div class="v" id="tD">0 / 0</div></div>
+        <div class="tile"><div class="k">Wagen</div><div class="v" id="tV">0<small>mm/s</small></div></div>
+        <div class="tile"><div class="k">Drehzahl A / B</div><div class="v" id="tR">0 / 0<small>U/min</small></div></div>
+      </div>
+      <div class="two">
+        <div class="prm"><div class="lab"><label for="v">Höchstgeschwindigkeit</label><output id="o_v"></output></div>
+          <input type="range" id="v" min="20" max="250" step="5" value="80">
+          <small>80 mm/s ist die Schätzung aus aufbau.md</small></div>
+        <div class="prm"><div class="lab"><label for="a">Beschleunigung <span class="badge">P</span></label><output id="o_a"></output></div>
+          <input type="range" id="a" min="100" max="3000" step="50" value="400">
+          <small>Rampe vor und nach jeder Ecke, Wagen hält an jeder Ecke</small></div>
+      </div>
+      <div class="bar" style="margin:0">
+        <label for="ms">Mikroschritte <span class="badge">P</span></label>
+        <select id="ms"><option>1</option><option>2</option><option>4</option><option>8</option><option selected>16</option><option>32</option></select>
+        <label><input type="checkbox" id="home" checked> nach jedem Zug zurück in die Home-Ecke</label>
+      </div>
+      <p class="info" id="spmInfo"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h_ab">
+      <h2 id="h_ab">Abstand: die bestimmende Regel</h2>
+      <div class="two">
+        <div class="prm"><div class="lab"><label for="s">Feldgröße s <span class="badge">P</span></label><output id="o_s"></output></div>
+          <input type="range" id="s" min="35" max="60" step="1" value="50">
+          <small>aufbau.md: 50 mm (P)</small></div>
+        <div class="prm"><div class="lab"><label for="w">Figurenbreite</label><output id="o_w"></output></div>
+          <input type="range" id="w" min="12" max="36" step="1" value="24">
+          <small>aufbau.md: höchstens 24 mm auf jeder Höhe</small></div>
+      </div>
+      <div class="msg" id="ruleMsg"></div>
+      <dl class="kv">
+        <dt>engste Stelle letzter Zug (Mitte zu Mitte)</dt><dd id="kMin">noch kein Zug</dd>
+        <dt>Luft zwischen den Figuren dort</dt><dd id="kGap">.</dd>
+        <dt>gerade beim Ziehen</dt><dd id="kLive">.</dd>
+      </dl>
+      <div class="ph"><span>Abstand zur nächsten stehenden Figur entlang des Pfads</span><span class="u">mm über Fahrweg mit Figur</span></div>
+      <div class="lg" style="margin:0 0 2px">
+        <span><i style="border-color:var(--s1)"></i>Abstand</span>
+        <span><i class="dash" style="border-color:var(--crit)"></i>Figurenbreite</span>
+        <span><i class="dash" style="border-color:var(--muted)"></i>s/2</span>
+      </div>
+      <div class="plot"><canvas id="cClear" aria-label="Abstand entlang des Pfads"></canvas></div>
+    </section>
+
+    <section class="card" aria-labelledby="h_mag">
+      <h2 id="h_mag">Magnetkraft über dem Spalt <span class="badge">qualitativ, P</span></h2>
+      <div class="two">
+        <div class="prm"><div class="lab"><label for="gap">Magnetspalt</label><output id="o_gap"></output></div>
+          <input type="range" id="gap" min="3" max="16" step="0.5" value="8">
+          <small>aufbau.md: rund 8 mm (Glas, Sensorlage, Luft, Fußboden)</small></div>
+        <div class="prm"><div class="lab"><label for="mu">Reibwert μ</label><output id="o_mu"></output></div>
+          <input type="range" id="mu" min="0.03" max="0.40" step="0.01" value="0.08">
+          <small>PTFE 0,05 bis 0,1 laut Stückliste, Filz eher 0,3 (P)</small></div>
+        <div class="prm"><div class="lab"><label for="m">Masse der Figur <span class="badge">P</span></label><output id="o_m"></output></div>
+          <input type="range" id="m" min="5" max="40" step="1" value="12"></div>
+        <div class="prm"><div class="lab"><label for="F8">Zugkraft bei 8 mm <span class="badge">P</span></label><output id="o_F8"></output></div>
+          <input type="range" id="F8" min="0.05" max="1.0" step="0.01" value="0.30">
+          <small>nicht gemessen, laut aufbau.md vor dem Kauf messen</small></div>
+      </div>
+      <div class="amp" id="amp1"><span class="lights"><i></i><i></i><i></i></span><div class="t"><b id="amp1T"></b><span id="amp1S"></span></div></div>
+      <div class="amp" id="amp2"><span class="lights"><i></i><i></i><i></i></span><div class="t"><b id="amp2T"></b><span id="amp2S"></span></div></div>
+      <div class="ph"><span>Querkraft am Fuß über dem Spalt</span><span class="u">mN, logarithmisch</span></div>
+      <div class="lg" style="margin:0 0 2px">
+        <span><i style="border-color:var(--s1)"></i>verfügbar k · F<sub>N</sub></span>
+        <span><i style="border-color:var(--s2)"></i>benötigt μ · (m·g + F<sub>N</sub>) + m·a</span>
+      </div>
+      <div class="plot"><canvas id="cForce" aria-label="Kraft über Magnetspalt"></canvas></div>
+      <p class="info">Modell: Normalkraft F<sub>N</sub> fällt mit (1 + g/3 mm)<sup>−3</sup>, Querkraftanteil k = 0,35, Nachbar spürt
+      F<sub>N</sub> · exp(−(d/12 mm)²). Alles (P), nur zum Vergleichen von Tendenzen. Der Magnet zieht die Figur auch nach unten,
+      deshalb wächst die nötige Kraft mit: ohne kleines μ hilft ein stärkerer Magnet kaum.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h_st">
+      <h2 id="h_st">Statistik</h2>
+      <div class="tiles">
+        <div class="tile"><div class="k">Fahrweg mit Figur</div><div class="v" id="sDrag">0<small>mm</small></div></div>
+        <div class="tile"><div class="k">Leerfahrt</div><div class="v" id="sLeer">0<small>mm</small></div></div>
+        <div class="tile"><div class="k">Fahrzeit letzter Zug</div><div class="v" id="sT">0<small>s</small></div></div>
+        <div class="tile"><div class="k">Stopps / Ecken</div><div class="v" id="sStops">0</div></div>
+        <div class="tile"><div class="k">Magnet an (Zeit mit Figur)</div><div class="v" id="sMag">0<small>s</small></div></div>
+        <div class="tile"><div class="k">Motorweg A / B</div><div class="v" id="sMot">0 / 0<small>mm</small></div></div>
+      </div>
+      <div class="ph"><span>Geschwindigkeit über der Zeit, letzter Zug</span><span class="u">mm/s, Fläche: Magnet an</span></div>
+      <div class="plot"><canvas id="cVel" aria-label="Geschwindigkeit über Zeit"></canvas></div>
+      <dl class="kv" style="margin-top:10px">
+        <dt>Züge per Magnet in dieser Partie</dt><dd id="pN">0</dd>
+        <dt>Fahrweg gesamt</dt><dd id="pMM">0 mm</dd>
+        <dt>Fahrzeit gesamt</dt><dd id="pT">0 s</dd>
+        <dt>Durchschnitt je Zug</dt><dd id="pAvg">.</dd>
+      </dl>
+      <p class="info">Zum Vergleich: aufbau.md schätzt 2 bis 3 s je Zug bei rund 150 bis 250 mm Fahrt. Die Simulation rechnet
+      Leerfahrt, Rampen, die Schaltzeit des Magneten (je 0,15 s, P) und die Rückfahrt in die Home-Ecke mit ein.</p>
+    </section>
+  </div>
+</div>
+
+<div class="foot card">
+  <b>Annahmen dieser Simulation</b>
+  <ul>
+    <li>Maße aus dem Repo: Feld 50 mm (P), Figur höchstens 24 mm, Spalt rund 8 mm, Verfahrweg 500 × 450 mm, Parkspuren 40 mm breit bei ±225 mm, 80 mm/s (Schätzung). Rahmen, Wellen, Riemen und Motoren wie im 3D-Modell, mit der Feldgröße mitskaliert.</li>
+    <li>Pfadplanung: kürzester Weg auf einem Halbfeld-Raster mit Strafe für jede Ecke. Erlaubt ist jedes Stück, das zu jeder stehenden Figur mindestens s/2 Abstand hält. Damit fährt der Springer automatisch ein halbes Feld schräg auf die Linie, die Linie entlang und wieder zur Feldmitte.</li>
+    <li>Parkspur (Annahme, offen): geschlagene weiße Figuren links, schwarze rechts, 17 Plätze im Abstand s/2, gefüllt wird der Platz, der der geschlagenen Figur am nächsten liegt.</li>
+    <li>Home-Ecke links unten außerhalb des Spielfelds (P), dort darf die Sensorik lesen. Umwandlung: der Bauer wird in der Simulation einfach zur Dame. In echt müsste eine Dame aus der Parkspur geholt werden, das ist offen.</li>
+    <li>Kinematik: 200 Vollschritte je Umdrehung (P), GT2-Riemen mit 2 mm Teilung auf 20-Zahn-Pulley, also 40 mm Riemen je Umdrehung. Bewegungsprofil trapezförmig je gerader Strecke.</li>
+    <li>Regeln: legale Züge mit Schach, Rochade, en passant. Der Gegner wählt einen zufälligen legalen Zug, keine Engine.</li>
+  </ul>
+</div>
+</div>
+
+<script>
+'use strict';
+/* ================================================================ Parameter */
+const P = { s: 50, w: 24, v: 80, a: 400, ms: 16, gap: 8, mu: 0.08, m: 12, F8: 0.30, home: true, spd: 1 };
+const K = {
+  STEPS_REV: 200,   // Vollschritte je Umdrehung, TODO(P)
+  TEETH: 20,        // GT2-Pulley 20 Z laut Stückliste M05
+  PITCH: 2,         // GT2: 2 mm Teilung
+  DWELL: 0.15,      // Schaltzeit Magnet an/aus in s, TODO(P)
+  KQ: 0.35,         // Querkraftanteil der Normalkraft, TODO(P)
+  G0: 3,            // Abklinglänge der Normalkraft in mm, TODO(P)
+  R0: 12,           // seitliche Abklinglänge in mm (Topfmagnet Ø 20 bis 25), TODO(P)
+  MAG_D: 22,        // Durchmesser Topfmagnet, Stückliste E01: Ø 20 bis 25 mm
+};
+const spm = () => K.STEPS_REV * P.ms / (K.TEETH * K.PITCH);   // Schritte je mm Riemen
+const PULLEY_R = K.TEETH * K.PITCH / (2 * Math.PI);             // Teilkreisradius in mm
+const HOME = { x: -0.5, y: -0.5 };                              // in Feldeinheiten
+const $ = id => document.getElementById(id);
+const nf = (v, d = 0) => (Math.abs(v) < 0.5 * Math.pow(10, -d) ? 0 : v).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/* Koordinaten: Feldeinheiten u, Feld a1 hat die Mitte (0,5 | 0,5). mm: Brettmitte = 0. */
+const toMM = u => (u - 4) * P.s;
+
+/* ================================================================ Schachlogik */
+const KN = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]];
+const KG = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+const RD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const BD = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+const DE = { k: 'K', q: 'D', r: 'T', b: 'L', n: 'S', p: 'B' };
+const DE_NAME = { k: 'König', q: 'Dame', r: 'Turm', b: 'Läufer', n: 'Springer', p: 'Bauer' };
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+let pieces = [], board = new Array(64).fill(-1);
+const G = { turn: 'w', cr: { K: true, Q: true, k: true, q: true }, ep: -1, over: '' };
+const sqName = sq => 'abcdefgh'[sq & 7] + (1 + (sq >> 3));
+const sqOf = n => (n.charCodeAt(0) - 97) + 8 * (+n[1] - 1);
+const center = sq => ({ x: (sq & 7) + 0.5, y: (sq >> 3) + 0.5 });
+
+function loadFEN(fen) {
+  const [pos, turn, cr, ep] = fen.split(' ');
+  pieces = []; board.fill(-1);
+  const rows = pos.split('/');
+  for (let i = 0; i < 8; i++) {
+    let f = 0; const r = 7 - i;
+    for (const ch of rows[i]) {
+      if (/\d/.test(ch)) { f += +ch; continue; }
+      const id = pieces.length;
+      pieces.push({ id, t: ch.toLowerCase(), c: ch === ch.toUpperCase() ? 'w' : 'b', x: f + 0.5, y: r + 0.5 });
+      board[r * 8 + f] = id; f++;
+    }
+  }
+  G.turn = turn || 'w';
+  G.cr = { K: /K/.test(cr), Q: /Q/.test(cr), k: /k/.test(cr), q: /q/.test(cr) };
+  G.ep = ep && ep !== '-' ? sqOf(ep) : -1;
+  G.over = '';
+}
+
+function attacked(sq, by, bd) {
+  const f = sq & 7, r = sq >> 3;
+  const get = (ff, rr) => (ff < 0 || ff > 7 || rr < 0 || rr > 7) ? null : (bd[rr * 8 + ff] >= 0 ? pieces[bd[rr * 8 + ff]] : 0);
+  const pd = by === 'w' ? 1 : -1;
+  for (const df of [-1, 1]) { const p = get(f + df, r - pd); if (p && p.c === by && p.t === 'p') return true; }
+  for (const [df, dr] of KN) { const p = get(f + df, r + dr); if (p && p.c === by && p.t === 'n') return true; }
+  for (const [df, dr] of KG) { const p = get(f + df, r + dr); if (p && p.c === by && p.t === 'k') return true; }
+  for (const [dirs, ts] of [[RD, 'rq'], [BD, 'bq']]) {
+    for (const [df, dr] of dirs) {
+      let ff = f + df, rr = r + dr;
+      for (;;) {
+        const p = get(ff, rr);
+        if (p === null) break;
+        if (p) { if (p.c === by && ts.includes(p.t)) return true; break; }
+        ff += df; rr += dr;
+      }
+    }
+  }
+  return false;
+}
+
+function kingSq(c, bd) { return bd.findIndex(id => id >= 0 && pieces[id].t === 'k' && pieces[id].c === c); }
+
+function genMoves(c) {
+  const out = [], opp = c === 'w' ? 'b' : 'w';
+  const tgt = (ff, rr) => (ff < 0 || ff > 7 || rr < 0 || rr > 7) ? null : rr * 8 + ff;
+  const add = (from, to, ex) => out.push(Object.assign({ from, to, cap: board[to] >= 0 ? to : -1 }, ex || {}));
+  for (let sq = 0; sq < 64; sq++) {
+    const id = board[sq]; if (id < 0) continue;
+    const p = pieces[id]; if (p.c !== c) continue;
+    const f = sq & 7, r = sq >> 3;
+    if (p.t === 'p') {
+      const d = c === 'w' ? 1 : -1, last = c === 'w' ? 7 : 0, st = c === 'w' ? 1 : 6;
+      const t1 = tgt(f, r + d);
+      if (t1 !== null && board[t1] < 0) {
+        add(sq, t1, { promo: r + d === last });
+        const t2 = tgt(f, r + 2 * d);
+        if (r === st && board[t2] < 0) add(sq, t2);
+      }
+      for (const df of [-1, 1]) {
+        const t = tgt(f + df, r + d); if (t === null) continue;
+        if (board[t] >= 0 && pieces[board[t]].c === opp) add(sq, t, { promo: r + d === last });
+        else if (t === G.ep && board[t] < 0) out.push({ from: sq, to: t, cap: t - 8 * d, ep: true });
+      }
+    } else if (p.t === 'n' || p.t === 'k') {
+      for (const [df, dr] of (p.t === 'n' ? KN : KG)) {
+        const t = tgt(f + df, r + dr); if (t === null) continue;
+        if (board[t] < 0 || pieces[board[t]].c === opp) add(sq, t);
+      }
+      if (p.t === 'k') {
+        const b0 = c === 'w' ? 0 : 56, kS = c === 'w' ? 'K' : 'k', qS = c === 'w' ? 'Q' : 'q';
+        const isRook = s => board[s] >= 0 && pieces[board[s]].t === 'r' && pieces[board[s]].c === c;
+        if (sq === b0 + 4 && !attacked(sq, opp, board)) {
+          if (G.cr[kS] && isRook(b0 + 7) && board[b0 + 5] < 0 && board[b0 + 6] < 0 &&
+              !attacked(b0 + 5, opp, board) && !attacked(b0 + 6, opp, board))
+            add(sq, b0 + 6, { castle: { rf: b0 + 7, rt: b0 + 5 } });
+          if (G.cr[qS] && isRook(b0) && board[b0 + 1] < 0 && board[b0 + 2] < 0 && board[b0 + 3] < 0 &&
+              !attacked(b0 + 3, opp, board) && !attacked(b0 + 2, opp, board))
+            add(sq, b0 + 2, { castle: { rf: b0, rt: b0 + 3 } });
+        }
+      }
+    } else {
+      const dirs = p.t === 'b' ? BD : p.t === 'r' ? RD : BD.concat(RD);
+      for (const [df, dr] of dirs) {
+        let ff = f + df, rr = r + dr;
+        for (;;) {
+          const t = tgt(ff, rr); if (t === null) break;
+          if (board[t] < 0) add(sq, t);
+          else { if (pieces[board[t]].c === opp) add(sq, t); break; }
+          ff += df; rr += dr;
+        }
+      }
+    }
+  }
+  return out.filter(m => {
+    const bd = board.slice();
+    if (m.cap >= 0) bd[m.cap] = -1;
+    bd[m.to] = bd[m.from]; bd[m.from] = -1;
+    if (m.castle) { bd[m.castle.rt] = bd[m.castle.rf]; bd[m.castle.rf] = -1; }
+    const k = kingSq(c, bd);
+    return k < 0 || !attacked(k, opp, bd);
+  });
+}
+
+function applyLogical(m) {
+  const id = board[m.from], p = pieces[id];
+  if (m.cap >= 0) board[m.cap] = -1;
+  board[m.to] = id; board[m.from] = -1;
+  if (m.castle) { board[m.castle.rt] = board[m.castle.rf]; board[m.castle.rf] = -1; }
+  if (p.t === 'k') { if (p.c === 'w') G.cr.K = G.cr.Q = false; else G.cr.k = G.cr.q = false; }
+  for (const s of [m.from, m.to]) {
+    if (s === 0) G.cr.Q = false; if (s === 7) G.cr.K = false;
+    if (s === 56) G.cr.q = false; if (s === 63) G.cr.k = false;
+  }
+  G.ep = (p.t === 'p' && Math.abs(m.to - m.from) === 16) ? (m.from + m.to) / 2 : -1;
+  G.turn = p.c === 'w' ? 'b' : 'w';
+}
+
+function notation(m, p) {
+  if (m.castle) return (m.castle.rf & 7) === 7 ? '0-0' : '0-0-0';
+  return (p.t === 'p' ? '' : DE[p.t]) + sqName(m.from) + (m.cap >= 0 ? 'x' : '-') + sqName(m.to) +
+    (m.promo ? 'D' : '') + (m.ep ? ' e.p.' : '');
+}
+
+/* ================================================================ Pfadplanung */
+function segDist(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+  let t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+class Heap {
+  constructor() { this.a = []; }
+  get size() { return this.a.length; }
+  push(k, v) {
+    const a = this.a; a.push([k, v]); let i = a.length - 1;
+    while (i > 0) { const p = (i - 1) >> 1; if (a[p][0] <= a[i][0]) break; [a[p], a[i]] = [a[i], a[p]]; i = p; }
+  }
+  pop() {
+    const a = this.a, top = a[0], last = a.pop();
+    if (a.length) {
+      a[0] = last; let i = 0;
+      for (;;) {
+        const l = 2 * i + 1, r = l + 1; let m = i;
+        if (l < a.length && a[l][0] < a[m][0]) m = l;
+        if (r < a.length && a[r][0] < a[m][0]) m = r;
+        if (m === i) break; [a[m], a[i]] = [a[i], a[m]]; i = m;
+      }
+    }
+    return top;
+  }
+}
+
+/* Halbfeld-Raster von -0,5 bis 8,5 in x und y (Verfahrweg 10 s × 9 s wäre mehr, das reicht).
+   Eine Kante ist erlaubt, wenn sie zu jeder stehenden Figur mindestens s/2 Abstand hält.
+   Kosten: Länge plus Strafe je Richtungswechsel (der Wagen hält an jeder Ecke). */
+function route(start, goal, st) {
+  const N = 19, MIN = 0.5 - 1e-6;
+  const I = v => Math.round((v + 0.5) * 2);
+  const si = I(start.x), sj = I(start.y), gi = I(goal.x), gj = I(goal.y);
+  const pen = (P.v * P.v / P.a) / P.s + 0.05;
+  const cache = new Int8Array(N * N * 8);
+  const okEdge = (i, j, d) => {
+    const k = (i * N + j) * 8 + d;
+    if (cache[k]) return cache[k] === 1;
+    const ni = i + KG[d][0], nj = j + KG[d][1];
+    let ok = ni >= 0 && nj >= 0 && ni < N && nj < N;
+    if (ok) {
+      const ax = i * 0.5 - 0.5, ay = j * 0.5 - 0.5, bx = ni * 0.5 - 0.5, by = nj * 0.5 - 0.5;
+      for (const p of st) if (segDist(p.x, p.y, ax, ay, bx, by) < MIN) { ok = false; break; }
+    }
+    cache[k] = ok ? 1 : 2;
+    return ok;
+  };
+  const S = N * N * 9, dist = new Float64Array(S).fill(Infinity), prev = new Int32Array(S).fill(-1);
+  const sid = (si * N + sj) * 9 + 8;
+  dist[sid] = 0;
+  const h = new Heap(); h.push(0, sid);
+  let end = -1;
+  while (h.size) {
+    const [c, u] = h.pop();
+    if (c > dist[u]) continue;
+    const d0 = u % 9, n = (u - d0) / 9, i = Math.floor(n / N), j = n % N;
+    if (i === gi && j === gj) { end = u; break; }
+    for (let d = 0; d < 8; d++) {
+      if (!okEdge(i, j, d)) continue;
+      const ni = i + KG[d][0], nj = j + KG[d][1];
+      const nc = c + ((d & 1) ? Math.SQRT1_2 : 0.5) + ((d0 !== 8 && d0 !== d) ? pen : 0);
+      const v = (ni * N + nj) * 9 + d;
+      if (nc < dist[v]) { dist[v] = nc; prev[v] = u; h.push(nc, v); }
+    }
+  }
+  if (end < 0) return { pts: [{ ...start }, { ...goal }], ok: false };
+  const nodes = [];
+  for (let u = end; u >= 0; u = prev[u]) {
+    const n = (u - u % 9) / 9;
+    nodes.push({ x: Math.floor(n / N) * 0.5 - 0.5, y: (n % N) * 0.5 - 0.5, d: u % 9 });
+  }
+  nodes.reverse();
+  const pts = [{ x: start.x, y: start.y }];
+  for (let k = 1; k < nodes.length; k++) {
+    if (k < nodes.length - 1 && nodes[k + 1].d === nodes[k].d) continue;
+    pts.push({ x: nodes[k].x, y: nodes[k].y });
+  }
+  return { pts, ok: true };
+}
+
+/* Parkspur: Weiß links (x = -0,5), Schwarz rechts (x = 8,5), Plätze im Abstand s/2. Annahme. */
+function chooseSlot(color, pos, capId) {
+  const lx = color === 'w' ? -0.5 : 8.5;
+  let best = null, bd = Infinity;
+  for (let k = 0; k <= 16; k++) {
+    const y = k * 0.5;
+    if (pos.some(p => Math.abs(p.x - lx) < 0.01 && Math.abs(p.y - y) < 0.01)) continue;
+    const d = Math.abs(y - pos[capId].y);
+    if (d < bd) { bd = d; best = { x: lx, y }; }
+  }
+  return best || { x: lx, y: 8.5 };
+}
+
+function buildPlan(m, movId, capId, rookId) {
+  const pos = pieces.map(p => ({ x: p.x, y: p.y }));
+  const jobs = [];
+  let cur = { x: car.x, y: car.y }, okAll = true;
+  const drag = (id, goal, kind, txtLeer, txtDrag) => {
+    const st = pos.map((p, k) => ({ x: p.x, y: p.y, id: k })).filter(p => p.id !== id);
+    const r = route(pos[id], goal, st);
+    okAll = okAll && r.ok;
+    jobs.push({ k: 'leer', pts: [cur, { ...pos[id] }], txt: txtLeer });
+    jobs.push({ k: 'on', txt: 'Magnet an, Figur einkoppeln' });
+    jobs.push({ k: 'drag', kind, id, pts: r.pts, st, txt: txtDrag });
+    jobs.push({ k: 'off', txt: 'Magnet aus, Figur steht' });
+    pos[id] = { ...goal }; cur = { ...goal };
+  };
+  const pm = pieces[movId];
+  if (capId >= 0) {
+    const slot = chooseSlot(pieces[capId].c, pos, capId);
+    const cp = pieces[capId];
+    drag(capId, slot, 'park', 'fährt leer zur geschlagenen Figur auf ' + sqName(m.cap),
+      'zieht ' + DE_NAME[cp.t] + ' ' + sqName(m.cap) + ' auf den Linien in die Parkspur ' + (cp.c === 'w' ? 'links' : 'rechts'));
+  }
+  drag(movId, center(m.to), 'zug', 'fährt leer zu ' + sqName(m.from),
+    (pm.t === 'n' ? 'Springer: halbes Feld schräg, auf der Linie, wieder zur Mitte, ' : 'zieht ' + DE_NAME[pm.t] + ' ') +
+    sqName(m.from) + ' nach ' + sqName(m.to));
+  if (rookId >= 0) {
+    drag(rookId, center(m.castle.rt), 'zug', 'Rochade: fährt leer zum Turm ' + sqName(m.castle.rf),
+      'Rochade: Turm ' + sqName(m.castle.rf) + ' auf der Linie hinter dem König nach ' + sqName(m.castle.rt));
+  }
+  if (P.home) jobs.push({ k: 'leer', pts: [cur, { ...HOME }], txt: 'zurück in die Home-Ecke, Sensorik liest' });
+  return { jobs, ok: okAll };
+}
+
+/* ================================================================ Bewegung und Zeit */
+function prof(L) {
+  const v = P.v, a = P.a;
+  let ta = v / a, da = 0.5 * a * ta * ta, tc, vp = v;
+  if (2 * da >= L) { ta = Math.sqrt(L / a); vp = a * ta; da = L / 2; tc = 0; } else tc = (L - 2 * da) / v;
+  const T = 2 * ta + tc;
+  return {
+    T, vp,
+    dist: t => t <= 0 ? 0 : t >= T ? L : t < ta ? 0.5 * a * t * t : t < ta + tc ? da + vp * (t - ta) : L - 0.5 * a * (T - t) * (T - t),
+    vel: t => (t <= 0 || t >= T) ? 0 : t < ta ? a * t : t < ta + tc ? vp : a * (T - t),
+  };
+}
+
+function timeline(jobs) {
+  const ph = []; let t = 0;
+  for (const j of jobs) {
+    if (j.k === 'on' || j.k === 'off') { ph.push({ k: j.k, t0: t, t1: t + K.DWELL, txt: j.txt }); t += K.DWELL; continue; }
+    for (let i = 0; i + 1 < j.pts.length; i++) {
+      const a = j.pts[i], b = j.pts[i + 1];
+      const L = Math.hypot(b.x - a.x, b.y - a.y) * P.s;
+      if (L < 1e-6) continue;
+      const pr = prof(L);
+      ph.push({ k: j.k, kind: j.kind, id: j.id, a, b, L, pr, t0: t, t1: t + pr.T, txt: j.txt });
+      t += pr.T;
+    }
+  }
+  return { ph, T: t };
+}
+
+function clearance(plan) {
+  const samples = [], breaks = [];
+  let along = 0, min = Infinity, at = null, near = null;
+  for (const j of plan.jobs) {
+    if (j.k !== 'drag') continue;
+    if (samples.length) breaks.push(along);
+    for (let i = 0; i + 1 < j.pts.length; i++) {
+      const a = j.pts[i], b = j.pts[i + 1];
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const n = Math.max(2, Math.ceil(len / 0.02));
+      for (let q = (i === 0 ? 0 : 1); q <= n; q++) {
+        const x = a.x + (b.x - a.x) * q / n, y = a.y + (b.y - a.y) * q / n;
+        let c = Infinity, np = null;
+        for (const p of j.st) { const d = Math.hypot(p.x - x, p.y - y); if (d < c) { c = d; np = p; } }
+        samples.push({ u: along + len * q / n, c });
+        if (c < min - 1e-9) { min = c; at = { x, y }; near = np; }
+      }
+      along += len;
+    }
+  }
+  return { samples, breaks, min, at, near, total: along };
+}
+
+function analyze(plan) {
+  const tl = timeline(plan.jobs);
+  let drag = 0, leer = 0, stops = 0, magT = 0, dA = 0, dB = 0, motA = 0, motB = 0;
+  for (const ph of tl.ph) {
+    if (ph.k === 'on' || ph.k === 'off') { magT += K.DWELL; continue; }
+    stops++;
+    if (ph.k === 'drag') { drag += ph.L; magT += ph.pr.T; } else leer += ph.L;
+    const dx = (ph.b.x - ph.a.x) * P.s, dy = (ph.b.y - ph.a.y) * P.s;
+    dA += dx + dy; dB += dx - dy; motA += Math.abs(dx + dy); motB += Math.abs(dx - dy);
+  }
+  const vel = [], N = 320;
+  let k = 0;
+  for (let i = 0; i <= N; i++) {
+    const t = tl.T * i / N;
+    while (k < tl.ph.length - 1 && tl.ph[k].t1 < t) k++;
+    const ph = tl.ph[k];
+    const v = ph && ph.pr ? ph.pr.vel(t - ph.t0) : 0;
+    vel.push({ t, v, mag: magAt(tl, t) });
+  }
+  return { tl, drag, leer, T: tl.T, stops, magT, dA, dB, motA, motB, cl: clearance(plan), vel };
+}
+
+function magAt(tl, t) {
+  let on = false;
+  for (const ph of tl.ph) { if (ph.t0 > t) break; if (ph.k === 'on') on = true; if (ph.k === 'off') on = false; }
+  return on;
+}
+
+/* ================================================================ Magnetkraft (qualitativ, P) */
+const Fn = g => P.F8 * Math.pow((1 + 8 / K.G0) / (1 + g / K.G0), 3);
+function magCalc(g) {
+  const m = P.m / 1000, a = P.a / 1000, FN = Fn(g);
+  const avail = K.KQ * FN, need = P.mu * (m * 9.81 + FN) + m * a;
+  return { FN, avail, need, R: avail / need };
+}
+function neighCalc() {
+  const d = P.s / 2, Fq = K.KQ * Fn(P.gap) * Math.exp(-(d / K.R0) * (d / K.R0));
+  const hold = P.mu * (P.m / 1000) * 9.81;
+  return { d, Fq, hold, R: hold / Fq };
+}
+
+/* ================================================================ Zustand */
+let mode = 'regel';
+let car = { x: HOME.x, y: HOME.y }, mag = false;
+let liveV = 0, liveVA = 0, liveVB = 0, liveClear = null;
+let anim = null, lastPlan = null, lastStats = null, moveStartA = 0, moveStartB = 0;
+let sel = -1, targets = [], lastMove = null, autoTimer = 0;
+const tot = { n: 0, mm: 0, T: 0 };
+let dirty = true, dirtyCharts = true;
+const log = [];
+
+function motorMM() {
+  const dx = (car.x - HOME.x) * P.s, dy = (car.y - HOME.y) * P.s;
+  return { A: dx + dy, B: dx - dy, dx, dy };
+}
+
+function resetGame(fen) {
+  clearTimeout(autoTimer);
+  anim = null; mag = false;
+  loadFEN(fen || START);
+  car = { x: HOME.x, y: HOME.y };
+  lastPlan = null; lastStats = null; lastMove = null; sel = -1; targets = [];
+  tot.n = 0; tot.mm = 0; tot.T = 0; log.length = 0;
+  liveV = liveVA = liveVB = 0; liveClear = null;
+  setPhase(G.turn === 'w' ? 'Bereit. Weiß am Zug: Figur antippen, dann Ziel.' : 'Bereit. Schwarz am Zug.');
+  renderLog(); updatePanels(); dirty = true;
+}
+
+function execMove(m) {
+  if (anim) return;
+  clearTimeout(autoTimer);
+  const movId = board[m.from];
+  if (movId < 0) return;
+  const capId = m.cap >= 0 ? board[m.cap] : -1;
+  const rookId = m.castle ? board[m.castle.rf] : -1;
+  const p = pieces[movId];
+  const plan = buildPlan(m, movId, capId, rookId);
+  let note = notation(m, p);
+  applyLogical(m);
+  if (mode === 'regel') {
+    const k = kingSq(G.turn, board);
+    const chk = k >= 0 && attacked(k, p.c, board);
+    const any = genMoves(G.turn).length > 0;
+    if (!any) G.over = chk ? 'Matt' : 'Patt';
+    if (chk) note += any ? '+' : '#';
+  }
+  plan.note = note; plan.color = p.c;
+  lastPlan = plan; lastStats = analyze(plan);
+  lastMove = { from: m.from, to: m.to };
+  tot.n++; tot.mm += lastStats.drag + lastStats.leer; tot.T += lastStats.T;
+  log.push({ note, mm: lastStats.drag + lastStats.leer, T: lastStats.T, c: p.c });
+  const mm0 = motorMM(); moveStartA = mm0.A; moveStartB = mm0.B;
+  anim = { tl: lastStats.tl, t: 0, i: 0, promoId: m.promo ? movId : -1 };
+  sel = -1; targets = [];
+  renderLog(); updatePanels(); dirty = true;
+}
+
+function stepAnim(dt) {
+  anim.t += dt * P.spd;
+  const tl = anim.tl;
+  while (anim.i < tl.ph.length && tl.ph[anim.i].t1 <= anim.t) { finishPhase(tl.ph[anim.i]); anim.i++; }
+  if (anim.i >= tl.ph.length) { endAnim(); return; }
+  const ph = tl.ph[anim.i], lt = anim.t - ph.t0;
+  setPhase(ph.txt);
+  liveClear = null;
+  if (ph.k === 'on') { mag = true; liveV = liveVA = liveVB = 0; }
+  else if (ph.k === 'off') { mag = false; liveV = liveVA = liveVB = 0; }
+  else {
+    const f = ph.pr.dist(lt) / ph.L;
+    car.x = ph.a.x + (ph.b.x - ph.a.x) * f; car.y = ph.a.y + (ph.b.y - ph.a.y) * f;
+    const v = ph.pr.vel(lt), L = Math.hypot(ph.b.x - ph.a.x, ph.b.y - ph.a.y);
+    const ux = (ph.b.x - ph.a.x) / L, uy = (ph.b.y - ph.a.y) / L;
+    liveV = v; liveVA = (v * ux + v * uy) * spm(); liveVB = (v * ux - v * uy) * spm();
+    if (ph.k === 'drag') {
+      const pc = pieces[ph.id]; pc.x = car.x; pc.y = car.y;
+      let c = Infinity;
+      for (const q of pieces) if (q.id !== ph.id) c = Math.min(c, Math.hypot(q.x - car.x, q.y - car.y));
+      liveClear = c;
+    }
+  }
+}
+
+function finishPhase(ph) {
+  if (ph.k === 'on') mag = true;
+  else if (ph.k === 'off') mag = false;
+  else { car.x = ph.b.x; car.y = ph.b.y; if (ph.k === 'drag') { pieces[ph.id].x = ph.b.x; pieces[ph.id].y = ph.b.y; } }
+}
+
+function endAnim() {
+  if (anim.promoId >= 0) pieces[anim.promoId].t = 'q';
+  anim = null; mag = false; liveV = liveVA = liveVB = 0; liveClear = null;
+  let msg = 'Fertig: ' + lastPlan.note + ' in ' + nf(lastStats.T, 1) + ' s, ' + nf(lastStats.drag + lastStats.leer) + ' mm.';
+  if (G.over) msg += ' ' + G.over + '.';
+  else if (mode === 'regel') msg += ' ' + (G.turn === 'w' ? 'Weiß' : 'Schwarz') + ' am Zug.';
+  setPhase(msg);
+  updatePanels(); dirty = true;
+  if (mode === 'regel' && $('auto').checked && G.turn === 'b' && !G.over) autoTimer = setTimeout(randomMove, 500);
+}
+
+function randomMove() {
+  if (anim) return;
+  if (G.over) { setPhase('Partie beendet: ' + G.over + '. "Neu" startet eine neue.'); return; }
+  const ms = genMoves(G.turn);
+  if (!ms.length) { setPhase('Kein legaler Zug für ' + (G.turn === 'w' ? 'Weiß' : 'Schwarz') + '.'); return; }
+  execMove(ms[Math.floor(Math.random() * ms.length)]);
+}
+
+let phaseTxt = '';
+function setPhase(t) { if (t !== phaseTxt) { phaseTxt = t; $('phase').textContent = t; } }
+
+/* ================================================================ Farben */
+let C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['bg', 'surface', 'ink', 'ink2', 'muted', 'grid', 'axis', 'border', 'chip', 's1', 's2', 's3', 'good', 'warn', 'crit',
+    'band', 'sqL', 'sqD', 'frame', 'lane', 'mech', 'pw', 'pwS', 'pwT', 'pb', 'pbS', 'pbT']) C[k] = cs.getPropertyValue('--' + k).trim();
+}
+
+/* ================================================================ Zeichnen: Brett */
+const cv = $('board');
+let VW = null;
+function worldBox() { const s = P.s; return { x0: -(4 * s + 95), x1: 4 * s + 95, y0: -(4 * s + 44), y1: 4 * s + 124 }; }
+
+function prep(canvas, hCss) {
+  const w = Math.max(10, canvas.clientWidth || canvas.parentElement.clientWidth);
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.round(w * dpr), H = Math.round(hCss * dpr);
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  canvas.style.height = hCss + 'px';
+  const g = canvas.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, hCss);
+  return { g, w, h: hCss };
+}
+
+function drawBoard() {
+  const wb = worldBox(), Wmm = wb.x1 - wb.x0, Hmm = wb.y1 - wb.y0;
+  const wCss = Math.max(10, cv.clientWidth || cv.parentElement.clientWidth);
+  const k = wCss / Wmm, hCss = Math.round(Hmm * k);
+  const { g } = prep(cv, hCss);
+  VW = { wb, k };
+  const X = mm => (mm - wb.x0) * k, Y = mm => (wb.y1 - mm) * k;
+  const UX = u => X(toMM(u)), UY = u => Y(toMM(u));
+  const s = P.s, S = s * k;
+  const RAIL = 4 * s + 52, BELT = 4 * s + 76, MOT = 4 * s + 92;
+  const carX = toMM(car.x), carY = toMM(car.y);
+
+  g.fillStyle = C.bg; g.fillRect(0, 0, wCss, hCss);
+  /* Glas / Rahmen */
+  g.fillStyle = C.frame; g.strokeStyle = C.border; g.lineWidth = 1;
+  roundRect(g, X(-(4 * s + 70)), Y(4 * s + 30), (8 * s + 140) * k, (8 * s + 60) * k, 8 * k); g.fill(); g.stroke();
+
+  /* Mechanik unter dem Glas: Wellen, Riemen, Motoren */
+  g.strokeStyle = C.mech; g.lineWidth = Math.max(1.5, 4 * k * 0.6);
+  g.globalAlpha = 0.55;
+  for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(X(sx * RAIL), Y(-(4 * s + 25))); g.lineTo(X(sx * RAIL), Y(4 * s + 25)); g.stroke(); }
+  g.globalAlpha = 1;
+  /* Riemen wie im 3D-Modell: Wagen, links, Motor A, Motor B, rechts, Wagen */
+  g.strokeStyle = C.ink2; g.lineWidth = Math.max(1.2, 3 * k * 0.5); g.globalAlpha = 0.6;
+  g.beginPath();
+  g.moveTo(X(carX - 14), Y(carY - 6)); g.lineTo(X(-BELT), Y(carY - 6)); g.lineTo(X(-BELT), Y(MOT));
+  g.lineTo(X(BELT), Y(MOT)); g.lineTo(X(BELT), Y(carY + 6)); g.lineTo(X(carX + 14), Y(carY + 6));
+  g.stroke(); g.globalAlpha = 1;
+  const mm = motorMM();
+  drawMotor(g, X(-BELT), Y(MOT), k, 'A', mm.A, Math.round(mm.A * spm()), liveVA, -1);
+  drawMotor(g, X(BELT), Y(MOT), k, 'B', mm.B, Math.round(mm.B * spm()), liveVB, 1);
+
+  /* Parkspuren */
+  for (const lx of [-4.5 * s, 4.5 * s]) {
+    g.fillStyle = C.lane; g.fillRect(X(lx - 0.4 * s), Y(4 * s), 0.8 * s * k, 8 * s * k);
+    g.strokeStyle = C.border; g.strokeRect(X(lx - 0.4 * s), Y(4 * s), 0.8 * s * k, 8 * s * k);
+    g.strokeStyle = C.axis; g.lineWidth = 1;
+    for (let q = 0; q <= 16; q++) { const y = -4 * s + q * s / 2; g.beginPath(); g.moveTo(X(lx - 0.12 * s), Y(y)); g.lineTo(X(lx + 0.12 * s), Y(y)); g.stroke(); }
+  }
+  g.fillStyle = C.ink2; g.font = `${Math.max(9, Math.round(10 * k))}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.fillText('Weiß', X(-4.5 * s), Y(4 * s) - 2); g.fillText('Schwarz', X(4.5 * s), Y(4 * s) - 2);
+
+  /* Felder */
+  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+    g.fillStyle = (f + r) % 2 ? C.sqL : C.sqD;
+    g.fillRect(UX(f), UY(r + 1), S + 0.5, S + 0.5);
+  }
+  if (lastMove && !anim) {
+    g.fillStyle = 'rgba(42,120,214,0.18)';
+    for (const sq of [lastMove.from, lastMove.to]) g.fillRect(UX(sq & 7), UY((sq >> 3) + 1), S, S);
+  }
+  if (sel >= 0) { g.fillStyle = 'rgba(42,120,214,0.38)'; g.fillRect(UX(sel & 7), UY((sel >> 3) + 1), S, S); }
+  g.strokeStyle = C.pwS; g.lineWidth = 1.2; g.strokeRect(UX(0), UY(8), 8 * S, 8 * S);
+  /* Beschriftung im Feld */
+  const fs = Math.max(8, Math.round(S * 0.2));
+  g.font = `600 ${fs}px system-ui, sans-serif`; g.textBaseline = 'alphabetic';
+  for (let f = 0; f < 8; f++) { g.fillStyle = f % 2 ? C.sqD : C.sqL; g.textAlign = 'right'; g.fillText('abcdefgh'[f], UX(f + 1) - 2, UY(0) - 2); }
+  for (let r = 0; r < 8; r++) { g.fillStyle = r % 2 ? C.sqD : C.sqL; g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText(String(r + 1), UX(0) + 2, UY(r + 1) + 2); }
+
+  /* Home-Ecke */
+  g.strokeStyle = C.ink2; g.lineWidth = 1.2;
+  const hx = UX(HOME.x), hy = UY(HOME.y), hs = Math.max(4, 7 * k);
+  g.strokeRect(hx - hs, hy - hs, 2 * hs, 2 * hs);
+  g.fillStyle = C.ink2; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = `${Math.max(9, Math.round(11 * k))}px system-ui, sans-serif`;
+  g.fillText('Home', hx + hs + 4, hy);
+
+  /* Ziele */
+  if (sel >= 0 && mode === 'regel') {
+    for (const t of targets) {
+      const c = center(t.to);
+      g.beginPath();
+      if (t.cap >= 0) { g.strokeStyle = 'rgba(42,120,214,0.75)'; g.lineWidth = 3; g.arc(UX(c.x), UY(c.y), S * 0.42, 0, 7); g.stroke(); }
+      else { g.fillStyle = 'rgba(42,120,214,0.6)'; g.arc(UX(c.x), UY(c.y), S * 0.13, 0, 7); g.fill(); }
+    }
+  }
+
+  /* Pfade des aktuellen oder letzten Zugs */
+  if (lastPlan) {
+    for (const j of lastPlan.jobs) {
+      if (j.k !== 'leer' && j.k !== 'drag') continue;
+      g.beginPath();
+      j.pts.forEach((p, i) => i ? g.lineTo(UX(p.x), UY(p.y)) : g.moveTo(UX(p.x), UY(p.y)));
+      if (j.k === 'leer') { g.setLineDash([5, 5]); g.strokeStyle = C.muted; g.lineWidth = 1.5; }
+      else { g.setLineDash([]); g.strokeStyle = j.kind === 'park' ? C.s3 : C.s1; g.lineWidth = 3; }
+      g.stroke(); g.setLineDash([]);
+      if (j.k === 'drag') {
+        g.fillStyle = j.kind === 'park' ? C.s3 : C.s1;
+        for (const p of j.pts) { g.beginPath(); g.arc(UX(p.x), UY(p.y), 3, 0, 7); g.fill(); }
+        arrowHead(g, j.pts, UX, UY);
+      }
+    }
+  }
+
+  /* Figuren */
+  const r = P.w / 2 * k;
+  const ruleBad = P.w > P.s / 2 + 1e-9;
+  for (const p of pieces) {
+    const x = UX(p.x), y = UY(p.y);
+    g.beginPath(); g.arc(x, y, r, 0, 7);
+    g.fillStyle = p.c === 'w' ? C.pw : C.pb; g.fill();
+    g.lineWidth = 1.4; g.strokeStyle = p.c === 'w' ? C.pwS : C.pbS; g.stroke();
+    g.fillStyle = p.c === 'w' ? C.pwT : C.pbT;
+    g.font = `700 ${Math.max(8, Math.round(r * 1.05))}px system-ui, sans-serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(DE[p.t], x, y + 0.5);
+  }
+
+  /* engste Stelle */
+  if (lastStats && lastStats.cl.at) {
+    const cl = lastStats.cl, minMM = cl.min * P.s, bad = minMM < P.w - 1e-6;
+    const ax = UX(cl.at.x), ay = UY(cl.at.y), nx = UX(cl.near.x), ny = UY(cl.near.y);
+    g.setLineDash([4, 3]); g.strokeStyle = bad ? C.crit : C.ink2; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(nx, ny); g.stroke(); g.setLineDash([]);
+    if (bad) { g.strokeStyle = C.crit; g.lineWidth = 2.5; g.beginPath(); g.arc(nx, ny, r + 3, 0, 7); g.stroke(); }
+    const lbl = nf(minMM, 1) + ' mm';
+    g.font = `600 ${Math.max(10, Math.round(12 * k))}px system-ui, sans-serif`;
+    const tw = g.measureText(lbl).width;
+    const mx = (ax + nx) / 2, my = (ay + ny) / 2;
+    g.fillStyle = C.surface; g.globalAlpha = 0.9; g.fillRect(mx - tw / 2 - 3, my - 8, tw + 6, 16); g.globalAlpha = 1;
+    g.fillStyle = bad ? C.crit : C.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(lbl, mx, my);
+  }
+  /* Kollision live */
+  if (anim && liveClear !== null && liveClear * P.s < P.w - 1e-6) {
+    g.strokeStyle = C.crit; g.lineWidth = 3; g.beginPath(); g.arc(UX(car.x), UY(car.y), r + 4, 0, 7); g.stroke();
+  }
+
+  /* X-Welle (Portal) und Wagen über allem, halbtransparent: liegt unter dem Glas */
+  g.globalAlpha = 0.45; g.strokeStyle = C.mech; g.lineWidth = Math.max(1.5, 4 * k * 0.6);
+  g.beginPath(); g.moveTo(X(-RAIL), Y(carY)); g.lineTo(X(RAIL), Y(carY)); g.stroke(); g.globalAlpha = 1;
+  const cx = X(carX), cy = Y(carY), mr = K.MAG_D / 2 * k;
+  if (mag) {
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, mr * 2.2);
+    gr.addColorStop(0, C.s2); gr.addColorStop(1, 'rgba(235,104,52,0)');
+    g.globalAlpha = 0.75; g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, mr * 2.2, 0, 7); g.fill(); g.globalAlpha = 1;
+  }
+  g.strokeStyle = mag ? C.s2 : C.ink2; g.lineWidth = mag ? 3 : 1.6;
+  g.beginPath(); g.arc(cx, cy, mr, 0, 7); g.stroke();
+  g.lineWidth = 1.2; g.beginPath();
+  g.moveTo(cx - mr * 1.6, cy); g.lineTo(cx - mr * 0.5, cy); g.moveTo(cx + mr * 0.5, cy); g.lineTo(cx + mr * 1.6, cy);
+  g.moveTo(cx, cy - mr * 1.6); g.lineTo(cx, cy - mr * 0.5); g.moveTo(cx, cy + mr * 0.5); g.lineTo(cx, cy + mr * 1.6);
+  g.stroke();
+  if (ruleBad) {
+    const txt = 'Figur breiter als s/2: Berührung auf den Linien';
+    let fz = Math.max(9, Math.round(13 * k));
+    g.font = `700 ${fz}px system-ui, sans-serif`;
+    const tw = g.measureText(txt).width;
+    if (tw > 7.6 * S) { fz = Math.max(8, Math.floor(fz * 7.6 * S / tw)); g.font = `700 ${fz}px system-ui, sans-serif`; }
+    g.fillStyle = C.crit; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    g.fillText(txt, X(0), Y(4 * s) - 3);
+  }
+}
+
+function drawMotor(g, x, y, k, name, beltMM, steps, vSteps, side) {
+  const body = 42 * k, pr = Math.max(5, 9 * k);
+  g.fillStyle = C.chip; g.strokeStyle = C.mech; g.lineWidth = 1.2;
+  roundRect(g, x - body / 2, y - body / 2, body, body, 4 * k); g.fill(); g.stroke();
+  g.beginPath(); g.arc(x, y, pr, 0, 7); g.fillStyle = C.surface; g.fill(); g.stroke();
+  const ang = -beltMM / PULLEY_R;
+  g.strokeStyle = Math.abs(vSteps) > 1 ? C.s1 : C.ink2; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(ang) * pr, y + Math.sin(ang) * pr); g.stroke();
+  g.fillStyle = C.ink; g.font = `700 ${Math.max(10, Math.round(13 * k))}px system-ui, sans-serif`;
+  g.textBaseline = 'middle'; g.textAlign = side < 0 ? 'left' : 'right';
+  const tx = x - side * (body / 2 + 6);
+  g.fillText('Motor ' + name, tx, y + 14 * k);
+  g.fillStyle = C.ink2; g.font = `${Math.max(9, Math.round(11 * k))}px system-ui, sans-serif`;
+  g.fillText(nf(steps) + ' Schritte', tx, y + 29 * k);
+}
+
+function arrowHead(g, pts, UX, UY) {
+  const n = pts.length; if (n < 2) return;
+  const a = pts[n - 2], b = pts[n - 1];
+  const x1 = UX(a.x), y1 = UY(a.y), x2 = UX(b.x), y2 = UY(b.y);
+  const ang = Math.atan2(y2 - y1, x2 - x1), L = 9;
+  g.beginPath(); g.moveTo(x2, y2);
+  g.lineTo(x2 - L * Math.cos(ang - 0.45), y2 - L * Math.sin(ang - 0.45));
+  g.lineTo(x2 - L * Math.cos(ang + 0.45), y2 - L * Math.sin(ang + 0.45));
+  g.closePath(); g.fill();
+}
+
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+
+/* ================================================================ Zeichnen: Diagramme */
+const hover = {};
+function tip(g, w, h, x, y, lines) {
+  g.font = '12px system-ui, sans-serif';
+  const tw = Math.max(...lines.map(l => g.measureText(l).width)) + 14, th = lines.length * 16 + 8;
+  let bx = x + 10; if (bx + tw > w) bx = x - 10 - tw; if (bx < 0) bx = 0;
+  let by = Math.max(2, Math.min(h - th - 2, y - th / 2));
+  g.fillStyle = C.surface; g.strokeStyle = C.border; g.lineWidth = 1;
+  roundRect(g, bx, by, tw, th, 6); g.fill(); g.stroke();
+  g.fillStyle = C.ink; g.textAlign = 'left'; g.textBaseline = 'top';
+  lines.forEach((l, i) => g.fillText(l, bx + 7, by + 5 + i * 16));
+}
+
+function axesFrame(g, box, xt, yt, fx, fy) {
+  g.strokeStyle = C.grid; g.lineWidth = 1; g.fillStyle = C.muted; g.font = '11px system-ui, sans-serif';
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (const v of yt) { const y = fy(v.v); g.beginPath(); g.moveTo(box.l, y); g.lineTo(box.r, y); g.stroke(); g.fillText(v.l, box.l - 5, y); }
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  for (const v of xt) { const x = fx(v.v); g.fillText(v.l, x, box.b + 4); }
+  g.strokeStyle = C.axis; g.beginPath(); g.moveTo(box.l, box.b); g.lineTo(box.r, box.b); g.stroke();
+}
+
+function niceStep(range, n) {
+  const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  return (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p;
+}
+
+function drawClear() {
+  const cvs = $('cClear'), { g, w, h } = prep(cvs, 150);
+  const box = { l: 38, r: w - 8, t: 8, b: h - 20 };
+  const ymax = Math.max(P.s * 1.5, P.w * 1.3);
+  const cl = lastStats ? lastStats.cl : null;
+  const tot = cl ? Math.max(cl.total * P.s, 1) : 100;
+  const fx = u => box.l + (u / tot) * (box.r - box.l), fy = v => box.b - Math.min(v, ymax) / ymax * (box.b - box.t);
+  const ys = niceStep(ymax, 3), yt = [];
+  for (let v = 0; v <= ymax + 1e-9; v += ys) yt.push({ v, l: nf(v) });
+  const xs = niceStep(tot, 4), xt = [];
+  for (let v = 0; v <= tot + 1e-9; v += xs) xt.push({ v, l: nf(v) });
+  axesFrame(g, box, xt, yt, fx, fy);
+  if (!cl || !cl.samples.length) {
+    g.fillStyle = C.muted; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '12px system-ui, sans-serif';
+    g.fillText('Noch kein Zug. Figur antippen, dann Ziel.', (box.l + box.r) / 2, (box.t + box.b) / 2);
+  }
+  /* Grenzlinien */
+  g.setLineDash([5, 4]); g.lineWidth = 1.5;
+  g.strokeStyle = C.muted; g.beginPath(); g.moveTo(box.l, fy(P.s / 2)); g.lineTo(box.r, fy(P.s / 2)); g.stroke();
+  g.strokeStyle = C.crit; g.beginPath(); g.moveTo(box.l, fy(P.w)); g.lineTo(box.r, fy(P.w)); g.stroke();
+  g.setLineDash([]);
+  if (cl && cl.samples.length) {
+    g.strokeStyle = C.axis; g.lineWidth = 1;
+    for (const b of cl.breaks) { g.beginPath(); g.moveTo(fx(b * P.s), box.t); g.lineTo(fx(b * P.s), box.b); g.stroke(); }
+    g.lineWidth = 2; g.lineJoin = 'round';
+    for (let i = 1; i < cl.samples.length; i++) {
+      const a = cl.samples[i - 1], b = cl.samples[i];
+      const bad = b.c * P.s < P.w - 1e-6 || a.c * P.s < P.w - 1e-6;
+      g.strokeStyle = bad ? C.crit : C.s1;
+      g.beginPath(); g.moveTo(fx(a.u * P.s), fy(a.c * P.s)); g.lineTo(fx(b.u * P.s), fy(b.c * P.s)); g.stroke();
+    }
+    const hx = hover.cClear;
+    if (hx != null && hx >= box.l && hx <= box.r) {
+      const u = (hx - box.l) / (box.r - box.l) * tot / P.s;
+      let best = cl.samples[0];
+      for (const sm of cl.samples) if (Math.abs(sm.u - u) < Math.abs(best.u - u)) best = sm;
+      const x = fx(best.u * P.s), y = fy(best.c * P.s);
+      g.strokeStyle = C.axis; g.beginPath(); g.moveTo(x, box.t); g.lineTo(x, box.b); g.stroke();
+      g.fillStyle = C.s1; g.strokeStyle = C.surface; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 4.5, 0, 7); g.fill(); g.stroke();
+      tip(g, w, h, x, y, ['nach ' + nf(best.u * P.s) + ' mm Weg', 'Abstand ' + nf(best.c * P.s, 1) + ' mm', 'Luft ' + nf(best.c * P.s - P.w, 1) + ' mm']);
+    }
+  }
+}
+
+function drawForce() {
+  const cvs = $('cForce'), { g, w, h } = prep(cvs, 180);
+  const box = { l: 44, r: w - 10, t: 8, b: h - 20 };
+  const gx0 = 3, gx1 = 16, ly0 = 0, ly1 = 4;   // 1 mN bis 10 N
+  const fx = v => box.l + (v - gx0) / (gx1 - gx0) * (box.r - box.l);
+  const fy = mN => box.b - (Math.log10(Math.max(mN, 1)) - ly0) / (ly1 - ly0) * (box.b - box.t);
+  const yt = [1, 10, 100, 1000, 10000].map(v => ({ v, l: v >= 1000 ? nf(v / 1000) + ' N' : nf(v) }));
+  const xt = []; for (let v = 4; v <= 16; v += 2) xt.push({ v, l: v + ' mm' });
+  g.strokeStyle = C.grid; g.lineWidth = 1; g.fillStyle = C.muted; g.font = '11px system-ui, sans-serif';
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (const t of yt) { const y = fy(t.v); g.beginPath(); g.moveTo(box.l, y); g.lineTo(box.r, y); g.stroke(); g.fillText(t.l, box.l - 5, y); }
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  for (const t of xt) g.fillText(t.l, fx(t.v), box.b + 4);
+  g.strokeStyle = C.axis; g.beginPath(); g.moveTo(box.l, box.b); g.lineTo(box.r, box.b); g.stroke();
+  /* Bereich "kommt mit" schattieren */
+  const N = 120, av = [], ne = [];
+  for (let i = 0; i <= N; i++) { const gg = gx0 + (gx1 - gx0) * i / N, c = magCalc(gg); av.push([gg, c.avail * 1000]); ne.push([gg, c.need * 1000]); }
+  g.fillStyle = 'rgba(42,120,214,0.10)'; g.beginPath();
+  av.forEach(([x, y], i) => i ? g.lineTo(fx(x), fy(Math.max(y, ne[i][1]))) : g.moveTo(fx(x), fy(Math.max(y, ne[i][1]))));
+  for (let i = N; i >= 0; i--) g.lineTo(fx(ne[i][0]), fy(ne[i][1]));
+  g.closePath(); g.fill();
+  for (const [arr, col] of [[av, C.s1], [ne, C.s2]]) {
+    g.strokeStyle = col; g.lineWidth = 2; g.beginPath();
+    arr.forEach(([x, y], i) => i ? g.lineTo(fx(x), fy(y)) : g.moveTo(fx(x), fy(y))); g.stroke();
+  }
+  /* Marker aktueller Spalt */
+  const c = magCalc(P.gap), xg = fx(P.gap);
+  g.setLineDash([4, 3]); g.strokeStyle = C.ink2; g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(xg, box.t); g.lineTo(xg, box.b); g.stroke(); g.setLineDash([]);
+  for (const [val, col] of [[c.avail, C.s1], [c.need, C.s2]]) {
+    g.fillStyle = col; g.strokeStyle = C.surface; g.lineWidth = 2; g.beginPath(); g.arc(xg, fy(val * 1000), 5, 0, 7); g.fill(); g.stroke();
+  }
+  g.fillStyle = C.ink2; g.font = '11px system-ui, sans-serif'; g.textAlign = xg > (box.l + box.r) / 2 ? 'right' : 'left'; g.textBaseline = 'top';
+  g.fillText('Spalt ' + nf(P.gap, 1) + ' mm', xg + (g.textAlign === 'left' ? 5 : -5), box.t + 2);
+  const hx = hover.cForce;
+  if (hx != null && hx >= box.l && hx <= box.r) {
+    const gg = gx0 + (hx - box.l) / (box.r - box.l) * (gx1 - gx0), cc = magCalc(gg);
+    g.strokeStyle = C.axis; g.lineWidth = 1; g.beginPath(); g.moveTo(hx, box.t); g.lineTo(hx, box.b); g.stroke();
+    tip(g, w, h, hx, fy(cc.avail * 1000), ['Spalt ' + nf(gg, 1) + ' mm', 'verfügbar ' + nf(cc.avail * 1000, 1) + ' mN',
+      'benötigt ' + nf(cc.need * 1000, 1) + ' mN', 'Reserve × ' + nf(cc.R, 2)]);
+  }
+}
+
+function drawVel() {
+  const cvs = $('cVel'), { g, w, h } = prep(cvs, 130);
+  const box = { l: 38, r: w - 8, t: 8, b: h - 20 };
+  const st = lastStats, T = st ? Math.max(st.T, 0.1) : 3, vmax = Math.max(P.v, 10) * 1.1;
+  const fx = t => box.l + t / T * (box.r - box.l), fy = v => box.b - v / vmax * (box.b - box.t);
+  const ys = niceStep(vmax, 3), yt = []; for (let v = 0; v <= vmax; v += ys) yt.push({ v, l: nf(v) });
+  const xs = niceStep(T, 5), xt = []; for (let v = 0; v <= T + 1e-9; v += xs) xt.push({ v, l: nf(v, xs < 1 ? 1 : 0) + ' s' });
+  g.strokeStyle = C.grid; g.lineWidth = 1; g.fillStyle = C.muted; g.font = '11px system-ui, sans-serif';
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (const t of yt) { const y = fy(t.v); g.beginPath(); g.moveTo(box.l, y); g.lineTo(box.r, y); g.stroke(); g.fillText(t.l, box.l - 5, y); }
+  g.textAlign = 'center'; g.textBaseline = 'top'; for (const t of xt) g.fillText(t.l, fx(t.v), box.b + 4);
+  g.strokeStyle = C.axis; g.beginPath(); g.moveTo(box.l, box.b); g.lineTo(box.r, box.b); g.stroke();
+  if (!st) {
+    g.fillStyle = C.muted; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '12px system-ui, sans-serif';
+    g.fillText('Noch kein Zug.', (box.l + box.r) / 2, (box.t + box.b) / 2); return;
+  }
+  /* Magnet-an-Bereiche */
+  g.fillStyle = C.band;
+  let t0 = null;
+  for (const ph of st.tl.ph) {
+    if (ph.k === 'on') t0 = ph.t0;
+    if (ph.k === 'off' && t0 !== null) { g.fillRect(fx(t0), box.t, fx(ph.t1) - fx(t0), box.b - box.t); t0 = null; }
+  }
+  g.strokeStyle = C.s1; g.lineWidth = 2; g.lineJoin = 'round'; g.beginPath();
+  st.vel.forEach((p, i) => i ? g.lineTo(fx(p.t), fy(p.v)) : g.moveTo(fx(p.t), fy(p.v))); g.stroke();
+  if (anim) {
+    const x = fx(Math.min(anim.t, T));
+    g.strokeStyle = C.ink; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, box.t); g.lineTo(x, box.b); g.stroke();
+  }
+  const hx = hover.cVel;
+  if (hx != null && hx >= box.l && hx <= box.r) {
+    const t = (hx - box.l) / (box.r - box.l) * T;
+    let best = st.vel[0]; for (const p of st.vel) if (Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
+    const x = fx(best.t), y = fy(best.v);
+    g.strokeStyle = C.axis; g.lineWidth = 1; g.beginPath(); g.moveTo(x, box.t); g.lineTo(x, box.b); g.stroke();
+    g.fillStyle = C.s1; g.strokeStyle = C.surface; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 4.5, 0, 7); g.fill(); g.stroke();
+    tip(g, w, h, x, y, [nf(best.t, 2) + ' s', nf(best.v) + ' mm/s', best.mag ? 'Magnet an' : 'Magnet aus']);
+  }
+}
+
+for (const id of ['cClear', 'cForce', 'cVel']) {
+  const el = $(id);
+  el.addEventListener('pointermove', e => { const r = el.getBoundingClientRect(); hover[id] = e.clientX - r.left; dirtyCharts = true; });
+  el.addEventListener('pointerleave', () => { hover[id] = null; dirtyCharts = true; });
+}
+
+/* ================================================================ Panels */
+function setTile(id, val, unit) { const el = $(id); el.innerHTML = ''; el.append(val); if (unit) { const s = document.createElement('small'); s.textContent = unit; el.append(s); } }
+
+function updateLive() {
+  const mm = motorMM(), sp = spm();
+  setTile('tPos', nf(mm.dx) + ' / ' + nf(mm.dy), 'mm');
+  setTile('tA', nf(Math.round(mm.A * sp)), 'Schritte');
+  setTile('tB', nf(Math.round(mm.B * sp)), 'Schritte');
+  setTile('tD', nf(Math.round((mm.A - moveStartA) * sp)) + ' / ' + nf(Math.round((mm.B - moveStartB) * sp)));
+  setTile('tV', nf(liveV), 'mm/s');
+  const rpm = v => v / (K.STEPS_REV * P.ms) * 60;
+  setTile('tR', nf(rpm(liveVA)) + ' / ' + nf(rpm(liveVB)), 'U/min');
+  $('lamp').classList.toggle('on', mag);
+  $('magTxt').textContent = mag ? 'AN' : 'AUS';
+  $('kLive').textContent = liveClear !== null ? nf(liveClear * P.s, 1) + ' mm' : (anim ? 'Wagen fährt ohne Figur' : '.');
+}
+
+function ampel(id, R, tg, ty, tr, sub) {
+  const el = $(id), cls = R >= 1.5 ? 'g' : R >= 1 ? 'y' : 'r';
+  el.className = 'amp ' + cls;
+  $(id + 'T').textContent = cls === 'g' ? tg : cls === 'y' ? ty : tr;
+  $(id + 'S').textContent = sub;
+}
+
+function updatePanels() {
+  const sp = spm();
+  $('spmInfo').textContent = `${K.STEPS_REV} Vollschritte je Umdrehung (P) × ${P.ms} Mikroschritte, 20-Zahn-Pulley mit GT2 (40 mm je Umdrehung): ${nf(sp, sp % 1 ? 1 : 0)} Schritte je mm Riemen. Diagonal läuft nur ein Motor, dafür mit √2-facher Riemengeschwindigkeit.`;
+  /* Regel */
+  const half = P.s / 2, rm = $('ruleMsg');
+  if (P.w > half + 1e-9) {
+    rm.className = 'msg crit';
+    rm.innerHTML = `<span class="ico crit">!</span>Figurenbreite ${nf(P.w)} mm ist größer als die halbe Feldgröße ${nf(half, 1)} mm. Auf den Linien zwischen den Feldern berührt die gezogene Figur stehende Figuren (Überdeckung ${nf(P.w - half, 1)} mm).`;
+  } else if (P.w > half - 1 + 1e-9) {
+    rm.className = 'msg warn';
+    rm.innerHTML = `<span class="ico warn">!</span>Regel knapp erfüllt: ${nf(P.w)} mm ≤ ${nf(half, 1)} mm, Luft auf der Linie nur ${nf(half - P.w, 1)} mm. Druck- und Lagetoleranz fressen das auf.`;
+  } else {
+    rm.className = 'msg';
+    rm.innerHTML = `<span class="ico">✓</span>Regel erfüllt: Figurenbreite ${nf(P.w)} mm ≤ s/2 = ${nf(half, 1)} mm, Luft auf der Linie ${nf(half - P.w, 1)} mm.`;
+  }
+  if (lastStats && isFinite(lastStats.cl.min)) {
+    const mn = lastStats.cl.min * P.s;
+    $('kMin').textContent = nf(mn, 1) + ' mm';
+    const air = mn - P.w;
+    $('kGap').innerHTML = air < -1e-6 ? `<span style="color:var(--crit)">Berührung, ${nf(-air, 1)} mm Überdeckung</span>` : nf(air, 1) + ' mm';
+  } else { $('kMin').textContent = 'noch kein Zug'; $('kGap').textContent = '.'; }
+  /* Magnet */
+  const c = magCalc(P.gap);
+  ampel('amp1', c.R, 'Figur kommt sicher mit', 'Knapp: Figur kommt mit, rutscht beim Anfahren eventuell nach', 'Figur bleibt zurück: Magnet reißt ab',
+    `verfügbar ${nf(c.avail * 1000, 1)} mN, benötigt ${nf(c.need * 1000, 1)} mN, Reserve × ${nf(c.R, 2)} (bei a = ${nf(P.a)} mm/s²)`);
+  const n = neighCalc();
+  ampel('amp2', n.R, 'Nachbar bleibt stehen', 'Knapp: Nachbar kann wackeln', 'Nachbar wird mitgerissen',
+    `Querkraft auf eine Figur im Abstand s/2 = ${nf(n.d, 1)} mm: ${nf(n.Fq * 1000, 2)} mN, ihre Haftung ${nf(n.hold * 1000, 1)} mN, Reserve × ${nf(n.R, 1)}`);
+  /* Statistik */
+  const st = lastStats;
+  setTile('sDrag', nf(st ? st.drag : 0), 'mm');
+  setTile('sLeer', nf(st ? st.leer : 0), 'mm');
+  setTile('sT', nf(st ? st.T : 0, 1), 's');
+  setTile('sStops', st ? String(st.stops) : '0');
+  setTile('sMag', nf(st ? st.magT : 0, 1), 's');
+  setTile('sMot', nf(st ? st.motA : 0) + ' / ' + nf(st ? st.motB : 0), 'mm');
+  $('pN').textContent = String(tot.n);
+  $('pMM').textContent = nf(tot.mm) + ' mm';
+  $('pT').textContent = nf(tot.T, 1) + ' s';
+  $('pAvg').textContent = tot.n ? nf(tot.mm / tot.n) + ' mm, ' + nf(tot.T / tot.n, 1) + ' s' : '.';
+  if (!anim && lastPlan && !lastPlan.ok) setPhase('Kein Weg mit s/2 Abstand gefunden, Figur fährt direkt.');
+  if (!anim && c.R < 1 && lastPlan) setPhase(phaseTxt.replace(/ Achtung:.*$/, '') + ' Achtung: bei diesen Magnetwerten käme die Figur nicht mit.');
+  $('bRand').disabled = !!anim;
+  for (const id of ['dKnight', 'dCap', 'dCastle', 'dPark', 'bNew']) $(id).disabled = !!anim;
+  dirtyCharts = true;
+}
+
+function renderLog() {
+  const ul = $('moves'); ul.innerHTML = '';
+  log.forEach((l, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('b'); b.textContent = l.note;
+    li.append((i + 1) + '. ', b, ' ' + nf(l.mm) + ' mm, ' + nf(l.T, 1) + ' s');
+    ul.append(li);
+  });
+  ul.scrollTop = ul.scrollHeight;
+}
+
+/* ================================================================ Eingabe */
+cv.addEventListener('pointerdown', e => {
+  if (anim || !VW) return;
+  const r = cv.getBoundingClientRect();
+  const mmX = (e.clientX - r.left) / VW.k + VW.wb.x0, mmY = VW.wb.y1 - (e.clientY - r.top) / VW.k;
+  const ux = mmX / P.s + 4, uy = mmY / P.s + 4, f = Math.floor(ux), rk = Math.floor(uy);
+  if (f < 0 || f > 7 || rk < 0 || rk > 7) { sel = -1; targets = []; dirty = true; return; }
+  const sq = rk * 8 + f;
+  if (sel >= 0) {
+    const m = targets.find(t => t.to === sq);
+    if (m) { execMove(m); return; }
+  }
+  const id = board[sq];
+  if (mode === 'regel' && G.over) { setPhase('Partie beendet: ' + G.over + '. "Neu" startet eine neue.'); return; }
+  if (id >= 0 && (mode === 'frei' || pieces[id].c === G.turn)) {
+    sel = sq;
+    if (mode === 'frei') {
+      targets = [];
+      const p = pieces[id];
+      for (let t = 0; t < 64; t++) if (t !== sq) targets.push({ from: sq, to: t, cap: board[t] >= 0 ? t : -1, promo: p.t === 'p' && (t >> 3) === (p.c === 'w' ? 7 : 0) });
+      setPhase('Freier Modus: ' + DE_NAME[p.t] + ' ' + sqName(sq) + ' gewählt, Ziel antippen. Besetztes Ziel wird geschlagen.');
+    } else {
+      targets = genMoves(G.turn).filter(m => m.from === sq);
+      setPhase(targets.length ? DE_NAME[pieces[id].t] + ' ' + sqName(sq) + ': ' + targets.length + ' legale Ziele.' : DE_NAME[pieces[id].t] + ' ' + sqName(sq) + ' kann nicht ziehen.');
+    }
+  } else { sel = -1; targets = []; }
+  dirty = true;
+});
+
+function setMode(m) {
+  mode = m; sel = -1; targets = [];
+  $('mRegel').classList.toggle('on', m === 'regel'); $('mFrei').classList.toggle('on', m === 'frei');
+  setPhase(m === 'frei' ? 'Freier Modus: jede Figur auf jedes Feld, ohne Regeln.' : 'Regelmodus: ' + (G.turn === 'w' ? 'Weiß' : 'Schwarz') + ' am Zug.');
+  dirty = true;
+}
+$('mRegel').onclick = () => setMode('regel');
+$('mFrei').onclick = () => setMode('frei');
+$('bRand').onclick = () => randomMove();
+$('bNew').onclick = () => resetGame(START);
+
+function demo(fen, from, to, msg) {
+  resetGame(fen); setMode('regel');
+  const m = genMoves(G.turn).find(x => x.from === sqOf(from) && x.to === sqOf(to));
+  setPhase(msg);
+  autoTimer = setTimeout(() => { if (m) execMove(m); }, 350);
+}
+$('dKnight').onclick = () => demo(START, 'g1', 'f3', 'Springer g1 nach f3 aus der Grundstellung.');
+$('dCap').onclick = () => demo('rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2', 'e4', 'd5', 'Bauer e4 schlägt d5: erst die geschlagene Figur an den Rand.');
+$('dCastle').onclick = () => demo('r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4', 'e1', 'g1', 'Kurze Rochade: König, dann Turm hinter dem König vorbei.');
+$('dPark').onclick = () => {
+  /* Parkspur Schwarz schon gut gefüllt, Dame schlägt auf h7 */
+  resetGame('4k3/7p/8/8/8/8/8/4K2Q w - - 0 1'); setMode('regel');
+  const fill = ['q', 'r', 'r', 'b', 'b', 'n', 'n', 'p', 'p', 'p', 'p', 'p'];
+  const ys = [0, 0.5, 1, 1.5, 2, 2.5, 6, 6.5, 7, 7.5, 8, 5.5];
+  fill.forEach((t, i) => pieces.push({ id: pieces.length, t, c: 'b', x: 8.5, y: ys[i] }));
+  const m = genMoves('w').find(x => x.from === sqOf('h1') && x.to === sqOf('h7'));
+  setPhase('Dh1 schlägt h7, rechte Parkspur ist schon fast voll.');
+  dirty = true;
+  autoTimer = setTimeout(() => { if (m) execMove(m); }, 350);
+};
+
+/* Theme */
+const THEMES = [['auto', 'Auto'], ['light', 'Hell'], ['dark', 'Dunkel']];
+let themeIdx = 0;
+try { const t = localStorage.getItem('schach-sim-theme'); const i = THEMES.findIndex(x => x[0] === t); if (i >= 0) themeIdx = i; } catch (e) { /* ohne Speicher */ }
+function applyTheme() {
+  const t = THEMES[themeIdx][0];
+  if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  $('theme').textContent = 'Design: ' + THEMES[themeIdx][1];
+  readColors(); dirty = true; dirtyCharts = true;
+}
+$('theme').onclick = () => { themeIdx = (themeIdx + 1) % 3; try { localStorage.setItem('schach-sim-theme', THEMES[themeIdx][0]); } catch (e) { /* egal */ } applyTheme(); };
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) { /* alte Browser */ }
+
+/* Regler */
+const SL = [
+  ['v', 'v', v => nf(v) + ' mm/s'], ['a', 'a', v => nf(v) + ' mm/s²'], ['s', 's', v => nf(v) + ' mm'], ['w', 'w', v => nf(v) + ' mm'],
+  ['gap', 'gap', v => nf(v, 1) + ' mm'], ['mu', 'mu', v => nf(v, 2)], ['m', 'm', v => nf(v) + ' g'], ['F8', 'F8', v => nf(v, 2) + ' N'],
+  ['spd', 'spd', v => '× ' + nf(v, 2)],
+];
+for (const [id, key, fmt] of SL) {
+  const el = $(id), out = $('o_' + id);
+  const upd = () => {
+    P[key] = parseFloat(el.value); out.textContent = fmt(P[key]);
+    if (!anim && lastPlan && key !== 'spd' && key !== 'gap' && key !== 'mu' && key !== 'm' && key !== 'F8') lastStats = analyze(lastPlan);
+    updatePanels(); dirty = true;
+  };
+  el.addEventListener('input', upd); upd();
+}
+$('ms').addEventListener('change', e => { P.ms = +e.target.value; updatePanels(); dirty = true; });
+$('home').addEventListener('change', e => { P.home = e.target.checked; });
+
+/* ================================================================ Schleife */
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  if (anim) { stepAnim(dt); dirty = true; dirtyCharts = true; }
+  if (dirty) { drawBoard(); updateLive(); dirty = false; }
+  if (dirtyCharts) { drawClear(); drawForce(); drawVel(); dirtyCharts = false; }
+  requestAnimationFrame(frame);
+}
+try { new ResizeObserver(() => { dirty = true; dirtyCharts = true; }).observe(document.body); } catch (e) { addEventListener('resize', () => { dirty = true; dirtyCharts = true; }); }
+
+applyTheme();
+resetGame(START);
+window.__sim = { P, G, get pieces() { return pieces; }, get board() { return board; }, get anim() { return anim; }, get lastStats() { return lastStats; },
+  get lastPlan() { return lastPlan; }, genMoves, execMove, route, sqOf, setMode, randomMove };
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

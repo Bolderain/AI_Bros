@@ -8,6 +8,11 @@ Stand: 04.10.2026, Vorschlag von Kevin B. Noch nicht entschieden, eine von mehre
 > Zwischenzeitlich entschieden: **geschalteter Elektromagnet** statt abgesenktem
 > Permanentmagnet, und **H-Bot** (ein Riemen) statt CoreXY.
 
+**Interaktive Simulation:** [`sim/index.html`](sim/index.html) (im Browser öffnen, eine Datei, offline).
+Züge per Klick oder Zufallsgegner, Pfadplanung auf den Linien zwischen den Feldern (Springer, Schlagen
+mit Parkspur, Rochade), H-Bot-Kinematik mit Schrittzahlen und Rampen, Abstandsprüfung über Feldgröße
+und Figurenbreite, Magnetkraft über dem Spalt mit Ampel. Modellwerte mit (P) sind Platzhalter, nichts ist gemessen.
+
 ## Idee
 
 Ein Schachbrett, auf dem man gegen eine Schach-Engine spielt. Die Züge der KI führt ein Magnet
